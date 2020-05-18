@@ -1,0 +1,21 @@
+include ../$(IN)
+OBJ = BulkMicroPhysics_Mod.f90\
+      ParameterMicrophys_Mod.f90\
+      TwoMomentBulkMicroPhysics_Mod.f90\
+      ISDACMicroPhysics_Mod.f90\
+      LSCMicroPhysics_Mod.f90
+      
+$(LIB)/libmicrophys.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	@if [ $(MACH) == "rs6000" -o $(MACH) == "pe6000" ] ;\
+          then $(F90) $(OPT) -I. $(KINCL) -c $(PCL) $? ;\
+          else $(F90) $(OPTFREE)  -I. $(KINCL) -c $(PCL) $? ;\
+        fi
+	@ar $(X64) rv $(LIB)/libmicrophys.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libmicrophys.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

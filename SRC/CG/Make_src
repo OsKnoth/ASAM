@@ -1,0 +1,29 @@
+include ../$(IN)
+OBJ = Kind_Mod_$(MACH).f90\
+      Index_Mod.f90 \
+      Tool_Mod.f90\
+      Matrix_Mod.f90\
+      MatSpDiag_Mod.f90    \
+      MatSpInd_Mod.f90     \
+      MatSpIndMat_Mod.f90     \
+      MatSpRowCol_Mod.f90  \
+      MatSpRowColMat_Mod.f90  \
+      MatSpRowColL_Mod.f90  \
+      MatSpRowColD_Mod.f90  \
+      MatSpRowColDiag_Mod.f90  \
+      MatSpConvert_Mod.f90 \
+      Sp_Mod.f90 
+      
+$(LIB)/libcg.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE_CG)  -I. $(KINCL) -c  $?
+	@ar $(X64) rv  $(LIB)/libcg.a ${?:.f90=.o} 
+	@ar $(X64) ts  $(LIB)/libcg.a
+	@rm *.o
+
+	-@for i in `ls *.$(ModSuf) 2>/dev/null`; do \
+       	mv $$i $(LIB); \
+	done 
+	@touch ../MODULE/*.f90

@@ -1,0 +1,19 @@
+include ../$(IN)
+
+Files = M2_Parameter.f90 \
+        M2_GAMMA_ETC.f90 \
+        M2_Canopy.f90\
+        Megan_version_2.f90 \
+        Canopy_Mod.f90
+
+$(LIB)/libcanopy.a: $(Files)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE) -I. $(KINCL) $(INCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libcanopy.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libcanopy.a
+	@rm -f *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

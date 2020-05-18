@@ -1,0 +1,17 @@
+include ../$(IN)
+
+Files = SoilData_Mod.f90 \
+        Soil_Mod.f90 \
+        RevWRF_Mod.f90 \
+
+$(LIB)/libsoil.a: $(Files)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE) -I. $(KINCL) $(INCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libsoil.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libsoil.a
+	@rm -f *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

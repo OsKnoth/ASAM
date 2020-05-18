@@ -1,0 +1,1091 @@
+MODULE Global_Mod
+
+  USE Kind_Mod
+  USE Parameter_Mod
+  USE Domain_Mod
+  USE Physics_Mod
+
+  IMPLICIT NONE
+
+! GlobalOro
+  REAL(RealKind) :: VelMax=35.0d0
+  REAL(RealKind) :: N=1.0d-2
+  REAL(RealKind) :: ProfFac=0.0d0
+  REAL(RealKind), PARAMETER :: Rho0=1.0d0
+  REAL(RealKind), PARAMETER :: th0=293.16d0
+  REAL(RealKind), PARAMETER :: D0=1.d-1
+  CHARACTER*40 :: Problem
+
+! GloablAcoustic
+  REAL(RealKind), PARAMETER :: t0=300.0d0
+  REAL(RealKind), PARAMETER :: DeltaP=100.0d0 !Pa
+  REAL(RealKind) :: zT
+  REAL(RealKind) :: R
+  REAL(RealKind) :: phi0=0.0d0
+  REAL(RealKind) :: lam0=0.0d0
+
+! GlobalGravity
+  REAL(RealKind), PARAMETER :: DeltaTh=10.0d0
+  REAL(RealKind) :: OmegaLoc=0.0d0
+  REAL(RealKind) :: CurvLoc=0.0d0
+  REAL(RealKind) :: nv=1.0d0
+
+! BaroIn / TestCases jw
+  REAL(RealKind)            :: exponent1
+  REAL(RealKind)            :: a_omega 
+  REAL(RealKind)            :: deg2rad
+  REAL(RealKind)            :: rad2deg
+  REAL(RealKind)            :: rotation_angle
+  REAL(RealKind), PARAMETER :: delta_T     = 480000._RealKind  ! in K, for T mean calculation
+  REAL(RealKind), PARAMETER :: eta_tropo   = 0.2d0      ! tropopause level
+  REAL(RealKind), PARAMETER :: Temp0       = 288.d0     ! horizontal mean T at surface
+  REAL(RealKind), PARAMETER :: eta0        = 0.252d0    ! center of jets (hybrid)
+  REAL(RealKind), PARAMETER :: perturbation_amplitude =  1.0d0 ! amplitude of u perturbation 1 m/s
+  REAL(RealKind), PARAMETER :: radius      = 10.0d0     ! reciprocal radius of the perturbation without 'a'
+  REAL(RealKind), PARAMETER :: LapRate     = 0.005d0  ! lapse rate
+
+! TestCases 3 4 5 6
+  REAL(RealKind), PARAMETER :: MoistLapRate= 0.0065d0  ! lapse rate for moist air
+  REAL(RealKind), PARAMETER :: p_ref   = 95500.d0      ! reference pressure
+  REAL(RealKind)            :: eta_top
+  LOGICAL                   :: Perturbation
+
+! Shallow
+  REAL(RealKind), PARAMETER :: H06=8000.0d0    ! m
+  REAL(RealKind)            :: omega6         ! s^-1 
+  REAL(RealKind)            :: K6             ! s^-1
+  REAL(RealKind), PARAMETER :: R6=4.0d0       ! wave number 
+
+
+  NAMELIST /Example/    &
+                    VelMax , &
+                    ProfFac , &
+                    Problem , &
+                    Perturbation, &
+                    N, &
+                    phi0, &
+                    lam0, &
+                    nv
+
+CONTAINS
+
+FUNCTION eta_n1(lam,phi,z,u0)
+  REAL(RealKind) :: eta_n1
+  REAL(RealKind) :: lam,phi,z,u0
+
+  REAL(RealKind) :: eta
+  REAL(RealKind) :: Accuracy
+  Accuracy=1.d-8
+  eta=exp(-Grav*z/(Rd*Temp0))
+
+  Newtonverfahren: DO
+    eta_n1=eta-F_lam_phi_eta(lam,phi,eta,z,u0)/dFdeta(lam,phi,eta,u0)
+    IF (Accuracy.GE.ABS(eta_n1-eta)) THEN
+      EXIT Newtonverfahren 
+    ELSE 
+      eta=eta_n1
+      CYCLE Newtonverfahren 
+    END IF
+  END DO Newtonverfahren
+END FUNCTION eta_n1
+
+FUNCTION F_lam_phi_eta(lam,phi,eta,z,u0)
+  REAL(RealKind) :: F_lam_phi_eta
+  REAL(RealKind) :: lam,phi,eta,u0,z
+  F_lam_phi_eta=-Grav*z+surface_geopotential(lam,phi,eta,u0)
+END FUNCTION F_lam_phi_eta
+
+FUNCTION dFdeta(lam,phi,eta,u0)
+  REAL(RealKind) :: dFdeta
+  REAL(RealKind) :: lam,phi,eta,u0
+  dFdeta=-Rd/eta*temperature(lam,phi,eta,u0)
+END FUNCTION dFdeta
+
+FUNCTION pressure(lam,phi,z,u0) 
+  REAL(RealKind) :: lam,phi,z
+  REAL(RealKind) :: u0
+  REAL(RealKind) :: pressure
+  REAL(RealKind) :: surface_pressure,phi_perturb
+  REAL(RealKind) :: geo_deviation
+  REAL(RealKind) :: A,B,C
+  A = Half*omega6*(Two*Omega+omega6)*COS(phi)*COS(phi) &
+      +0.25d0*K6*K6*(COS(phi))**(Two*R6)*((R6+One)*COS(phi)*COS(phi) &
+      +(Two*R6*R6-R6-Two)-Two*R6*R6*(COS(phi))**(-Two))
+  B = Two*(Omega+omega6)*K6/(R6+One)/(R6+Two) &
+      *(COS(phi))**R6*((R6*R6+Two*R6+Two) &
+      -(R6+One)*(R6+One)*COS(phi)*COS(phi))
+  C = 0.25d0*K6*K6*(COS(phi))**(Two*R6)*((R6+One)*COS(phi)*COS(phi) &
+      -(R6+Two))
+  phi_perturb      = RadEarth**2.0d0*(A+B*COS(R6*lam)+C*COS(2.0d0*R6*lam))
+  surface_pressure = p_ref*(1.0d0+MoistLapRate/(Grav*Temp0)*phi_perturb)  &
+                            **(Grav/(MoistLapRate*Rd))   ! surface pressure
+  pressure         = p_ref*((surface_pressure/p_ref)**((MoistLapRate*Rd)/Grav) & 
+                               -MoistLapRate/Temp0*z)**(Grav/(MoistLapRate*Rd))
+END FUNCTION pressure
+
+FUNCTION temperature(lam,phi,eta,u0) 
+  REAL(RealKind) :: temperature
+  REAL(RealKind) :: eta,u0
+  REAL(RealKind) :: lam,phi
+
+  temperature = t_mean(eta) + t_deviation(lam,phi,eta,u0)
+END FUNCTION temperature
+  !
+  ! Horizontally averaged temperature (equation (4) and (5) in Jablonowski and Williamson (2006))
+  !
+FUNCTION t_mean(eta)
+  REAL(RealKind) :: t_mean
+  REAL(RealKind) :: eta
+
+  IF ((eta).GE.(eta_tropo)) THEN
+     t_mean = Temp0*eta**exponent1                                ! mean temperature at each level (troposphere)
+  ELSE
+     t_mean = Temp0*eta**exponent1 + delta_T*(eta_tropo-eta)**5  ! mean temperature at each level (stratosphere)
+  ENDIF
+END FUNCTION t_mean
+  !
+  ! Temperature deviation from the horizontal mean 
+  ! (equation (6) minus horizontally averaged temperature)
+  !
+FUNCTION t_deviation(lam,phi,eta,u0)
+  REAL(RealKind) :: t_deviation
+  REAL(RealKind) :: eta,u0
+  REAL(RealKind) :: lam,phi
+  REAL(RealKind) :: factor,eta_vertical
+
+  factor       = eta*pi*u0/Rd             
+  eta_vertical = (eta - eta0) * 0.5d0*pi
+  t_deviation  = factor * 1.5d0 * SIN(eta_vertical) * (cos(eta_vertical))**0.5d0 *                        &
+                 ((-2.d0*(SIN(phi))**6 * ((COS(phi))**2 + 1.d0/3.d0) + 10.d0/63.d0)*              &
+                 u0 * (COS(eta_vertical))**1.5d0  +                                                       &
+                 (8.d0/5.d0*(COS(phi))**3 * ((SIN(phi))**2 + 2.d0/3.d0) - pi/4.d0)*a_omega*0.5d0 )
+END FUNCTION t_deviation
+
+!**************************************************************************
+!
+! Surface geopotential (equation (7) in Jablonowski and Williamson, 2006)
+!
+!**************************************************************************  
+FUNCTION geo_deviation(lam,phi,eta,u0)
+  REAL(RealKind) :: geo_deviation
+  REAL(RealKind) :: eta,u0
+  REAL(RealKind) :: lam,phi!,rotation_angle
+  REAL(RealKind) :: A,B,C
+  REAL(RealKind) :: cos_tmp
+
+  cos_tmp    = u0 * (COS((eta-eta0)*pi*0.5d0))**1.5d0
+  geo_deviation = ( & 
+                    ( -2.d0*(SIN(phi))**6.0d0      &
+                     * ((COS(phi))**2.0d0 + 1.d0/3.d0) + 10.d0/63.d0 )*cos_tmp     &
+                   + ( 8.d0/5.d0*(COS(phi))**3.0d0   &
+                       * ((SIN(phi))**2.0d0 + 2.d0/3.d0) - pi/4.d0 )*a_omega      & 
+                  )*cos_tmp
+END FUNCTION geo_deviation
+
+FUNCTION geo_mean(eta)
+  REAL(RealKind) :: geo_mean
+  REAL(RealKind) :: factor,eta
+
+      factor=Temp0*Grav/LapRate
+      IF (eta.GE.eta_tropo) THEN
+        geo_mean = factor*(1.d0-eta**exponent1)
+      ELSE
+        geo_mean = factor*(1.d0-eta**exponent1)    &
+                  - Rd*delta_T*( (LOG(eta/eta_tropo)+137.d0/60.d0)*eta_tropo**5.d0   &
+                                - 5.d0*eta_tropo**4.d0*eta                &
+                                + 5.d0*eta_tropo**3.d0*eta**2.d0          &
+                                - 10.d0/3.d0*eta_tropo**2.d0*eta**3.d0    &
+                                + 5.d0/4.d0*eta_tropo*eta**4.d0           &
+                                - 1.d0/5.d0*eta**5.d0      )
+      END IF
+END FUNCTION geo_mean
+
+FUNCTION surface_geopotential(lam,phi,eta,u0)
+  REAL(RealKind) :: surface_geopotential
+  REAL(RealKind) :: lam,phi,eta,u0,z
+  surface_geopotential=geo_mean(eta) + geo_deviation(lam,phi,eta,u0)
+
+END FUNCTION surface_geopotential
+
+FUNCTION u_pert(lam,phi)
+  REAL(RealKind) :: u_pert
+  REAL(RealKind) :: lam,phi!,rotation_angle
+  REAL(RealKind) :: phi_vertical,sin_tmp,cos_tmp,circdis
+  REAL(RealKind) :: perturb_lam
+  REAL(RealKind) :: perturb_phi
+
+  perturb_lam = Pi/9.0d0
+  perturb_phi = 2.0d0*Pi/9.0d0
+  sin_tmp = SIN(perturb_phi)*SIN(phi)
+  cos_tmp = COS(perturb_phi)*COS(phi)
+  circdis = ACOS( sin_tmp + cos_tmp*COS(lam-perturb_lam) )    ! great circle distance without radius 'a'
+  u_pert = perturbation_amplitude*EXP(- (circdis*radius)**2.0d0 )
+  IF (u_pert <= 1.0d-6) u_pert = 0.0d0
+END FUNCTION u_pert
+
+END MODULE Global_Mod
+
+SUBROUTINE SetBoundCells(BoundCellLoc)
+
+  USE Global_Mod
+  USE DataType_Mod
+  IMPLICIT NONE
+  TYPE(BoundCell_T) :: BoundCellLoc
+
+END SUBROUTINE SetBoundCells
+
+SUBROUTINE InputExample(FileName)
+  USE Global_Mod
+  IMPLICIT NONE
+  CHARACTER(*) :: FileName
+  INTEGER :: Pos
+  CHARACTER(300) :: Line
+
+  OPEN(UNIT=InputUnit,FILE=TRIM(FileName),STATUS='OLD')
+  DO
+    READ(InputUnit,*,END=1) Line
+    IF (INDEX(Line,'&Example')>0) THEN
+      BACKSPACE(InputUnit)
+      READ(InputUnit,NML=Example)
+      EXIT
+    END IF
+  END DO
+1 CONTINUE
+  CLOSE(UNIT=InputUnit)
+  zT=Domain%z1
+  R=RadEarth/3.0d0
+  deg2rad     = Pi/180.0d0
+  rad2deg     = 180.0d0/Pi
+  a_omega     = RadEarth*Omega 
+  exponent1   = Rd*Laprate/Grav 
+  rotation_angle = RotAngle
+  lam0         = lam0*deg2rad
+  phi0         = phi0*deg2rad
+  eta_top=EXP(-Grav*H06/(Rd*Temp0))
+  omega6=50/(R6*RadEarth)
+  K6=50/(R6*RadEarth)     !K6=omega6=u0/(R6*RadEarth), R6=4=wave number, u0=50m/s
+END SUBROUTINE InputExample
+
+
+FUNCTION RhoFun(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: RhoFun
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,ThLoc,ExPre,G,F,u0
+  REAL(RealKind) :: pLoc,rad
+  REAL(RealKind) :: eta
+  REAL(RealKind) :: rot_lam,rot_phi
+  u0=VelMax
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      G=Grav*Grav/(N*N*cpD)
+      S=N*N/Grav
+      F=-u0*COS(phi)**2*(RadEarth*Omega+Curv*0.5d0*u0)
+      IF (N>Zero) THEN
+        ExPre=(One-G/th0)+G/th0*EXP(-S*(z+F/Grav))
+      ELSE
+        ExPre=One-Grav/(th0*cpD)*(z+F/Grav)
+      END IF
+      pLoc=p0*ExPre**(1.0d0/kappa)
+      ThLoc=th0*exp(S*(z+F/Grav))
+      RhoFun=pLoc/((pLoc/p0)**kappa*Rd*ThLoc)
+    CASE('GlobalAcoustic')
+      ploc=p0*EXP(-z/(Rd*t0))
+      rad=RadEarth*ACOS(SIN(phi0)*SIN(phi)+COS(phi0)*COS(phi)*COS(lam-lam0))
+      F=Zero
+      IF (rad<R) THEN
+        F=Half*(One+COS(Pi*rad/R))
+      END IF
+      g=SIN(Pi*z/zT)
+      pLoc=ploc+DeltaP*F*g
+      RhoFun=pLoc/(Rd*t0)
+    CASE('GlobalGravity')
+      G=Grav*Grav/(N*N*Cpd)
+      S=N*N/Grav
+      F=-u0*COS(phi)**2*(RadEarth*OmegaLoc+CurvLoc*0.5d0*u0)
+      IF (N>Zero) THEN
+        ExPre=(One-G/t0)+G/t0*EXP(-S*(z+F/Grav))
+      ELSE
+        ExPre=One-Grav/(t0*Cpd)*(z+F/Grav)
+      END IF
+      pLoc=p0*ExPre**(1.0d0/kappa)
+      ThLoc=t0*exp(S*(z+F/Grav))
+      RhoFun=pLoc/((pLoc/p0)**kappa*Rd*ThLoc)
+    CASE('BaroIn')
+      CALL Rotate(lam,phi,rot_lam,rot_phi)
+!     CALL RegRot(rot_lam,rot_phi,lam,phi,0.0d0,Half*Pi-rotation_angle)
+      eta=eta_n1(rot_lam,rot_phi,z,U0)
+      ThLoc=temperature(rot_lam,rot_phi,eta,u0) 
+      RhoFun=p0*eta/(Rd*ThLoc)
+    CASE ('William6')
+      pLoc=pressure(lam,phi,z,u0)
+      ThLoc=Temp0*(pLoc/p_ref)**((MoistLapRate*Rd)/Grav)
+      RhoFun=pLoc/(Rd*ThLoc)
+  END SELECT
+END FUNCTION RhoFun
+
+FUNCTION RhoProf(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: RhoProf
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,ThLoc,ExPre,G,F,u0,pLoc
+  u0=VelMax
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      G=Grav*Grav/(N*N*cpD)
+      S=N*N/Grav
+      F=-u0*COS(phi)**2*(RadEarth*Omega+Curv*0.5d0*u0)
+      IF (N>Zero) THEN
+        ExPre=(One-G/th0)+G/th0*EXP(-S*(z+F/Grav))
+      ELSE
+        ExPre=One-Grav/(th0*cpD)*(z+F/Grav)
+      END IF
+      pLoc=p0*ExPre**(1.0d0/kappa)
+      ThLoc=th0*exp(S*(z+F/Grav))
+      RhoProf=ProfFac*pLoc/((pLoc/p0)**kappa*Rd*ThLoc)
+    CASE('GlobalAcoustic')
+      ploc=p0*EXP(-z/(Rd*t0))
+      RhoProf=pLoc/(Rd*t0)
+    CASE('GlobalGravity')
+      G=Grav*Grav/(N*N*Cpd)
+      S=N*N/Grav
+      IF (N>Zero) THEN
+        ExPre=(One-G/t0)+G/t0*EXP(-S*z)
+      ELSE
+        ExPre=One-Grav/(t0*Cpd)*z
+      END IF
+      pLoc=p0*ExPre**(1.0d0/kappa)
+      ThLoc=t0*exp(S*z)
+      RhoProf=pLoc/((pLoc/p0)**kappa*Rd*ThLoc)
+    CASE DEFAULT
+      RhoProf=0.0d0
+  END SELECT
+END FUNCTION RhoProf
+
+FUNCTION PreStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: PreStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,ThLoc,ExPre,G,F,u0
+  u0=VelMax
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      G=Grav*Grav/(N*N*cpD)
+      S=N*N/Grav
+      F=-u0*COS(phi)**2*(RadEarth*Omega+Curv*0.5d0*u0)
+      IF (N>Zero) THEN
+        ExPre=(One-G/th0)+G/th0*EXP(-S*(z+F/Grav))
+      ELSE
+        ExPre=One-Grav/(th0*cpD)*(z+F/Grav)
+      END IF
+      PreStart=p0*ExPre**(1.0d0/kappa)
+    CASE('GlobalAcoustic')
+      PreStart=p0*EXP(-z/(Rd*t0))
+    CASE('GlobalGravity')
+      G=Grav*Grav/(N*N*Cpd)
+      S=N*N/Grav
+      F=-u0*COS(phi)**2*(RadEarth*OmegaLoc+CurvLoc*0.5d0*u0)
+      IF (N>Zero) THEN
+        ExPre=(One-G/t0)+G/t0*EXP(-S*(z+F/Grav))
+      ELSE
+        ExPre=One-Grav/(t0*Cpd)*(z+F/Grav)
+      END IF
+      PreStart=p0*ExPre**(1.0d0/kappa)
+    CASE DEFAULT
+      PreStart=0.0d0
+  END SELECT
+END FUNCTION PreStart
+
+FUNCTION PreProf(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: PreProf
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,ThLoc,ExPre,G
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      PreProf=0.0d0
+    CASE('GlobalAcoustic')
+      PreProf=p0*EXP(-z/(Rd*t0))
+    CASE('GlobalGravity')
+      S=N*N/Grav
+      G=Grav*Grav/(N*N*Cpd)
+      IF (N>Zero) THEN
+        ExPre=(One-G/t0)+G/t0*EXP(-S*z)
+      ELSE
+        ExPre=One-Grav/(t0*Cpd)*z
+      END IF
+      PreProf=p0*ExPre**(1.0d0/kappa)
+    CASE DEFAULT
+      PreProf=0.0d0
+  END SELECT
+END FUNCTION PreProf
+
+FUNCTION ThProfFun(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ThProfFun
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,F,u0
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      u0=VelMax
+      F=-u0*COS(phi)**2*(RadEarth*Omega+Curv*0.5d0*u0)
+      S=N*N/Grav
+      ThProfFun=ProfFac*th0*exp(S*(z+F/Grav))
+    CASE('GlobalAcoustic')
+      ThProfFun=t0*EXP(kappa*z/(Rd*t0))
+    CASE('GlobalGravity')
+      S=N*N/Grav
+      ThProfFun=t0*EXP(S*z)
+    CASE DEFAULT
+      ThProfFun=0.0d0
+  END SELECT
+END FUNCTION ThProfFun
+
+FUNCTION QvProfFun(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE ThProf_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QvProfFun
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  QvProfFun=0.0d0
+END FUNCTION QvProfFun
+
+FUNCTION UStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE Physics_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: UStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: rot_lam,rot_phi
+  REAL(RealKind) :: phiL,phiR
+  REAL(RealKind) :: U0,u_lat,v_lat,v_tmp
+  REAL(RealKind) :: eta,eta_v
+  U0=VelMax
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      UStart=U0*COS(phi)
+    CASE('GlobalAcoustic')
+      UStart=U0*COS(phi)
+    CASE('GlobalGravity')
+      UStart=U0*COS(phi)
+    CASE('BaroIn')
+      CALL Rotate(lam,phi,rot_lam,rot_phi)
+!     CALL RegRot(rot_lam,rot_phi,lam,phi,0.0d0,Half*Pi-rotation_angle)
+      eta=eta_n1(rot_lam,rot_phi,z,U0)
+      eta_v=(eta-eta0)*0.5d0*Pi
+      u_lat=U0*COS(eta_v)**1.5d0*SIN(2.0d0*rot_phi)**2.0d0
+      IF (Perturbation) THEN
+        u_lat=u_lat+u_pert(rot_lam,rot_phi)
+      END IF
+      IF (ABS(rotation_angle)<1.0E-8) THEN
+        UStart = u_lat
+      ELSE
+        v_lat = 0.0d0
+        ! rotate wind components
+!       CALL turnwi1(u_lat,v_lat,UStart,v_tmp,lam,phi,rot_lam,rot_phi,0.0d0,-0.5d0*Pi+rotation_angle,-1)
+!       CALL Turnwi(uPr,vPr,u,v,lam,phi,lamPr,phiPr,lamP,phiP)
+        CALL Turnwi(UStart,v_tmp,u_lat,v_lat,lam,phi,0.0d0,rotation_angle)
+        IF (ABS(UStart)<1.0E-10) UStart=0.0d0
+      ENDIF
+    CASE ('William6')
+      UStart=RadEarth*omega6*COS(phi) &
+            +RadEarth*K6*(COS(phi))**(R6-One) &
+            *(R6*SIN(phi)*SIN(phi)-COS(phi)*COS(phi))*COS(R6*lam)
+  END SELECT
+END FUNCTION UStart
+
+FUNCTION UStartE(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE UVW_Mod
+  REAL(RealKind) :: UStartE
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  UStartE=UStart(lam,phi,z,zHeight,Time)
+END FUNCTION UStartE
+
+FUNCTION VStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE Physics_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: VStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: rot_lam,rot_phi
+  REAL(RealKind) :: phiL,phiR
+  REAL(RealKind) :: U0,u_lat,v_lat,u_tmp
+  REAL(RealKind) :: eta,eta_v
+  U0=VelMax
+  VStart=0.0d0
+  SELECT CASE(Problem)
+    CASE ('William6')
+      VStart=-RadEarth*K6*R6*(COS(phi))**(R6-One)*SIN(phi)*SIN(R6*lam)
+    CASE ('BaroIn')
+      IF (ABS(rotation_angle)<1.0E-8) THEN
+        VStart = 0.0d0
+      ELSE
+        CALL Rotate(lam,phi,rot_lam,rot_phi)
+!       CALL RegRot(rot_lam,rot_phi,lam,phi,0.0d0,Half*Pi-rotation_angle)
+        eta=eta_n1(rot_lam,rot_phi,z,U0)
+        eta_v=(eta-eta0)*0.5d0*Pi
+        u_lat=U0*COS(eta_v)**1.5d0*SIN(2.0d0*rot_phi)**2.0d0
+        IF (Perturbation) THEN
+          u_lat=u_lat+u_pert(rot_lam,rot_phi)
+        END IF
+        v_lat = 0.0d0
+        ! pole point velocities are not well-defined
+!       IF (ABS(Pi*0.5d0-phi)<1.0E-8.OR.ABS(Pi*0.5d0+phi)<1.0E-8) THEN
+!         VStart = 0.0d0
+!       ELSE
+!         ! rotate wind components
+!         CALL turnwi1(u_lat,v_lat,u_tmp,VStart,lam,phi,rot_lam,rot_phi,0.0d0,-0.5d0*Pi+rotation_angle,-1)
+!       ENDIF
+        CALL Turnwi(u_tmp,VStart,u_lat,v_lat,lam,phi,0.0d0,rotation_angle)
+      ENDIF
+    CASE DEFAULT
+      VStart=0.0d0
+  END SELECT
+END FUNCTION VStart
+
+FUNCTION VStartE(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE UVW_Mod
+  REAL(RealKind) :: VStartE
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  VStartE=VStart(lam,phi,z,zHeight,Time)
+END FUNCTION VStartE
+
+FUNCTION WStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: WStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  WStart=0.0d0
+END FUNCTION WStart
+
+FUNCTION ThStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  USE ThProf_Mod
+  REAL(RealKind) :: ThStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: S,F,ff,gg,rad
+  REAL(RealKind) :: u0,eta,T,ThLoc,pLoc
+  REAL(RealKind) :: rot_lam,rot_phi
+  U0=VelMax
+  SELECT CASE(Problem)
+    CASE('GlobalOro')
+      F=-u0*COS(phi)**2*(RadEarth*Omega+Curv*0.5d0*u0)
+      S=N*N/Grav
+      ThStart=th0*exp(S*(z+F/Grav))
+    CASE('GlobalAcoustic')
+      ThStart=t0*EXP(kappa*z/(Rd*t0))
+    CASE('GlobalGravity')
+      F=-u0*COS(phi)**2*(RadEarth*OmegaLoc+CurvLoc*0.5d0*u0)
+      S=N*N/Grav
+      ThStart=t0*exp(S*(z+F/Grav))
+      rad=RadEarth*ACOS(SIN(phi0)*SIN(phi)+COS(phi0)*COS(phi)*COS(lam-lam0))
+      ff=Zero
+      IF (rad<R) THEN
+        ff=Half*(One+COS(Pi*rad/R))
+      END IF
+      gg=SIN(nv*Pi*z/zT)
+      ThStart=ThStart+DeltaTh*ff*gg
+    CASE('BaroIn')
+      CALL Rotate(lam,phi,rot_lam,rot_phi)
+!     CALL RegRot(rot_lam,rot_phi,lam,phi,0.0d0,Half*Pi-rotation_angle)
+      eta=eta_n1(rot_lam,rot_phi,z,U0)
+      T=temperature(rot_lam,rot_phi,eta,u0) 
+      ThStart=T/eta**kappa
+    CASE ('William6')
+      pLoc=pressure(lam,phi,z,u0)
+      ThLoc=Temp0*(pressure(lam,phi,z,u0)/p_ref)**((MoistLapRate*Rd)/Grav)
+      ThStart=ThLoc*(p0/pLoc)**kappa
+  END SELECT
+END FUNCTION ThStart
+
+FUNCTION TkeStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: TkeStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  TkeStart=0.0d0
+END FUNCTION TkeStart
+
+FUNCTION DisStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: DisStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  DisStart=0.0d0
+END FUNCTION DisStart
+
+FUNCTION QvStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: QvStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  QvStart=0.d0
+END FUNCTION QvStart
+
+FUNCTION QcStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: QcStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  QcStart=0.0d0
+END FUNCTION QcStart
+
+FUNCTION QrStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: QrStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  QrStart=0.d0
+END FUNCTION QrStart
+
+FUNCTION DStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: DStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  DStart=D0
+END FUNCTION DStart
+
+FUNCTION DummyStart(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DummyStart
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  DummyStart=0.0d0
+END FUNCTION DummyStart
+
+FUNCTION DummyStart1(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DummyStart1
+  REAL(RealKind) :: rot_lam,rot_phi
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: eta_c,eta
+  REAL(RealKind) :: sin_tmp,cos_tmp,circdis
+  REAL(RealKind) :: perturb_lam,perturb_phi,tmp
+  REAL(RealKind) :: U0
+  CALL Rotate(lam,phi,rot_lam,rot_phi)
+  perturb_lam = Pi/9.d0
+  perturb_phi = 11.d0*Pi/36.d0
+  eta_c=0.6d0
+  U0=VelMax
+  eta=eta_n1(rot_lam,rot_phi,z,U0)
+  sin_tmp = SIN(perturb_phi)*SIN(rot_phi)
+  cos_tmp = COS(perturb_phi)*COS(rot_phi)
+  circdis = ACOS( sin_tmp + cos_tmp*COS(rot_lam-perturb_lam) )    ! great circle distance
+  tmp = EXP(- ((circdis*radius)**2.0d0 + ((eta-eta_c)/0.1d0)**2.0d0))
+  IF (ABS(tmp)<1.0d-8) tmp = 0.0d0
+  DummyStart1 = tmp
+END FUNCTION DummyStart1
+
+FUNCTION DummyStart2(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DummyStart2
+  REAL(RealKind) :: rot_lam,rot_phi
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: eta_c,eta
+  REAL(RealKind) :: sin_tmp,cos_tmp,circdis
+  REAL(RealKind) :: perturb_lam,perturb_phi,tmp
+  REAL(RealKind) :: U0
+  CALL Rotate(lam,phi,rot_lam,rot_phi)
+  perturb_lam = Pi/9.d0
+  perturb_phi = 11.d0*Pi/36.d0
+  eta_c=1.d0
+  U0=VelMax
+  eta=eta_n1(rot_lam,rot_phi,z,U0)
+  sin_tmp = SIN(perturb_phi)*SIN(rot_phi)
+  cos_tmp = COS(perturb_phi)*COS(rot_phi)
+  circdis = ACOS( sin_tmp + cos_tmp*COS(rot_lam-perturb_lam) )    ! great circle distance
+  tmp = EXP(- ((circdis*radius)**2.0d0 + ((eta-eta_c)/0.1d0)**2.0d0))
+  IF (ABS(tmp)<1.0d-8) tmp = 0.0d0
+  DummyStart2 = tmp
+END FUNCTION DummyStart2
+
+FUNCTION DummyStart3(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: DummyStart3
+  REAL(RealKind) :: rot_lam,rot_phi
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  REAL(RealKind) :: eta
+  CALL Rotate(lam,phi,rot_lam,rot_phi)
+  DummyStart3 = 0.5d0*( TANH( 3.0d0*ABS(rot_phi)-pi ) + 1.0d0)
+END FUNCTION DummyStart3
+
+FUNCTION DummyStart4(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  REAL(RealKind) :: DummyStart4
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  DummyStart4=1.0d0
+END FUNCTION DummyStart4
+
+FUNCTION QiStart(lam,phi,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QiStart
+  REAL(RealKind) :: lam,phi,z,zHeight,Time
+  QiStart=0.d0
+END FUNCTION QiStart
+
+!FUNCTION RhoStart(lam,phi,z,zHeight,Time)
+!  USE Global_Mod
+!  USE Rho_Mod
+!  USE RhoProf_Mod
+!  IMPLICIT NONE
+!  REAL(RealKind) :: RhoStart
+!  REAL(RealKind) :: lam,phi,z,zHeight,Time
+!  RhoStart=RhoFun(lam,phi,z,zHeight,Time)  &
+!          -RhoProf(lam,phi,z,zHeight,Time)
+!END FUNCTION RhoStart
+
+FUNCTION TStart(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: TStart
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  TStart =Zero
+END FUNCTION TStart
+
+
+FUNCTION TkeHStart(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: TkeHStart
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  TkeHStart=Zero
+END FUNCTION TkeHStart
+
+FUNCTION TkeVStart(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: TkeVStart
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  TkeVStart=Zero
+END FUNCTION TkeVStart
+
+FUNCTION LenStart(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: LenStart
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  LenStart=Zero
+END FUNCTION LenStart
+
+SUBROUTINE PerturbProfile(VecC)
+
+  USE DataType_Mod
+  IMPLICIT NONE
+  TYPE(Vector4Cell_T) :: VecC(:)
+
+END SUBROUTINE PerturbProfile
+
+FUNCTION ForceU(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ForceU
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  ForceU=Zero
+END FUNCTION ForceU
+
+FUNCTION ForceV(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ForceV
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  ForceV=Zero
+END FUNCTION ForceV
+
+FUNCTION ForceW(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ForceW
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  ForceW=Zero
+END FUNCTION ForceW
+
+FUNCTION ForceRho(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ForceRho
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  ForceRho=Zero
+END FUNCTION ForceRho
+
+
+FUNCTION HeightFun(x,y,z,zHeight,Time)
+  USE Global_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: HeightFun
+  REAL(RealKind) :: x,y,z,zHeight,Time
+  HeightFun=Zero
+END FUNCTION HeightFun
+
+FUNCTION ThStartSoil(x,y,zS,LandClass,SoilType,Time)
+  USE Parameter_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ThStartSoil
+  REAL(RealKind) :: x,y,zS,Time
+  INTEGER :: LandClass,SoilType
+  ThStartSoil=0.0d0
+END FUNCTION ThStartSoil
+
+FUNCTION QvStartSoil(x,y,zS,LandClass,SoilType,Time)
+  USE Parameter_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QvStartSoil
+  REAL(RealKind) :: x,y,zS,Time
+  INTEGER :: LandClass,SoilType
+  QvStartSoil=0.0d0
+END FUNCTION QvStartSoil
+
+SUBROUTINE Rotate(lam,phi,rot_lam,rot_phi)
+
+  USE Global_Mod
+  IMPLICIT NONE
+
+  REAL(RealKind) :: lam,phi,rot_lam,rot_phi
+
+  IF (ABS(rotation_angle)<1.0E-8) THEN
+    rot_lam = lam
+    rot_phi = phi
+  ELSE
+     CALL regrot1(lam,phi,rot_lam,rot_phi,0.0d0,-0.5d0*pi+rotation_angle,1)
+  ENDIF
+END SUBROUTINE Rotate
+
+SUBROUTINE RegRot(lam,phi,lamPr,phiPr,lamP,phiP)
+
+  USE Global_Mod
+  IMPLICIT NONE
+
+  REAL(RealKind) :: lam,phi
+  REAL(RealKind) :: lamPr,phiPr,lamP,phiP
+
+  phi=ASIN(SIN(phiPr)*SIN(phiP)-COS(phiPr)*COS(phiP)*COS(lamPr))
+  lam=ATAN2(COS(phiPr)*SIN(lamPr),SIN(phiPr)*COS(phiP)+COS(phiPr)*COS(lamPr)*SIN(phiP))
+  IF (lam<=Zero) THEN
+    lam=lam+Two*Pi
+  END IF  
+  lam=lam+lamP
+
+END SUBROUTINE RegRot
+
+SUBROUTINE Turnwi(uPr,vPr,u,v,lamPr,phiPr,lamP,phiP)
+
+  USE Global_Mod
+  IMPLICIT NONE
+
+  REAL(RealKind) :: uPr,vPr
+  REAL(RealKind) :: u,v,lamPr,phiPr,lamP,phiP
+  REAL(RealKind) :: CosLam,SinLam,CosPhi,SinPhi
+
+  SinPhi=SIN(phiPr)*SIN(phiP)-COS(phiPr)*COS(phiP)*COS(lamPr)
+  CosPhi=SQRT(One-SinPhi*SinPhi)
+  SinLam=COS(phiPr)*SIN(lamPr)/CosPhi
+  CosLam=(SIN(phiPr)-SIN(phiP)*SinPhi)/(CosPhi*COS(phiP))
+  uPr=(COS(lamPr)*CosLam+SIN(phiP)*SIN(lamPr)*SinLam)*u &
+     +0.0d0
+  vPr=-COS(phiP)*SinLam/COS(phiPr)*u
+
+END SUBROUTINE Turnwi
+
+
+SUBROUTINE regrot1(pxreg,pyreg,pxrot,pyrot,pxcen,pycen,kcall)
+  USE Global_Mod
+  IMPLICIT NONE!
+!----------------------------------------------------------------------
+!
+!*    conversion between regular and rotated spherical coordinates.
+!*
+!*    pxreg     longitudes of the regular coordinates
+!*    pyreg     latitudes of the regular coordinates
+!*    pxrot     longitudes of the rotated coordinates
+!*    pyrot     latitudes of the rotated coordinates
+!*              all coordinates given in degrees n (negative for s)
+!*              and degrees e (negative values for w)
+!*    pxcen     regular longitude of the south pole of the rotated grid
+!*    pycen     regular latitude of the south pole of the rotated grid
+!*
+!*    kcall=-1: find regular as functions of rotated coordinates.
+!*    kcall= 1: find rotated as functions of regular coordinates.
+!
+!-----------------------------------------------------------------------
+!
+  INTEGER :: kxdim,kydim,kx,ky,kcall
+  REAL(RealKind) :: pxreg,pyreg,&
+                    pxrot,pyrot,&
+                    pxcen,pycen
+  REAL(RealKind) :: zsycen,zcycen,zxmxc,zsxmxc,zcxmxc,zsyreg,zcyreg, &
+                    zsyrot,zcyrot,zcxrot,zsxrot,zpi,zpih
+  INTEGER  :: jy,jx
+
+  zpih = Pi*0.5d0
+  zsycen = SIN((pycen+zpih))
+  zcycen = COS((pycen+zpih))
+!
+  IF (kcall.eq.1) then
+     zxmxc  = pxreg - pxcen
+     zsxmxc = SIN(zxmxc)
+     zcxmxc = COS(zxmxc)
+     zsyreg = SIN(pyreg)
+     zcyreg = COS(pyreg)
+     zsyrot = zcycen*zsyreg - zsycen*zcyreg*zcxmxc
+     zsyrot = max(zsyrot,-1.d0)
+     zsyrot = min(zsyrot,+1.d0)
+     
+     pyrot = ASIN(zsyrot)
+    
+     zcyrot = COS(pyrot)
+     zcxrot = (zcycen*zcyreg*zcxmxc +zsycen*zsyreg)/zcyrot
+     zcxrot = max(zcxrot,-1.d0)
+     zcxrot = min(zcxrot,+1.d0)
+     zsxrot = zcyreg*zsxmxc/zcyrot
+   
+     pxrot = ACOS(zcxrot)
+  
+     IF (zsxrot<0.0) pxrot = -pxrot
+        ELSEIF (kcall.eq.-1) then
+          zsxrot = SIN(pxrot)
+          zcxrot = COS(pxrot)
+          zsyrot = SIN(pyrot)
+          zcyrot = COS(pyrot)
+          zsyreg = zcycen*zsyrot + zsycen*zcyrot*zcxrot
+          zsyreg = max(zsyreg,-1.d0)
+          zsyreg = min(zsyreg,+1.d0)
+         
+          pyreg = ASIN(zsyreg)
+         
+          zcyreg = COS(pyreg)
+          zcxmxc = (zcycen*zcyrot*zcxrot -&
+               zsycen*zsyrot)/zcyreg
+          zcxmxc = max(zcxmxc,-1.d0)
+          zcxmxc = min(zcxmxc,+1.d0)
+          zsxmxc = zcyrot*zsxrot/zcyreg
+          zxmxc  = ACOS(zcxmxc)
+          IF (zsxmxc<0.0) zxmxc = -zxmxc
+         
+          pxreg = zxmxc + pxcen
+          
+     ELSE
+         WRITE(6,'(1x,''invalid kcall in regrot1'')')
+         STOP
+     ENDIF
+END SUBROUTINE regrot1
+
+SUBROUTINE turnwi1(puarg,pvarg,pures,pvres,         &
+                  pxreg,pyreg,pxrot,pyrot,   &
+                  pxcen,pycen,kcall)
+!
+  USE Global_Mod
+  IMPLICIT NONE
+!
+!-----------------------------------------------------------------------
+!
+!*    turn horizontal velocity components between regular and
+!*    rotated spherical coordinates.
+!
+!*    puarg : input u components
+!*    pvarg : input v components
+!*    pures : output u components
+!*    pvres : output v components
+!*    pa    : transformation coefficients
+!*    pb    :    -"-
+!*    pc    :    -"-
+!*    pd    :    -"-
+!*    pxreg : regular longitudes
+!*    pyreg : regular latitudes
+!*    pxrot : rotated longitudes
+!*    pyrot : rotated latitudes
+!*    kxdim              : dimension in the x (longitude) direction
+!*    kydim              : dimension in the y (latitude) direction
+!*    kx                 : number of gridpoints in the x direction
+!*    ky                 : number of gridpoints in the y direction
+!*    pxcen              : regular longitude of the south pole of the
+!*                         transformed grid
+!*    pycen              : regular latitude of the south pole of the
+!*                         transformed grid
+!*
+!*    kcall < 0          : find wind components in regular coordinates
+!*                         from wind components in rotated coordinates
+!*    kcall > 0          : find wind components in rotated coordinates
+!*                         from wind components in regular coordinates
+!*    note that all coordinates are given in degrees n and degrees e.
+!*       (negative values for s and w)
+!
+!-----------------------------------------------------------------------
+
+  INTEGER kxdim,kydim,kx,ky,kcall
+  REAL(RealKind) puarg,pvarg,    &
+                 pures,pvres,    &
+                 pa,   pb,       &
+                 pc,   pd,       &
+                 pxreg,pyreg,    &
+                 pxrot,pyrot
+  REAL(RealKind) pxcen,pycen
+!-----------------------------------------------------------------------
+  INTEGER jy,jx
+  REAL(RealKind) zpih,zsyc,zcyc,zsxreg,zcxreg,zsyreg,zcyreg,zxmxc,&
+                 zsxmxc,zcxmxc,zsxrot,zcxrot,zsyrot,zcyrot
+!-----------------------------------------------------------------------
+  IF (kcall.eq.1) then
+     zpih = Pi*0.5d0
+     zsyc = SIN(pycen+zpih)
+     zcyc = COS(pycen+zpih)
+     !
+     zsxreg = SIN(pxreg)
+     zcxreg = COS(pxreg)
+     zsyreg = SIN(pyreg)
+     zcyreg = COS(pyreg)
+     !
+     zxmxc  = pxreg - pxcen
+     zsxmxc = SIN(zxmxc)
+     zcxmxc = COS(zxmxc)
+     !
+     zsxrot = SIN(pxrot)
+     zcxrot = COS(pxrot)
+     zsyrot = SIN(pyrot)
+     zcyrot = COS(pyrot)
+     !
+     pa = zcyc*zsxmxc*zsxrot + zcxmxc*zcxrot
+     pb = zcyc*zcxmxc*zsyreg*zsxrot - zsyc*zcyreg*zsxrot - &
+          zsxmxc*zsyreg*zcxrot
+     pc = zsyc*zsxmxc/zcyrot
+     pd = (zsyc*zcxmxc*zsyreg + zcyc*zcyreg)/zcyrot
+     !
+     pures = pa*puarg + pb*pvarg
+     pvres = pc*puarg + pd*pvarg
+  ELSEIF (kcall.eq.-1) then
+     zpih = Pi*0.5d0
+     zsyc = SIN(pycen+zpih)
+     zcyc = COS(pycen+zpih)
+     !
+     zsxreg = SIN(pxreg)
+     zcxreg = COS(pxreg)
+     zsyreg = SIN(pyreg)
+     zcyreg = COS(pyreg)
+     !
+     zxmxc  = pxreg - pxcen
+     zsxmxc = SIN(zxmxc)
+     zcxmxc = COS(zxmxc)
+     !
+     zsxrot = SIN(pxrot)
+     zcxrot = COS(pxrot)
+     zsyrot = SIN(pyrot)
+     zcyrot = COS(pyrot)
+     !
+     pa = zcxmxc*zcxrot + zcyc*zsxmxc*zsxrot
+     pb = zcyc*zsxmxc*zcxrot*zsyrot + zsyc*zsxmxc*zcyrot -&
+          zcxmxc*zsxrot*zsyrot
+     pc =-zsyc*zsxrot/zcyreg
+     pd = (zcyc*zcyrot - zsyc*zcxrot*zsyrot)/zcyreg
+     !
+     pures = pa*puarg + pb*pvarg
+     pvres = pc*puarg + pd*pvarg
+  ELSE
+     write(6,'(1x,''invalid kcall in turnwi1'')')
+     STOP
+  ENDIF
+END SUBROUTINE turnwi1
+
+
+

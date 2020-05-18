@@ -1,0 +1,47 @@
+DEFPATH = /Users/knoth/ASAM
+ASAMPATH = /Users/knoth/ASAM
+COMPPATH=/Users/knoth/ASAM/ParExample
+ModSuf=mod
+
+#OPTFREE = -O2 -ffree-form -ffixed-line-length-none -ffree-line-length-none 
+OPTFREE = -O2 -ffree-form -ffixed-line-length-none -ffree-line-length-none 
+OPTFIX = -ffixed-line-length-none -ffree-line-length-none 
+#OPT = -O2
+OPT =  -O2
+
+LINK = mpif90
+F90  = mpif90 $(OPTFREE)
+F90_F  = mpif90 $(OPTFIX)
+
+
+CC   = mpicc  
+
+
+OP =
+CL=
+
+INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
+KINCL       = -I$(DEFPATH)/LIB_Mac
+KGRIDINCL   = -I$(DEFPATH)/LIBGRID_Mac
+KSHAPEINCL  = -I$(DEFPATH)/LIBSHAPE_Mac
+LIB         = $(DEFPATH)/LIB_Mac
+LIBGRID     = $(DEFPATH)/LIBGRID_Mac
+LIBSHAPE    = $(DEFPATH)/LIBSHAPE_Mac
+LIBCHEMSYS    = $(DEFPATH)/LIBCHEMSYS_Mac
+LIB_O       = $(DEFPATH)/LIB_Mac
+LIB_D       = $(DEFPATH)/LIB_MacD
+KINCL_O     = -I$(DEFPATH)/LIB_Mac
+KGRIDINCL_O = -I$(DEFPATH)/LIBGRID_Mac
+KSHAPEINCL_O = -I$(DEFPATH)/LIBSHAPE_Mac
+KINCL_D     = -I$(DEFPATH)/LIB_MacD
+KINCLGRID_D = -I$(DEFPATH)/LIBGRID_MacD
+KCHEMINCL   =-I$(DEFPATH)/LIBCHEMSYS_Mac
+PARMETIS    = -L/Users/knoth/ASAM/SparseLinearSolver/metis-5.1.0/build/Darwin-x86_64/libmetis -lmetis -lm -llapack -lblas
+NETCDF      = -L/usr/local/lib -lcurl    -L/usr/local/lib -lnetcdf -L/usr/local/lib -lnetcdff 
+NETCDF     += -L/usr/local/lib -lhdf5_hl -L/usr/local/lib -lhdf5   -L/usr/local/lib -lz
+NETCDF     += -L/usr/local/lib -lz       -L/usr/local/lib -lsz 
+CURFIT      = -L GRID/LIB -l_cur
+SURFIT      = -L GRID/LIB -l_surf
+GK          = -L GRID/LIB -l_gk
+MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/lib -ldmumps  -lmumps_common  -lpord
+SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.0.1/libscalapack.a 

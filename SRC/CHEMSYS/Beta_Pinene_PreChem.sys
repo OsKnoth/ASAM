@@ -1,0 +1,378 @@
+COMMENT  CAPRAM 3.0 + RACM-MIM2ext
+COMMENT  25-08-2006 (AT)
+COMMENT   ===================   Unit options   ======================
+
+UNIT GAS    0   COMMENT     Gas phase units     (0 = molec/cm3, 1 = mol/m3)
+UNIT AQUA   0   COMMENT     Aqueous phase units (0 = mol/l)
+UNIT MPHYS
+
+COMMENT   ===========================================================
+
+#Anorganic reactions
+CLASS: GAS 
+NO2       =     O3PX   +   NO
+PHOTMCM:  I: 1.165e-02   M: 0.244E0   C:  0.267E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS  
+O3PX +  [O2]   =  O3
+SPEC2:  A: 6.00E-34  B: -2.6  #rate constant mit [O2] berechnen
+
+CLASS: GAS  
+O3PX +  [O2] + [N2]   =  O3
+SPEC2:  A: 5.60E-34  B: -2.6  #rate constant mit [N2] berechnen
+
+CLASS: GAS  
+O3PX +   NO2      =     NO    +    [O2]
+TEMP1:   A:  6.50E-12  E/R:  -120.0   # aus capram.sys
+
+CLASS: GAS  
+O3PX + NO2 = NO3
+TROEF:  KO: 9e-32  N: 2.0  KINF: 2.2e-11  M: 0  F: 0.8
+
+CLASS: GAS  
+O3  +  NO   =  NO2   + [O2]   
+TEMP1:   KO:  2.0E-12  E/R:  1400.0
+
+CLASS: GAS
+NO2 + O3 = NO3 + [O2] 
+TEMP1:   KO:  1.4E-13  E/R:  2470.0 # MCM/Griffin 2003
+
+CLASS: GAS  
+NO3  +  NO       = NO2   +    NO2
+TEMP1:   A:  1.80E-11  E/R:  -110.0 # MCM/Griffin 2003
+
+CLASS: GAS  
+NO  +  NO  + [O2]  =  NO2  +  NO2  
+TEMP1:   KO:  3.30E-39  E/R:  -530.0 #aus capram.sys
+
+CLASS: GAS  
+NO3 +  NO2  =  N2O5
+TROE:  KO: 2.20E-30  N: 3.9  KINF:  1.50E-12  M: 0.7  #aus capram.sys
+
+CLASS: GAS  
+N2O5   =  NO2   + NO3  
+TROEQ:  KO: 2.2E-30  N: 3.9  KINF: 1.5E-12  M: 0.7  KO: 2.7E-27  B: 11000.  #aus capram.sys
+
+CLASS: GAS
+N2O5 + [H2O] = HNO3 + HNO3
+CONST: A: 2.59E-22
+
+CLASS: GAS  
+NO3  +  NO2      =     NO   +     NO2   +    [O2]
+TEMP1:   A:  4.50E-14  E/R:  1260.0  #aus capram.sys
+
+CLASS: GAS  
+NO3  = NO + [O2]
+PHOTMCM: I: 2.485E-02   M: 0.168E0   N: 0.108E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS  
+NO3  = NO + O3PX
+PHOTMCM: I: 1.747E-01   M: 0.155E0   N: 0.125E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS
+O3 = O1D +  [O2]
+PHOTMCM: I: 6.073E-05   M: 1.743E0   N: 0.474E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS
+O3 = O3PX +  [O2]
+PHOTMCM: I: 4.775E-04   M: 0.298E0   N: 0.080E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS
+O1D + [H2O] = 2. HO 
+CONST: A: 2.2E-10 #aus capram.sys/Griffin et al. 2003
+
+CLASS: GAS  
+O1D  + [N2]   =  O3PX   + [N2]   
+TEMP1:   KO:  1.80E-11  E/R:  -110.0 #aus capram.sys
+
+CLASS: GAS  
+O1D  + [O2]   =  O3PX  +  [O2]   
+TEMP1:   KO:  3.20E-11  E/R:   -70.0 #aus capram.sys
+
+CLASS: GAS  
+NO +  HO   =  HONO
+TROE:   KO: 7.00E-31  N:  2.6  KINF:  1.5E-11  M:  0.5	#aus capram.sys
+
+CLASS: GAS
+HONO = 0.9 NO + 0.1 NO2 + 0.9 HO + 0.1 HO2
+PHOTMCM: I: 2.644E-03  M: 0.261E0  N: 0.288E0 # aus MCM (Saunders et al. 2003)
+
+CLASS: GAS 
+NO2 + [H2O] = HONO - NO2 + HNO3
+CONST: A: 4.0E-24
+
+CLASS: GAS  
+HO +  NO2  =  HNO3  
+TROE:   KO: 2.60E-30  N:  3.2  KINF:  2.40E-11  M:  1.3 #aus capram.sys
+
+CLASS: GAS
+HO  +  HNO3  =  NO3 +  [H2O]
+SPEC3:  K1: 7.2e-15 K2: 785.0  K3: 4.1e-16 K4: 1440.0 K5: 1.9e-33 K6: 725.0 #aus capram.sys
+
+CLASS: GAS
+CO + HO = HO2 + CO2
+SPEC1:  KO: 1.5E-13 A: 2.439E-20 #aus capram.sys
+
+CLASS: GAS  
+O3 +  HO   =  HO2  +  [O2]   
+TEMP1:   A:  1.60E-12  E/R:   940.0 #aus capram.sys
+
+CLASS: GAS  
+HO2 +  NO   =  NO2  +  HO   
+TEMP1:   KO:  3.70E-12  E/R:  -250.0 #aus capram.sys
+
+CLASS: GAS  
+HO2  + NO2  =  HNO4
+TROE:  KO: 1.80E-31  N:  3.2  KINF:  4.70E-12  M:  1.4 #aus capram.sys
+
+CLASS: GAS  
+HNO4   =  HO2 +   NO2 
+TROEQ:   KO: 1.80E-31  N: 3.2  KINF: 4.7E-12  M: 1.4  KO: 2.1E-27  B: 10900 #aus capram.sys
+
+CLASS: GAS
+HNO4 + HO = NO2 + [O2] +  [H2O]  
+TEMP1: A: 1.3E-12  E/R: -380.0 #aus capram.sys
+
+CLASS: GAS  
+O3  +  HO2  =  HO  +  2. [O2]   
+TEMP1:   KO:  1.10E-14  E/R:   500.0   #aus capram.sys
+
+CLASS: GAS  
+HO2 +  HO2 =  H2O2 
+SPEC4:  C1: 2.3E-13   C2: 600   C3: 1.7E-33  C4: 1000  #aus capram.sys
+
+CLASS: GAS  
+HO2 +  HO2 + [H2O]   =  H2O2 
+S4H2O:  C1: 3.22E-34  C2: 2800.  C3: 2.38E-54  C4: 3200. # aus CAPRAM.sys
+
+CLASS: GAS  
+HO2 + NO3  =  0.2 HNO3 + 0.8 NO2 + 0.8 HO + [O2]
+CONST:   A: 4.00E-12 #Griffin et al. 2003/ MCM
+
+CLASS: GAS  
+O3PX + O3 = [O2] + [O2]
+TEMP1:  A: 8e-12  E/R: 2060.0  # aus CAPRAM.sys
+
+CLASS: GAS  
+HO  +  SO2  =  SULF +  HO2  
+TROE:  KO: 3.00E-31  N:  3.3  KINF:  1.50E-12  M:  0.0  # aus CAPRAM.sys
+
+CLASS: GAS 
+H2O2          =     HO   +     HO
+PHOTMCM:   I: 1.041e-05  M: 0.723E0   C: 0.279E0  #aus MCM (Saunders et al. 2003)
+
+CLASS: GAS  
+H2O2  +  HO       = HO2 +   [H2O]
+TEMP1:   KO: 2.90E-12   E/R: 160 #aus capram.sys
+
+CLASS: GAS
+O3PX + NO +  [N2] = NO2
+TROE: KO: 9e-32  N: 1.5  KINF: 3e-11  M: 0 #aus capram.sys
+
+CLASS: GAS  
+HO + HONO = NO2 + [H2O]
+TEMP1:   A: 2.7E-12  E/R: 260.0 #aus MCM/ Griffin et al. 2003
+
+CLASS: GAS  
+HO + NO3 = NO2 + HO2 
+CONST:  A: 2.0e-11 #aus MCM/ Griffin et al. 2003
+
+CLASS: GAS  
+NO3 + NO3 = NO2 + NO2 + [O2]
+TEMP1:   A: 8.5e-13  E/R: 2450.0 #aus capram.sys
+
+CLASS: GAS  
+HO  +  HO2      = (DUMMY)
+TEMP1:   A:  4.80E-11  E/R:  -250.0  #aus capram.sys
+
+#Wasserdissoziation
+CLASS: DISS  
+[aH2O]       =  OHm + Hp
+DTEMP:   A: 1.8e-16  B: -6800.0  C: 1.3e11
+
+#Organic reactions
+
+CLASS: GAS
+BPIN + HO = RO2201 + RO2T
+TEMP1: KO: 2.38E-11  E/R: -357.0
+
+CLASS: GAS
+BPIN + NO3 = RO2202 + RO2T
+CONST: A: 2.51E-12
+
+CLASS: GAS
+BPIN + O3 = 0.51 NOPI + 0.11 ACID + 0.03 CO + 0.03 [H2O] + 0.84 HCHO + 0.35 H2O2 + 0.33 RO2203 + 0.33 HO + 0.16 ALKM + 0.16 CO2 + 0.33 RO2T
+TEMP1:  KO: 1.35E-15  E/R: 1270
+
+#CLASS: GAS
+#BPIN + O3 = 0.67 NOPI + 0.11 ACID + 0.03 CO + 0.03 [H2O] + 0.84 HCHO + 0.35 H2O2 + 0.33 RO2203 + 0.33 HO + 0.16 CO2 + 0.33 RO2T
+#TEMP1: KO: 1.35E-15  E/R: 1270
+#CONST: A: 1.9E-17
+
+
+CLASS: GAS
+BPIN + O3PX = 0.75 UR201 + 0.25 NOPI
+CONST: A: 2.7E-11 
+
+CLASS: GAS
+RO2201 + NO = 0.38 AP201 + 0.62 NOPI + 0.62 HO2 + 0.62 HCHO + 0.62 NO2
+TEMP1: KO: 8.8E-13  E/R: -180.2
+
+CLASS: GAS
+RO2201 + RO2T = 0.3 UR202 + 0.7 NOPI + 0.7 HO2 + 0.7 HCHO + RO2T + [O2]
+TEMP1: KO: 1.82E-13  E/R: -416.0
+
+CLASS: GAS
+RO2201 + HO2 = NOPI + HCHO + OOH1
+TEMP1: KO: 4.1E-13  E/R: -790.0
+
+CLASS: GAS
+RO2202 + NO = 0.57 NOPI + 1.31 NO2 + 0.57 HCHO + 0.17 AP202 + 0.17 HO2 + 0.26 UR203
+TEMP1: KO: 8.8E-13  E/R: -180.2
+
+CLASS: GAS
+RO2202 + RO2T = 0.318 NOPI + 1.31 NO2 + 0.57 HCHO + 0.17 AP202 + 0.17 HO2 + 0.26 UR203
+TEMP1: KO: 1.82E-13  E/R: -416.0
+
+CLASS: GAS
+RO2202 + HO2 = 0.83 NOPI + 0.83 NO2 + 0.83 HCHO + 0.17 AP202 + 0.17 OOH1 + 0.83 OOH2
+TEMP1: KO: 4.1E-13  E/R: -790.0
+
+CLASS: GAS
+NOPI + HO = RO2203 + [H2O] + RO2T
+CONST: A: 1.43E-11 
+
+CLASS: GAS
+RO2203 + NO = RO2109 + NO2 + RO2T
+TEMP1: KO: 1.05E-12  E/R: -180.2
+
+#CLASS: GAS
+#RO2203 + RO2T = 0.05 UR204 + 0.05 UR205 + 0.9 RO2109 + 1.9 RO2T
+#TEMP1: KO: 1.82E-13  E/R: -416.0
+
+CLASS: GAS
+RO2203 + RO2T = 0.35 UR204 + 0.3 UR205 + 0.35 RO2109 + 1.35 RO2T
+TEMP1: KO: 1.82E-13  E/R: -416.0
+
+CLASS: GAS
+RO2203 + HO2 = RO2109 + OOH2 + RO2T
+TEMP1: KO: 4.1E-13  E/R: -790.0
+
+CLASS: GAS
+AP201 + HO = NOPI + HCHO + NO2 + [H2O]
+CONST: A: 4.82E-12
+
+CLASS: GAS
+AP202 + HO = NOPI + CO2 + NO2 + [H2O]
+CONST: A: 6.92E-12
+
+CLASS: GAS
+RO2108 + NO = 0.35 AP104 + 0.65 KETH + 0.65 NO2 + 0.65 HO2
+TEMP1: KO: 1.24E-12  E/R: -180.2
+
+CLASS: GAS
+RO2108 + RO2T = KETH + HO2 + RO2T + [O2]
+TEMP1: KO: 1.82E-13  E/R: -416.0
+
+CLASS: GAS
+RO2108 + HO2 = KETH + OOH1
+TEMP1: KO: 4.1E-13  E/R: -790.0
+
+CLASS: GAS
+RO2109 + NO = CO2 + NO2 + RO2108 + RO2T
+TEMP1: KO: 1.11E-11  E/R: -180.2
+
+CLASS: GAS
+RO2109 + NO2 = PAN103
+TROE: KO: 9.7E-29  N: 5.6  KINF:  9.3E-12  M: 1.5  #Hinreaktion, Griffin et al. 2002, ref. Gl. 154 mit rate constant von Gl. 126
+
+CLASS: GAS
+PAN103 = RO2109 + NO2 + RO2T
+TROEQ:  KO: 9.7E-29  N: 5.6  KINF: 9.3E-12  M: 1.5  KO: 8.6E-29  B: 13954  #??? Rueckreaktion Griffin et al. 2002, ref. Gl. 155 mit rate constant von Gl. 127 (in equlibrium with Gl. 154)
+
+#CLASS: GAS
+#RO2109 + RO2T = 0.9 UR104 + 0.05 CO2 + 0.05 RO2108 + 1.05 RO2T + [O2]
+#CONST: A: 5.0E-12
+
+CLASS: GAS
+RO2109 + RO2T = 0.4 RP101 + 0.6 CO2 + 0.6 RO2108 + 1.6 RO2T + [O2]
+CONST: A: 5.0E-12
+
+CLASS: GAS
+RO2109 + HO2 = UR104 + [O2]
+TEMP1: KO: 4.3E-13  E/R: -1040.0
+
+CLASS: GAS
+RP101 + HO = UR104 + O3 - HO2
+CONST: A: 2.62E-11
+
+#RO2T Chemistry
+CLASS: GAS
+RO2T + HO2 = HO2
+TEMP1: KO: 3.41E-13  E/R: -800.2   #Griffin et al. 2002
+
+CLASS: GAS
+RO2T + NO = NO
+TEMP1: KO: 4.2E-12   E/R: -181.2   #Griffin et al. 2002
+
+CLASS: GAS
+RO2T + RO2T = RO2T
+CONST: A: 1.0E-15           #Griffin et al. 2002
+
+#HCHO Chemistry
+
+CLASS: GAS
+HCHO = HCO + H
+PHOTMCM: I: 4.642e-05    M: 0.762E0   N: 0.353E0
+
+CLASS: GAS
+HCO + [O2] = CO + HO2
+CONST: A: 5.10E-12
+
+CLASS: GAS
+H + [O2] + [N2] = HO2 
+SPEC2: C1: 5.40E-32     C2: -1.8
+
+CLASS: GAS
+HCHO = CO + H2
+PHOTMCM: I: 6.853e-05    M: 0.477E0     N: 0.323E0
+
+CLASS: GAS
+HCHO + HO = HCO + [H2O]
+TEMP1: KO: 5.40E-12    E/R: -135
+
+CLASS: GAS
+HCHO + NO3 = HNO3 + HCO 
+CONST: A: 5.60E-12
+
+CLASS: PARTI
+NOPI = pNOPI
+KOMI: P0: 0.5998E-03     MM: 138.0      GG: 1.0 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+AP201 = pAP201
+KOMI: P0: 0.6874E-07     MM: 215.0      GG: 1.0 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+AP202 = pAP202
+KOMI: P0: 0.6283E-05     MM: 213.0      GG: 1.0E+03 #Achtung [P0]=atm!!	
+
+CLASS: PARTI
+UR203 = pUR203
+KOMI: P0: 0.2196E-07     MM: 260.0      GG: 1.0E+03 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+UR204 = pUR204
+KOMI: P0: 0.1102E-04     MM: 154.0        GG: 1.0E+05 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+RP101 = pRP101
+KOMI: P0: 0.2460E-06     MM: 170.0        GG: 1.0E+05 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+UR104 = pUR104
+KOMI: P0: 0.2050E-09     MM: 186.0        GG: 1.0E+05 #Achtung [P0]=atm!!
+
+CLASS: PARTI
+PAN103 = pPAN103
+KOMI: P0: 0.7549E-06     MM: 229.0         GG: 1.0E+03 #Achtung [P0]=atm!!

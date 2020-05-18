@@ -1,0 +1,43 @@
+include ../$(IN)
+
+Files = Domain_Mod.f90       \
+        Parameter_Mod.f90     \
+        Parallel_Mod.f90     \
+        Control_Mod.f90\
+        Floor_Mod.f90          \
+        InputTool_Mod.f90\
+        Exchange_Mod.f90     \
+        Transport_Mod.f90 \
+        VecPrVel_Mod.f90\
+        ScalarCell_Mod.f90     \
+        Vector1Cell_Mod.f90     \
+        Vector1Face_Mod.f90     \
+        Vector4Cell_Mod.f90     \
+        ScalarVectorCell_Mod.f90 \
+        Vector1CellPar_Mod.f90     \
+        Vector1FacePar_Mod.f90     \
+        Vector4CellPar_Mod.f90     \
+        SpMatrix4CellPar_Mod.f90\
+        VelocityFace_Mod.f90     \
+        ScalarFace_Mod.f90     \
+        DataType_Mod.f90          \
+        Physics_Mod.f90  \
+        Thermodynamic_Mod.f90\
+        BoundaryCond_Mod.f90 \
+        Names_Mod.f90\
+        Tools_Mod.f90\
+        Variable_Mod.f90\
+        Random_Mod.f90
+
+$(LIB)/libmod.a: $(Files)
+#	@if [ -f *.o ] ;\
+#          then  rm *.o ;\
+#         fi
+	$(F90) $(OPTFREE) -I. $(KINCL) $(INCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libmod.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libmod.a
+	@rm -f *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done
+

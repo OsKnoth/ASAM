@@ -1,0 +1,1 @@
+gfortran -o PreChem  String_Mod.f90 HashStr_Mod.f90 ChemSys_Mod.f90

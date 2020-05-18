@@ -1,0 +1,79 @@
+   nStage=5
+   nPhi=0
+   MIS_SV3_3_5_17_A_fixed%nStage=nStage
+   MIS_SV3_3_5_17_A_fixed%nPhi=nPhi
+   MIS_SV3_3_5_17_A_fixed%CFLNumber=2.4d0
+   ALLOCATE(MIS_SV3_3_5_17_A_fixed%aRunge(nStage+1,nStage))
+   ALLOCATE(MIS_SV3_3_5_17_A_fixed%cRunge(nStage+1))
+   ALLOCATE(MIS_SV3_3_5_17_A_fixed%dRunge(nStage+1,nStage))
+   ALLOCATE(MIS_SV3_3_5_17_A_fixed%gRunge(nStage+1,nStage))
+   ALLOCATE(MIS_SV3_3_5_17_A_fixed%dtRunge(nStage+1))
+   aRunge=>MIS_SV3_3_5_17_A_fixed%aRunge
+   cRunge=>MIS_SV3_3_5_17_A_fixed%cRunge
+   dRunge=>MIS_SV3_3_5_17_A_fixed%dRunge
+   gRunge=>MIS_SV3_3_5_17_A_fixed%gRunge
+   dtRunge=>MIS_SV3_3_5_17_A_fixed%dtRunge
+   DO i=2,nStage+1
+     DO j=1,i-1
+       ALLOCATE(aRunge(i,j)%Koeff(0:nPhi))
+       aRunge(i,j)%Koeff=Zero
+     END DO
+   END DO
+   aRunge(2,1)%Koeff(0)=0.64041020889005d0
+   aRunge(3,1)%Koeff(0)=-0.20773630720240d0
+   aRunge(3,2)%Koeff(0)=0.23551358670396d0
+   aRunge(4,1)%Koeff(0)=-0.62656046594359d0
+   aRunge(4,2)%Koeff(0)=0.31168295935400d0
+   aRunge(4,3)%Koeff(0)=0.60719780514929d0
+   aRunge(5,1)%Koeff(0)=0.83462634186442d0
+   aRunge(5,2)%Koeff(0)=-0.14669356009899d0
+   aRunge(5,3)%Koeff(0)=-1.27175772876886d0
+   aRunge(5,4)%Koeff(0)=0.77414104433699d0
+   aRunge(6,1)%Koeff(0)=0.05503191431565d0
+   aRunge(6,2)%Koeff(0)=0.06049353173044d0
+   aRunge(6,3)%Koeff(0)=0.02385735552466d0
+   aRunge(6,4)%Koeff(0)=0.04826091246404d0
+   aRunge(6,5)%Koeff(0)=0.05070762433730d0
+
+   cRunge=Zero
+   cRunge(2)=0.64041020889005d0
+   cRunge(3)=0.43756618268033d0
+   cRunge(4)=0.85140389695863d0
+   cRunge(5)=1.02410213952032d0
+   cRunge(6)=1.00000000000000d0
+
+   dRunge=Zero
+   dRunge(3,2)=-2.53797676567078d0
+   dRunge(4,2)=-0.30105279731106d0
+   dRunge(4,3)=1.31940148046008d0
+   dRunge(5,2)=-0.32586599262698d0
+   dRunge(5,3)=1.48324887719036d0
+   dRunge(5,4)=-2.48855777065895d0
+   dRunge(6,2)=0.35270390504987d0
+   dRunge(6,3)=0.04899377623188d0
+   dRunge(6,4)=0.27394424475802d0
+   dRunge(6,5)=0.09886737528278d0
+
+   gRunge=Zero
+   gRunge(3,2)=3.17786179169028d0
+   gRunge(4,2)=1.13851897498759d0
+   gRunge(4,3)=-1.26738258705448d0
+   gRunge(5,2)=-0.12651311083429d0
+   gRunge(5,3)=-2.56760629586917d0
+   gRunge(5,4)=4.36542535417897d0
+   gRunge(6,2)=-0.04921846899019d0
+   gRunge(6,3)=-0.27279801960549d0
+   gRunge(6,4)=0.34694554965268d0
+   gRunge(6,5)=0.03451255114463d0
+
+   dtRunge=Zero
+   DO i=2,nStage+1
+     dtRunge(i)=0.0d0
+     DO j=1,i-1
+       dtRunge(i)=dtRunge(i)+aRunge(i,j)%Koeff(0)
+     END DO
+     DO j=1,i-1
+       aRunge(i,j)%Koeff=aRunge(i,j)%Koeff/dtRunge(i)
+       gRunge(i,j)=gRunge(i,j)/dtRunge(i)
+     END DO
+   END DO

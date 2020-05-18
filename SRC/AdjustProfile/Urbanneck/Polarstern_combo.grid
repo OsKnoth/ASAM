@@ -1,0 +1,333 @@
+&ModelTransport
+it0=0,
+it1=1,
+nFrac=0,
+rStart=1.d-8,
+pFac=2.0d0,
+ChemieFile='Tracer3.chem', !Chemie file
+DataFile='Chem.dat',
+IniFile='Point.ini',
+Chemie=.TRUE.,
+Emiss=.TRUE.,
+EmissionTimeStart=0.,
+ChemieGas=.FALSE.,
+ChemieAqua=.FALSE.,
+Koagul=.FALSE.,
+HenryTrans=.FALSE.,
+Aerosol=.FALSE.,
+Limit=.FALSE.,
+AdvMass=.FALSE.,
+RelFac1=1.d0,
+RelFac2=1.d2,
+NuMin=1.d-10,
+MassEps=1.d-20,
+bMax=100.0d0,
+Neutral=.TRUE.,
+/END
+
+&Example
+uMax=2.5d0, !initial wind speed in x-direction
+vMax=0.0d0, !initial wind speed in y direction
+x0Lead=100.0d0
+x1Lead=300.0d0
+DeltaT=0.2d0, !temperature pertubation of +- 0.1K
+Perturb=.F. !set the perturbation to true
+ProfIn=.TRUE.,
+uStar=0.25
+ProfileWind='Const'
+/END
+
+&AdjustCtrl
+Sounding=.TRUE.
+NameSounding='prof/PS92_37333_radiosonde_2015-05-28T10'
+FileNameOut='Lead'   
+CaseProfile=2
+/END
+
+&ModelPhysics
+ThetaKind='Density', !defines the thermodynamical variable, here used density potential temperature
+Advection=.TRUE.,
+Diffusion=.TRUE.,
+CrossDiff=.TRUE.,
+DiffMin=1.0d-2,
+DiffMax=50.0d0,
+Buoyancy=.TRUE., ! buoyancy is allowed
+TkeSmag=.FALSE.,
+TkeSGS=.TRUE.,
+TkeDis=.FALSE.,
+DTkeDis=.FALSE.,
+DragSurf=.TRUE.
+DynamicSoil=.FALSE.
+Canopy=.FALSE.
+DragScheme='revWRF'
+Wall=.FALSE.
+Louis=.FALSE.
+MomFlux=.TRUE.,
+ScalarFlux=.TRUE.,
+SensFluxFix=.FALSE.
+LatFluxFix=.FALSE.
+
+PGradient=.TRUE.
+Coriolis=.TRUE. !Coriolis force is allowed
+CoriolisFree=.FALSE.
+PhiCor=79.d0, ! to calculate the Coriolis force, the latitude is needed f=2*Omega*sin(lat)
+Curvature=.FALSE.
+! Microphysics 
+Cloud=.FALSE. !Microphysics is set to true
+MicroScheme='Bulk2',
+StartTimeIce=7200.0d0, ! 2h starting time for ice processes to act
+RelCloud=0.2d0, 
+RelCloudIce=0.1d0,
+PrecipIce=.FALSE., !Precipitation of ice is turned on
+IceSurf=.FALSE., !ice on surface is removed
+Forcing=.FALSE.,  
+ForcingExtern=.FALSE.,  
+FileForceNudging='' !'Table_Lead.txt'
+RadiationISDAC=.FALSE., 
+! Cell Perturbation Method (for in/outflow)
+ForcingCellPert=.TRUE.
+ForcingCellPertTime=22
+ForcingCellPertTh=0.03125d0
+ForcingCellPertHeight=20.0d0
+ForcingCellPertFile='East64_8x8.pert'
+! Damping
+Damping=.TRUE.,
+DampAverage=.FALSE.,
+Damp%R_T=1.0d-3,
+Damp%R_W=0.0d0,
+Damp%R_E=0.0d0,
+Damp%R_S=0.0d0,
+Damp%R_N=0.0d0,
+StrideDamp%R_T=100.0d0,  ! Damping layer at 900 m < z < 1000 m
+StrideDamp%R_W=0.0d0,
+StrideDamp%R_E=0.0d0,
+StrideDamp%R_S=0.0d0,
+StrideDamp%R_N=0.0d0,
+/END
+
+&ModelControl
+CGMaxIterPre=30,
+CGTolPre=1.d-4,
+CGMaxIterSch=30,
+CGTolSch=1.d-4,
+BiCGStabTol=1.d-8,
+BiCGStabMaxIter=80,
+QMRTol=1.d-8,
+QMRMaxIter=40,
+RefLevelG=5,
+mi_wgts='Polarstern_combo.Weight2' !the WEIGHT file, where all necessary boundary concdition are summarized
+Profile='Lead.prof',  !the vertical profiles
+TermUnit=6,
+JacSound=.TRUE.,
+JacTransport=.TRUE.
+! Time explicit calculated now before RosRK3 was used!! ExMIS2
+Method='ExPeerJ' !'ExRKJ',  !'ExPeerJ' !'ExMIS4', !'RosRK3', 'ExRKJ1', !'Ros3Pw', ! 'JebLPeer' !'GL4LPeer', !'GL4LPeer' !'Ros3AMF', !'ExRK3TVDF' !'ExRKW', !'ExRk43K' !'ExRK3',  !'EulIC', 
+dtMax=0.25d0, !time step of 1s
+dtStart=0.25d0,
+dtP=0.0d0 !0.25d0! 0.25d0,
+nsCompute=.TRUE.,
+TimeStepControl=.TRUE.
+CloudFast=.FALSE.
+nsMin=0,
+DivDampMax=0.0d0 !0.25d0! 0.025d0,
+ref_glob=0,
+ivar=1,
+EndTime=1200, ! 1200 s
+EndIter=400000,
+! Advection
+MethAdv='Koren'
+Primitive=.TRUE.
+! Pressure Solver
+MethSound='FGMRES' !FGMRES
+MultiMu=.F.
+MultiEx=.FALSE.
+MultiMuTR=.FALSE.
+MultiTriT=.T.
+MultiTriTB=.F.
+MultiTriTR=.F.
+MultIter2=2,
+MultIter3=2,
+GaussIter2=0,
+GaussIter3=0,
+xOrder=2,
+yOrder=3,
+zOrder=1,
+Fac=2.d0
+/END
+
+&ModelOutput !Output variables
+ProfgmvStep=1000   
+VelOut=.TRUE.
+thOut=.TRUE.
+tkeOut=.TRUE.
+disOut=.FALSE.
+qvOut=.TRUE.
+DiffMomOut=.TRUE.
+RhoOut=.TRUE.
+PreOut=.TRUE.
+ChemieOut=.TRUE.
+OutputTimeStart=0,
+OutputTimeStep=10,
+OutputTimeEnd=1200, ! 20 min
+OutputStart=0,
+OutputFrequ=0,
+OutputEnd=36000,
+OutputFileName='Polarstern_combo.out',
+OutputType='GMVb',
+/END
+
+
+&OutputSpecial
+AbsoTemp=.TRUE.
+TheEquiv=.FALSE.
+QvMProf=.FALSe.
+TheDens=.TRUE.
+RelHum=.FALSe.
+SuperSat=.FALSe.
+ThetaDry=.FALSE.
+RhoVS=.FALSE.
+VPD=.FALSE.
+RhoVOut=.TRUE.
+RhoLOut=.TRUE.
+TotalEne=.FALSE.
+LWC=.FALSe.
+LWP=.FALSe.
+!IWC=.TRUE.
+!IWP=.TRUE.
+!QLR=.FALSE.
+/END
+
+#Gitter
+cart                    !cartesian grid, a spherical grid is possible
+0.0d0  2300.0d0  460 ! 5 m    !x direction
+0.0d0  260.0d0    52 ! 5 m    !y direction   
+0.0d0  1000.0d0  200 ! 5 m    !z direction
+
+&GridFileOut
+WNull=.FALSE.     ! -> *.WNull
+GCut=.TRUE.      ! -> *.Cut.out.gmvG
+GCut2=.FALSE.     ! -> *.Cut2.out.gmvG
+GSoil=.FALSE.      ! -> *.Soil.out.gmvG
+GONull=.FALSE.    ! -> *.ONull.out.gmvG
+GOro=.TRUE.       ! -> *.Oro.out.gmvG
+Bound=.FALSE.     ! -> *.bound
+Pbound=.FALSE.    ! -> *.pva.bound
+Pgall=.FALSE.     ! -> *.pva.gall
+Ptropo=.FALSE.    ! -> *.pva.tropo
+vtk=.FALSE.
+gmv=.FALSE.
+/END
+
+&OutGMVControl               ! Output-Grid: G-Global,C-Cartesian
+ out_wahlgrid='C',           ! Output-Grid: G-Global,C-Cartesian
+ out_type='b',               ! Output-format: b->binary,a->ascii
+ out_wahlgrid='C',           ! Output-Grid: G-Global,C-Cartesian
+ out_type='b',               ! Output-format: b->binary,a->ascii
+ RadOutput=1.0d6,              ! RadOutput, value added to numerator for parametrization
+ ScaleRad=1.0d5,               ! ScaleRad, value to denominator for parametrization
+/
+
+&GridDistsCtrl
+ dist_fscv=1.0d-12,     ! for fine scaling dist to in_out-def, CheckVertex
+ distx_coeff=0.01    !0.01,      ! Distance Point(x) coefficient for analyze
+ disty_coeff=0.01    !0.01,      ! Distance Point(y) coefficient for analyze
+ distz_coeff=0.01    !0.01,      ! Distance Point(z) coefficient for analyze
+ dxViewLoc=1.0d-8,      ! Distance Point(x) coefficient of model border
+ dyViewLoc=1.0d-8,      ! Distance Point(y) coefficient of model border
+ dzViewLoc=1.0d-8,      ! Distance Point(z) coefficient of model border
+ IncrVol=10             ! counter for cuts of volume-analysis (1 für Einheitswürfel)
+/END
+
+
+#Funktion 
+Haus1
+Polarstern_combo.haus1
+
+#OutputDomain
+XYZ_Number
+0 460  
+0 52 
+0 200 
+
+#SelfMultiblock
+0 460 32   
+0  52  4  
+0  200  2 
+
+
+&ModelBCP
+BCP%West=-1
+BCP%East=-1
+BCP%South=-1
+BCP%North=-1
+BCP%Bottom=-1
+BCP%Top=-1
+/END
+
+&ModelBCVel
+BCVel%West='Period',
+BCVel%East='Period',
+BCVel%South='Period',
+BCVel%North='Period',
+BCVel%Bottom='FreeSlip',
+BCVel%Top='FreeSlip',
+/END
+
+
+&ErrorControl
+ErrControl=.FALSE.,
+RTolG=1.d-3
+uRTol=1.d-2,
+uATol=1.d-1,
+vRTol=1.d-2,
+vATol=1.d-3,
+wRTol=1.d-2,
+wATol=1.d-1,
+thRTol=1.d-2,
+thATol=1.d-5,
+tkeRTol=1.d-2,
+tkeATol=1.d-5,
+disRTol=1.d-2,
+disATol=1.d-7,
+qvRTol=1.d-2,
+qvATol=1.d-9,
+qcRTol=1.d-1,
+qcATol=1.d-2,
+qrRTol=1.d-2,
+qrATol=1.d-9,
+RhoRTol=1.d-2,
+RhoATol=1.d-5,
+PreRTol=1.d-2,
+PreATol=1.d-5,
+/END
+
+
+&EnvPos
+uPosEnv=1,
+vPosEnv=2,
+wPosEnv=3,
+/END
+
+&ProfileOutput
+OutputTimeMeanStart=0.0d0,
+dtimeMean=1.0d0,
+OutputTimeMeanEnd=1200.0d0 
+FileNameMeanProfile='Polarstern_combo_Profile_x300-700',
+OutputSubdomain=.TRUE.
+OutputXStart=300.0d0
+OutputXEnd=700.0d0
+OutputYStart=0.0d0
+OutputYEnd=256.0d0
+
+/END
+
+#MeanProfileTable
+6
+Var Units   Description             MeanProfile VertFlux TotalVertFlux Variance
+TE  "K"     "Potential Temperature" .TRUE.      .TRUE.   .TRUE.        .TRUE.
+T   "K"      "Absolute temperature" .TRUE.      .TRUE.   .TRUE.        .TRUE.
+TKE "m^2 s^2"      "Absolute temperature" .TRUE.      .TRUE.   .TRUE.        .TRUE.
+U   "m/s"   "Zonal Wind"            .TRUE.      .TRUE.   .TRUE.        .TRUE.
+V   "m/s"   "Meridional Wind"       .TRUE.      .TRUE.   .TRUE.        .TRUE.
+W   "m/s"   "Vertical Wind"         .TRUE.      .FALSE.  .FALSE.       .TRUE.
+/END

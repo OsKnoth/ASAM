@@ -1,0 +1,21 @@
+###############
+### Linux
+#F90  = ifort                      # raute
+#F90  = ifort -assume byterecl     # wenn SizeOfReal=4 gesetzt
+### LINUX Enviroment setzen
+# export LD_LIBRARY_PATH=/opt/intel_fc_80  # zuvor setzen
+# export LC_ALL=C       # zuvor setzen
+
+
+gfortran -o GridHi.Mac -g  -L ./  \
+  Kind_Mod.f90 Parameter_Mod.f90 IOControl_Mod.f90 Geometry_Mod.f90 Domain_Mod.f90 Haus_Mod.f90 \
+  Tree_Mod.f90 Floor_Mod.f90 \
+  F_Mod.f90 Parametric_Mod.f90 Emission_Mod.f90 Masking_Mod.f90 Grid_Mod.f90  ReadWeights.f90 \
+  OutputWeight.f90 OutputWeightBlkJoins.f90 OutputWeightBlk_Mod.f90 OutputOutGmvG_Mod.f90 \
+  MainProg.f90  \
+-L LIB -l_cur -L LIB -l_surf  -L LIB  -l_gk
+
+
+rm *.mod
+rm -f /Users/knoth/bin/GridHi.Mac
+ln -s /Users/knoth/ASAMNeu/SRC_V2.7_ohneRhoD/GRID_Hi/GridHi.Mac  /Users/knoth/bin/GridHi.Mac

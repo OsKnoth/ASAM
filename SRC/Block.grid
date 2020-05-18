@@ -1,0 +1,535 @@
+#Multiblock
+           0        1024      ! X ... nxa, nxe
+           0           1      ! Y ... nya, nye
+           0        1024      ! Z ... nza, nze
+ 
+          25        !Number of blocks ... nb
+                              !Block           1
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           2
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           3
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           4
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           5
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           6
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           7
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           8
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block           9
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          10
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          11
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          12
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          13
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          14
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          15
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          16
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          17
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          18
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          19
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          20
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          21
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          22
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          23
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          24
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 0 0 0 0 4 T T
+                              !Block          25
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 0 0 0 0 4 T T
+#MultiLayerSoil
+          25        !Number of blocks ... nb
+ !.............................................
+           1                     !Block           1
+ 1                ! nr_soildef
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           2                     !Block           2
+ 1                ! nr_soildef
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           3                     !Block           3
+ 1                ! nr_soildef
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           4                     !Block           4
+ 1                ! nr_soildef
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           5                     !Block           5
+ 1                ! nr_soildef
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           6                     !Block           6
+ 1                ! nr_soildef
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           7                     !Block           7
+ 1                ! nr_soildef
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           8                     !Block           8
+ 1                ! nr_soildef
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+           9                     !Block           9
+ 1                ! nr_soildef
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          10                     !Block          10
+ 1                ! nr_soildef
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          11                     !Block          11
+ 1                ! nr_soildef
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          12                     !Block          12
+ 1                ! nr_soildef
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          13                     !Block          13
+ 1                ! nr_soildef
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          14                     !Block          14
+ 1                ! nr_soildef
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          15                     !Block          15
+ 1                ! nr_soildef
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          16                     !Block          16
+ 1                ! nr_soildef
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          17                     !Block          17
+ 1                ! nr_soildef
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          18                     !Block          18
+ 1                ! nr_soildef
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          19                     !Block          19
+ 1                ! nr_soildef
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          20                     !Block          20
+ 1                ! nr_soildef
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          21                     !Block          21
+ 1                ! nr_soildef
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          22                     !Block          22
+ 1                ! nr_soildef
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          23                     !Block          23
+ 1                ! nr_soildef
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          24                     !Block          24
+ 1                ! nr_soildef
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 1   ! soil layers
+ !.............................................
+          25                     !Block          25
+ 1                ! nr_soildef
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+ 1   ! soil layers
+#LandClassDef
+          25        !Number of blocks ... nb
+ !.............................................
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+           0         205      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         205         410      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         410         615      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         615         820      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+ !.............................................
+         820        1024      ! ixa, ixe
+           0           1      ! iya, iye
+ 1              ! LandClass
+                              !Block           1           1           1
+         205         205      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           1           1           1
+         205         205      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           1           1           1
+         205         205      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           1           1           1
+         205         205      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+           0           1           0           1 4 T T
+                              !Block           1           1           1
+         205         205      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+           0           1           0           1 4 T T
+                              !Block           2           1           1
+         410         410      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           2           1           1
+         410         410      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+          -1          -1           0          -1 4 T T
+                              !Block           2           1           1
+         410         410      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           2           1           1
+         410         410      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           2           1           1
+         410         410      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+           0           1           0           1 4 T T
+                              !Block           3           1           1
+         615         615      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+          -1          -1           0          -1 4 T T
+                              !Block           3           1           1
+         615         615      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+           0           0           1           0 4 T T
+                              !Block           3           1           1
+         615         615      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+          -1          -1           0          -1 4 T T
+                              !Block           3           1           1
+         615         615      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           3           1           1
+         615         615      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           4           1           1
+         820         820      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           4           1           1
+         820         820      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+          -1          -1           0          -1 4 T T
+                              !Block           4           1           1
+         820         820      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           4           1           1
+         820         820      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           4           1           1
+         820         820      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+           0           1           0           1 4 T T
+                              !Block           5           1           1
+        1024        1024      ! ixa, ixe
+           0           1      ! iya, iye
+           0         205      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           5           1           1
+        1024        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         205         410      ! iza, ize
+          -2          -2           0          -2 4 T T
+                              !Block           5           1           1
+        1024        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         410         615      ! iza, ize
+          -3          -3           0          -3 4 T T
+                              !Block           5           1           1
+        1024        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         615         820      ! iza, ize
+           0           1           0           1 4 T T
+                              !Block           5           1           1
+        1024        1024      ! ixa, ixe
+           0           1      ! iya, iye
+         820        1024      ! iza, ize
+           0           1           0           1 4 T T

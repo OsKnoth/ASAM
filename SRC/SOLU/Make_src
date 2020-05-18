@@ -1,0 +1,19 @@
+include ../$(IN)
+
+OBJ = Iter_Mod.f90            \
+      LinearSolver_Mod.f90    \
+      dgefa.f90 \
+      dpofa.f90 \
+      dposl.f90
+
+$(LIB)/libsolu.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $?
+	@ar $(X64) rv $(LIB)/libsolu.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libsolu.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

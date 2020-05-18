@@ -1,0 +1,8 @@
+cmake \
+> -DCMAKE_INSTALL_PREFIX=/Users/knoth/asam/SRC/AdjustProfile/sundials/instdir \
+> -DEXAMPLES_INSTALL_PATH=/Users/knoth/asam/SRC/AdjustProfile/sundials/instdir/examples \
+> -DMPI_ENABLE=ON \
+> -DFCMIX_ENABLE=ON \
+> /Users/knothaasam/SRC/AdjustProfile/sundials/srcdir
+make install
+

@@ -1,0 +1,31 @@
+include ../$(IN)
+OBJ = Reaction_Mod.f90 \
+      Rates_Mod.f90 \
+      Kernel_Mod.f90\
+      Chemie_Mod.f90\
+      Aerosol_Mod.f90\
+      MicroPhysics_Mod.f90\
+      Koehler_Mod.f90\
+      InitAerosol_Mod.f90 \
+      EmissDeposParameter_Mod.f90 \
+      Deposition_Mod.f90\
+      MarineEmission_Mod.f90\
+      FireEmission_Mod.f90\
+      Emission_Mod.f90\
+      Ansatz_Mod.f90\
+      Kernel_Mod.f90\
+      Koagulation_Mod.f90\
+      CondenAdvect_Mod.f90\
+      Adiabatic_Mod.f90
+      
+$(LIB)/libchemie.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(KINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libchemie.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libchemie.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

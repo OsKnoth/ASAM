@@ -1,0 +1,28 @@
+include ../$(IN)
+
+OBJ =               \
+      Init_Mod.f90\
+      Output_Mod.f90\
+      OutputProfile_Mod.f90\
+      MeanSurface_Mod.f90\
+      SingleColumnXProfile_Mod.f90\
+      SingleColumnZProfile_Mod.f90\
+      PointSurface_Mod.f90\
+      ReadWeights_Mod.f90\
+      Restart_Mod.f90\
+      Grid_Mod.f90\
+      ReadWRF_Mod.f90\
+      ReadWRFnc_Mod.f90\
+      ReadOutput_Mod.f90
+
+$(LIB)/libinit.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libinit.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libinit.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

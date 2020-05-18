@@ -1,0 +1,59 @@
+MP_FILES =  \
+ data_runcontrol.f90 \
+ data_modelconfig.f90 \
+ data_constants.f90 \
+ data_parallel.f90 \
+ data_mp_ice.f90 \
+ utilities_mp_ice.f90 \
+ organize_mp_ice.f90 \
+ xquerxd.f90 \
+ aktuellxd.f90 \
+ ap_newxd.f90 \
+ contact_freezing_matrixxd.f90 \
+ ggw_newxd.f90 \
+ koll_ice_dropsxd.f90 \
+ schmelzenxd.f90 \
+ apvertxd.f90 \
+ contact_tempxd.f90 \
+ immersion_koopxd.f90 \
+ koll_insolxd.f90 \
+ sconstxd.f90 \
+ breakxd.f90 \
+ cwasserxd.f90 \
+ keisxd.f90 \
+ koll_sxd.f90\
+ term_velxd.f90 \
+ ceisxd.f90 \
+ delt_freezexd.f90\
+ kernelxd.f90 \
+ konstxd.f90 \
+ vent_coeffxd.f90 \
+ cloudxd.f90 \
+ depoxd.f90 \
+ kluftxd.f90 \
+ kritxd.f90 \
+ ventixd.f90 \
+ cond_inixd.f90 \
+ dvxd.f90 \
+ kolk_avexd.f90 \
+ cond_mixxd.f90 \
+ esattxd.f90 \
+ koll_contactxd.f90 \
+ molalxd.f90 \
+ cond_shiftxd.f90 \
+ frierenxd.f90 \
+ initialxd.f90 \
+ vbestxd.f90 \
+ vstokesxd.f90 \
+ kontaktxd.f90 \
+ koll_eis_eisxd.f90 \
+ schmelzenxd2.f90 \
+ etaxd.f90 \
+ sigmaxd.f90 \
+ init_mp.f90 
+
+
+
+
+
+

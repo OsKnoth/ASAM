@@ -1,0 +1,16 @@
+include ../${IN}
+
+include Objects_MP
+OBJ = $(MP_FILES) 
+
+$(LIB)/libspecs.a:$(OBJ)
+	@if [ $(MACH) == "rs6000" -o $(MACH) == "pe6000" ] ;\
+          then $(F90) $(OPT) -qsuffix=f=f90:cpp=f90 -I. $(KINCL) $(PCL) -c $? ;\
+          else $(F90) $(OPTFREE) -I. $(KINCL) $(PCL) -c $? ;\
+        fi 
+	@ar $(X64) rv $(LIB)/libspecs.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libspecs.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+	mv $$i $(LIB); \
+	done

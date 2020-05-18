@@ -1,0 +1,16 @@
+include ../$(IN)
+
+OBJ = WindFarm_Mod.f90
+      
+$(LIB)/libwind.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(KINCL) -c $?
+	@ar $(X64) rv $(LIB)/libwind.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libwind.a
+	-@for i in `ls *.$(ModSuf) 2>/dev/null`; do \
+           mv $$i $(LIB); \
+        done
+	@rm *.o
+

@@ -1,0 +1,31 @@
+Compilation:
+
+Comp_int
+
+Execution:
+
+Moist case
+ Eingabe qt0
+.02
+ Eingabe RelHum
+1.0d0
+ Eingabe Theta0
+280
+ Eingabe FileNameOut
+ProfileMoist
+
+Dry case
+ Eingabe qt0
+0 
+ Eingabe RelHum
+0
+ Eingabe Theta0
+280  
+ Eingabe FileNameOut
+ProfileDry
+
+Note: You can add other profile computations
+following the example Res1 in the module Profile_Mod.f90.
+
+The integration is done with the DAE (Differential Algebraic Equation)
+solver DASSL. Its source code is contained in the subdirectory DASSL

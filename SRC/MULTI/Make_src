@@ -1,0 +1,22 @@
+include ../$(IN)
+
+OBJ = Reverse_Mod.f90 \
+      Factor_Mod.f90\
+      SparseSolver_Mod.f90\
+      TriDiagT_Mod.f90 \
+      TriDiagTB_Mod.f90 \
+      TriDiagTR_Mod.f90 \
+      JacAccGrav_Mod.f90 
+
+$(LIB)/libmulti.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $?
+	@ar $(X64) rv $(LIB)/libmulti.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libmulti.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done
+

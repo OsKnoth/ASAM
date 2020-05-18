@@ -1,0 +1,46 @@
+  INTEGER :: MaxLenTable=0
+    REAL(RealKind) :: x
+    INTEGER, ALLOCATABLE :: ixProf(:)
+!   INTEGER :: z_varid, rec_varid, px_varid, py_dimid
+!   INTEGER :: z_dimid, rec_dimid, px_dimid, py_varid
+    INTEGER, ALLOCATABLE :: ixProf(:)
+    INTEGER :: z_varid, rec_varid, px_varid, py_dimid
+    INTEGER :: z_dimid, rec_dimid, px_dimid, py_varid
+  INTEGER :: ix,iy,iz,ixProf,iyProf,izProf
+  INTEGER :: iPx,iPy
+  CHARACTER*12 :: NamePx,NamePy
+  INTEGER :: z_varid, rec_varid, px_varid, py_varid
+  INTEGER :: z_dimid, rec_dimid, px_dimid, py_dimid
+      xProf=ColumnXProfile(iProf)%P%x
+      S1:DO ix=ix0+1,ix1
+          IF (xP(ix-1)<=xProf.AND. &
+              xP(ix  )>=xProf.AND. &
+      ALLOCATE(ColumnXProfile(iProf)%ixProf(ColumnXProfile(iProf)%nbLoc))
+      xProf=ColumnXProfile(iProf)%P%x
+      S2:DO ix=ix0+1,ix1
+          IF (xP(ix-1)<=xProf.AND. &
+              xP(ix  )>=xProf.AND. &
+            ColumnXProfile(iProf)%ixProf(ColumnXProfile(iProf)%nbLoc)=ix
+        xProf=ColumnXProfile(iProf)%P%x
+        IF (x0<=xProf.AND. &
+          x1>=xProf.AND. &
+        xProf=ColumnXProfile(iProf)%P%x
+        IF (x0<=xProf.AND. &
+          x1>=xProf.AND. &
+      iPx=ColumnXProfileWrite(iProf)%P%x
+      WRITE(NamePx,'(I10)') iPx
+      NamePoint='Px'//TRIM(ADJUSTL(NamePx))//'Py'//TRIM(ADJUSTL(NamePy))
+      CALL check(nf90_def_dim(ncid,TRIM('Px'),1,px_dimid))
+      CALL check(nf90_def_var(ncid,TRIM('Px'),NF90_INT,px_dimid,px_varid))
+      CALL check(nf90_put_att(ncid,px_varid,UNITS,'m'))
+      !CALL check(nf90_put_att(ncid,px_varid,'x',TRIM(ADJUSTL(NamePx))))
+      CALL check(nf90_put_var(ncid,px_varid,iPx))
+  REAL(RealKind) :: SaeuleProfile(Domain%nz,MaxLenTable)
+  REAL(RealKind) :: SaeuleProfile0(Domain%nz,MaxLenTable)
+  INTEGER :: ix,iy,iz,igz
+              ix=ColumnXProfile(iProf)%ixProf(ibLoc1)
+                  ColumnXProfile(iProf)%ProfileBlock(ibLoc1)%Profile(igz,i)=ScalarC(ibLoc)%c(ix,iy,iz,1)/(Rho(ibLoc)%c(ix,iy,iz,1)+Eps)
+              ix=ColumnXProfile(iProf)%ixProf(ibLoc1)
+                  ColumnXProfile(iProf)%ProfileBlock(ibLoc1)%Profile(igz,i)=ScalarC(ibLoc)%c(ix,iy,iz,1)
+        READ(InputUnit,*) ColumnXProfile(i)%P%x,ColumnXProfile(i)%P%y
+        MaxLenTable=MAX(MaxLenTable,LenTable)

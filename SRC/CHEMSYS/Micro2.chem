@@ -1,0 +1,106 @@
+  ===========================================================
+  ========                 MODMEP                    ========
+  ========     Output -  Chemical Reaction Data      ========
+  ===========================================================
+
+  Created:             Fri Nov 28 10:25:45 2008
+  Chemical Mechanism:  Micro.chem
+
+  =================     Units         =======================
+
+  Gas Phase Units:     mol/m3
+  Aqueous Phase Units: mol/l
+
+  =================    Numbers        =======================
+
+        16         Number of Species 
+        16         No. of gaseous species           
+         0         No. of aqueous species           
+         0         No. of solid species           
+         0         Number of Non-reactive Species 
+
+  =================   Species Names   =======================
+
+'TE'
+'RHO'
+'QV'
+'QC'
+'QR'
+'NV'
+'NC'
+'NR'
+'TRACER1'
+'TRACER2'
+'UCL'
+'UCR'
+'VCL'
+'VCR'
+'WCL'
+'WCR'
+
+  ================   Description of Reactions   ==============
+
+         7        NREAK   : Number of Reactions 
+         0        NGAS   : Gas phase reactions  
+         0           Gaseous PHOTO - type reactions
+         0           Gaseous TEMP - type reactions
+         0           Gaseous  - type reactions
+         0           Gaseous  - type reactions
+         0           Gaseous  - type reactions
+         0        NHENRY : Henry Equilib. reactions
+         0        NDISS  : Dissociation reactions
+         0        NAQUA  : Aquatic Equilib. reactions
+         0           Aqueous PHOTO - type reactions
+         0           Aqueous TEMP - type reactions
+         0           Aqueous TROE - type reactions
+         0           Aqueous  - type reactions
+         0        NSOLID  : Solid Equilib. reactions
+         0        NSOLID  : Solid Equilib. reactions
+         0        NSOLID  : Solid Equilib. reactions
+         0        NSOLID  : Solid Equilib. reactions
+         7        NMICRO  : Number of microphysical reactions
+
+  ======================  Reactions   ========================
+
+#----------- 1. Reaction ------ Input index 1 ------ 
+MICROPHYS   COND
+6 1 6 1
+2 3 4 5 6 1 2 5 
+3 -1.0d0 4 -1.0d0 6 -1.0d0 7 -1.0d0 1 -1.0d0
+1  0.0d0  
+#----------- 2. Reaction ------ Input index 2 ------  
+MICROPHYS   NUCL
+2 1 2 1
+3 6 2 5  
+3 -1.0d0 4 -1.0d0 6 -1.0d0 7 -1.0d0 1 -1.0d0
+1  0.0d0  
+#----------- 3. Reaction ------ Input index 3 ------ 
+MICROPHYS   AUTO
+6 1 6 1
+2 3 4 5 7 1 2 5 
+4 -1.0d0 5 -1.0d0 7 -1.0d0 8 -1.0d0 1 -1.0d0
+1  0.0d0  
+#----------- 4. Reaction ------ Input index 4 ------ 
+MICROPHYS   SELFC
+3 1 3 1
+2 4 7 2 1 
+7 -1.0d0 
+1  0.0d0  
+#----------- 5. Reaction ------ Input index 5 ------ 
+MICROPHYS   SELFR
+3 1 3 1
+2 5 8 2 1 
+8 -1.0d0 
+1  0.0d0  
+#----------- 6. Reaction ------ Input index 6 ------ 
+MICROPHYS   ACC
+6 1 6 1
+2 3 4 5 7 1 2 5 
+4 -1.0d0 5 -1.0d0 7 -1.0d0 8 -1.0d0 1 -1.0d0
+1  0.0d0  
+#----------- 7. Reaction ------ Input index 7 ------ 
+MICROPHYS   EVAP
+6 1 6 1
+2 3 4 5 8 1 2 5 
+3 -1.0d0 5 -1.0d0 6 -1.0d0 8 -1.0d0 1 -1.0d0 
+1  0.0d0  

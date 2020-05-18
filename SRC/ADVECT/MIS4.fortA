@@ -1,0 +1,61 @@
+   nStage=4
+   nPhi=0
+   MIS4%nStage=nStage
+   MIS4%nPhi=nPhi
+   MIS4%CFLNumber=1.5d0
+   ALLOCATE(MIS4%aRunge(nStage+1,nStage))
+   ALLOCATE(MIS4%cRunge(nStage+1))
+   ALLOCATE(MIS4%dRunge(nStage+1,nStage))
+   ALLOCATE(MIS4%gRunge(nStage+1,nStage))
+   ALLOCATE(MIS4%dtRunge(nStage+1))
+   aRunge=>MIS4%aRunge
+   cRunge=>MIS4%cRunge
+   dRunge=>MIS4%dRunge
+   gRunge=>MIS4%gRunge
+   dtRunge=>MIS4%dtRunge
+   DO i=2,nStage+1
+     DO j=1,i-1
+       ALLOCATE(aRunge(i,j)%Koeff(0:nPhi))
+       aRunge(i,j)%Koeff=Zero
+     END DO
+   END DO
+   aRunge(2,1)%Koeff(0)=  0.13629647842266179     
+   aRunge(3,1)%Koeff(0)=  0.28046239897933556     
+   aRunge(3,2)%Koeff(0)= -1.60351333596248577E-002
+   aRunge(4,1)%Koeff(0)=  0.90471335520843155     
+   aRunge(4,2)%Koeff(0)=  -1.0401118315403626     
+   aRunge(4,3)%Koeff(0)=  0.65233756348866223     
+   aRunge(5,1)%Koeff(0)=  6.71969845545695721E-002
+   aRunge(5,2)%Koeff(0)= -0.36562186260961194     
+   aRunge(5,3)%Koeff(0)= -0.15486147083521187     
+   aRunge(5,4)%Koeff(0)=  0.97036244446880304     
+   cRunge=Zero
+   cRunge(2)=  0.13629647842266179     
+   cRunge(3)=  0.48155366095621122     
+   cRunge(4)=  0.58375197724891603     
+   cRunge(5)=  0.99999999992067423     
+   dRunge=Zero
+   dRunge(3,2)=  0.91409281030389122     
+   dRunge(4,2)=   1.1427441739726025     
+   dRunge(4,3)= -0.29521124618847322     
+   dRunge(5,2)=  0.11296528223065300     
+   dRunge(5,3)=  0.33736941129609332     
+   dRunge(5,4)=  0.50374718311858491     
+   gRunge=Zero
+   gRunge(3,2)=  0.67895198329071216     
+   gRunge(4,2)=  -1.3897416407020489     
+   gRunge(4,3)=  0.50386457630169545     
+   gRunge(5,2)= -0.37532860828160519     
+   gRunge(5,3)=  0.32092502110855337     
+   gRunge(5,4)= -0.15825968894504380     
+   dtRunge=Zero
+   DO i=2,nStage+1
+     dtRunge(i)=0.0d0
+     DO j=1,i-1
+       dtRunge(i)=dtRunge(i)+aRunge(i,j)%Koeff(0)
+     END DO
+     DO j=1,i-1
+       aRunge(i,j)%Koeff=aRunge(i,j)%Koeff/dtRunge(i)
+       gRunge(i,j)=gRunge(i,j)/dtRunge(i)
+     END DO
+   END DO

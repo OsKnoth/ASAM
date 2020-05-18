@@ -1,0 +1,337 @@
+&ModelTransport
+it0=0,
+it1=1,
+nFrac=0,
+rStart=1.d-8,
+pFac=2.0d0,
+ChemieFile='short.chem',
+!DataFile='' !'Chem.dat',
+!IniFile='' !'SULF.ini',
+Chemie=.true.
+ChemieGas=.falsE.,
+ChemieAqua=.FALSE.,
+Street=.true. !dh
+Parcel=.FALSE.,
+Koagul=.FALSE.,
+HenryTrans=.FALSE.,
+Aerosol=.FALSE.,
+Limit=.FALSE.,
+AdvMass=.FALSE.,
+RelFac1=1.d0,
+RelFac2=1.d2,
+NuMin=1.d-10,
+MassEps=1.d-20,
+bMax=100.0d0,
+Neutral=.TRUE.,
+EmissionTimeStart=0., !dh
+/END
+
+&Example
+NL=2.50d-2,
+NU=1.0d-2,
+H=3000.0d0
+uMax=5.d0,
+vMax=0.d0,
+th0=285.0d0,
+ZrauhEffective=1.d0, !dh
+ZrauhHeight=12.d0, !dh
+/END
+
+&ModelPhysics
+Advection=.truE.,
+Diffusion=.truE.,
+CrossDiff=.falsE.,
+DiffMin=0.0d0,
+DiffMax=1.d+4,
+Buoyancy=.falsE.,
+TkeSGS=.FALSE.,
+TkeLen=.FALSE.,
+TkeDis=.truE.,
+TkeDisRich=.FALSE.,
+TkeHVLen=.FALSE.,
+DragSurf=.truE.,
+Wall=.truE.,
+Louis=.FALSE.,
+LouisMom=.FALSE.,
+PGradient=.truE.,
+Coriolis=.FALSE.,
+CoriolisFree=.FALSE.,
+CoriolisFix=.FALSE.,
+PhiCor=50.65d0,
+Radiation=.FALSE.,
+Curvature=.FALSE.,
+Baum=.TRUE. !dh
+Damping=.falsE.,
+Damp%R_T=1.0d-3,
+Damp%R_W=1.0d-3,
+Damp%R_E=1.0d-3,
+Damp%R_S=0.0d0,
+Damp%R_N=0.0d0,
+StrideDamp%R_T= 6000.0d0,
+StrideDamp%R_W=30000.0d0,
+StrideDamp%R_E=30000.0d0,
+StrideDamp%R_S=0.0d0,
+StrideDamp%R_N=0.0d0,
+/END
+
+&ModelPos
+/END
+uPosL=1,
+uPosR=2,
+vPosL=3,
+vPosR=4,
+wPosL=5,
+wPosR=6,
+thPos=7,
+prePos=10,
+rhoPos=11,
+tkePos=8,
+disPos=9,
+/END
+
+&ModelControl
+CGMaxIterPre=50,
+CGTolPre=1.d-2,
+CGMaxIterSch=50,
+CGTolSch=1.d-5,
+BiCGStabTol=1.d-8,
+BiCGStabMaxIter=20,
+QMRTol=1.d-6,
+QMRMaxIter=40,
+RefLevelG=5,
+!dh mi_wgts='Neustadt.Weight'
+Method='Ros3AMF', !'EulIC', !'Ros3C',
+dtMax=0.3d0,
+dtP=1.d2
+dtStart=1.0d-5,
+ref_glob=0,
+ivar=0,
+EndTime=100. !500., ! (either ...       ! Aenderungsmoeglichkeit
+EndIter=, ! ... or)
+Fac=2.d0, 
+MultiMu=.FALSE.
+MultiTri=.TRUE.
+xOrder=2,
+yOrder=3,
+zOrder=1,
+Fac=2.d0,
+TermUnit=6,
+/END
+
+&ModelOutput
+VelOut=.truE.
+thOut=.falsE.
+tkeOut=.TRUE.
+tkeHOut=.FALSE.
+tkeVOut=.FALSE.
+disOut=.TRUE.
+LenOut=.FALSE.
+qvOut=.FALSE.
+qcOut=.FALSE.
+qrOut=.FALSE.
+DiffOut=.TRUE.
+DiffHOut=.FALSE.
+DiffVOut=.FALSE.
+DiffMomOut=.FALSE.
+DiffPotOut=.FALSE.
+RhoOut=.falsE.
+PreOut=.falsE.
+ChemieOut=.truE.
+OutputTimeStart=0.001, ! (either ...
+OutputTimeStep=20.,
+OutputTimeEnd=100.,
+OutputStart=, ! ... or)
+OutputFrequ=,
+OutputEnd=, !200000,
+!dh OutputFileName='TEST.out',
+OutputType='AVS', !'GMVb', !'AVS'
+/END
+
+#Gitter ! nur für Gitter-Modell
+cart
+ 440.d0  1060.d0 155
+ 980.d0  1360.d0  95
+   0.d0    80.d0  20
+
+#xGrid ! nur für Gitter-Modell
+ 1
+ 440.d0 1060.d0 155
+#yGrid
+ 1
+ 980.d0 1360.d0 95
+#zGrid
+ 3
+  0.d0  24.d0 12 ! 2m
+ 24.d0  32.d0  2 ! 4m
+ 32.d0  80.d0  6 ! 8m
+
+&OutGMVControl               ! Output-Grid: G-Global,C-Cartesian
+ out_wahlgrid='C',           ! Output-Grid: G-Global,C-Cartesian
+ out_type='a' !'b',               ! Output-format: b->binary,a->ascii
+ RadOutput=1.0d5,              ! RadOutput, value added to numerator for parametrization
+ ScaleRad=1.0d4,               ! ScaleRad, value to denominator for parametrization
+ distx_coeff=0.0,           ! Distance Point(x) coefficient
+ disty_coeff=0.0,           ! Distance Point(y) coefficient
+ distz_coeff=0.0            ! Distance Point(z) coefficient
+/END
+
+#Funktion ! nur für Gitter-Modell (Hindernisse)
+! (falls zusaetzlich Orografie, dann deren Kennwort+Datei zuerst)
+Haus_GML ! Kennwort
+Haus2.Haus ! Input-Datei
+
+#Emission ! nur für Gitter-Modell (Emissionen) !dh
+Emi_Street ! Kennwort !dh
+Street2.Street ! Input-Datei !dh
+
+#Masking ! nur für Gitter-Modell (Baumbestand) !dh
+Mask_Baum ! Kennwort !dh
+Baum2.Baum ! Input-Datei !dh
+
+#OutputDomain
+10 145
+10  85
+ 0  20
+
+#Multiblock ! auch für Gitter-Modell
+    0 155   ! Domain: X-direction ... nxa, nxe
+    0  95   !         Y-direction ... nya, nye
+    0  20   !         Z-direction ... nza, nze
+
+  1         ! Number of blocks    ... nb
+              ! Block    1 (  2) west
+    0 155    !        ixa, ixe
+    0  95    !        iya, iye
+    0  20    !        iza, ize
+  0 0 0 0 4
+              ! Block    2 (  2) west
+    0   240    !        ixa, ixe
+    0   310    !        iya, iye
+    5    10    !        iza, ize
+  0 0 0 0 4
+              ! Block    3 (  2) west
+    0   284    !        ixa, ixe
+    0   204    !        iya, iye
+   30    50    !        iza, ize
+  -2 -2 -2 0 4
+
+              ! Block    1 (  1) south
+   40   132    !        ixa, ixe
+    0   120    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) south/west
+    5   119    !        ixa, ixe 
+    5   115    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) north/west
+    5   119    !        ixa, ixe
+   115   225    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) south/east
+  119   233    !        ixa, ixe
+    5   115    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) north/east
+  119   233    !        ixa, ixe
+  115   225    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) north
+    5   233    !        ixa, ixe
+    225   230    !        iya, iye 
+    0   24     !        iza, ize
+  0 0 0 0 4
+              ! Block    1 (  1) east
+    233   238    !        ixa, ixe
+    0   230    !        iya, iye
+    0   24     !        iza, ize
+  0 0 0 0 4
+
+&M!odelBCP
+BCP%West=1
+BCP%East=1
+BCP%South=1
+BCP%North=1
+BCP%Bottom=-1
+BCP%Top=-1
+/END
+
+&ModelBCVel
+BCVel%West='OutFlow',
+BCVel%East='OutFlow',
+BCVel%South='OutFlow',
+BCVel%North='OutFlow',
+BCVel%Bottom='FreeSlip',
+BCVel%Top='InFlow',
+/END
+
+&M!odelBCRho
+BCScal%West='ZeroGrad',BCScal%East='ZeroGrad',BCScal%South='ZeroGrad',BCScal%North='ZeroGrad'
+/END
+
+&M!odelBCth
+BCScal%West='ZeroGrad',BCScal%East='ZeroGrad',BCScal%South='ZeroGrad',BCScal%North='ZeroGrad'
+/END
+
+&M!odelBCtke
+BCScal%West='MeanValue',BCScal%East='MeanValue',BCScal%South='MeanValue',BCScal%North='MeanValue'
+/END
+
+&M!odelBCdis
+BCScal%West='MeanValue',BCScal%East='MeanValue',BCScal%South='MeanValue',BCScal%North='MeanValue'
+/END
+
+&M!odelBCgas
+!BCScal%Top='ZeroValue',
+/END
+
+&ErrorControl
+ErrControl=.TRUE.,
+RTolG=1.d0
+ATolG=1.d1
+uRTol=2.d-1,
+uATol=2.d-1,
+vRTol=2.d-1,
+vATol=2.d-1,
+wRTol=2.d-1,
+wATol=2.d-1,
+thRTol=1.d-2,
+thATol=1.d-1,
+tkeRTol=4.d-1,
+tkeATol=1.d-3,
+disRTol=4.d-1,
+disATol=1.d-4,
+qvRTol=1.d-2,
+qvATol=1.d-9,
+qcRTol=1.d-1,
+qcATol=1.d-2,
+qrRTol=1.d-2,
+qrATol=1.d-9,
+RhoRTol=1.d-1,
+RhoATol=1.d-2,
+PreRTol=1.d-2,
+PreATol=1.d-5,
+/END
+
+
+TOPOGRAPHY
+2  ! nInt
+2  ! nBerg
+600.d0, 1898.d0 ! hP
+600.d0, 1898.d0 ! sP
+2 ! nV
+0.5d0 0.5d0 !V
+600.d0, 1898.d0 ! sVP
+END TOPOGRAPHY
+
+&EnvPos
+uPosEnv=  1,
+wPosEnv=  2,
+thPosEnv= 3,
+/END
+
+

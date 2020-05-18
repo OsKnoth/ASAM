@@ -1,0 +1,20 @@
+include ../$(IN)
+
+OBJ =Kind_Mod.f90\
+     Control_Mod.f90\
+     Geometry_Mod.f90\
+     Shape_Mod.f90\
+     DBase_Mod.f90\
+     OSD_Mod.f90 
+
+$(LIBSHAPE)/libshape.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KGSHAPEINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIBSHAPE)/libshape.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIBSHAPE)/libshape.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIBSHAPE); \
+  done

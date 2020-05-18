@@ -1,0 +1,19 @@
+include ../$(IN)
+
+OBJ = String_Mod.f90\
+      HashStr_Mod.f90\
+      ChemSys_Mod.f90
+
+$(LIBCHEMSYS)/libchemsys.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KCHEMINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIBCHEMSYS)/libchemsys.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIBCHEMSYS)/libchemsys.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIBCHEMSYS); \
+  done
+
+

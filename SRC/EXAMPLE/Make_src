@@ -1,0 +1,23 @@
+include ../$(IN)
+
+OBJ = ReadProfile_Mod.f90\
+      ReadProfile3D_Mod.f90\
+      ReadProfileRad_Mod.f90\
+      Example_Mod.f90
+
+$(LIB)/libexample.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $?
+	@ar $(X64) rv $(LIB)/libexample.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libexample.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done
+
+
+
+
+

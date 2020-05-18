@@ -1,0 +1,22 @@
+
+#===============  Include LIB-Path and Compiler Options  ================
+include ${IN}
+MPINCL = -I. -I$(LIB_MET) -I$(LIB_MP)
+
+# ======================== OBJ-Files ====================================
+include  Objects_MP
+
+#........................................................................
+
+# OFI has to be set in $IN
+OBJ = $(MP_FILES) 
+
+$(LIB_MP)/libmp.a: $(OBJ)
+	$(F90) $(OPT) $(MPINCL) -c $?
+	$(ARCH) rv $@ ${?:.f90=.o}
+	$(ARCH) ts $@
+	rm -f ${?:.f90=.o}
+	@if ls *.mod 2>/dev/null >/dev/null ;\
+          then  mv *.mod $(LIB_MP) ;\
+         fi
+

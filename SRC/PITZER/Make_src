@@ -1,0 +1,18 @@
+include ../$(IN)
+OBJ = ActivityAim_Mod.f90\
+      ActivityAimo_Mod.f90\
+      ActivityPitzer_Mod.f90\
+      ActivityPitzer1_Mod.f90\
+      Activity_Mod.f90
+      
+$(LIB)/libpitzer.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(KINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libpitzer.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libpitzer.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+  mv $$i $(LIB); \
+  done

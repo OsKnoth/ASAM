@@ -1,0 +1,76 @@
+SUBROUTINE ShadowCompute
+ 
+ USE Kind_Mod
+ USE Parallel_MOD
+ USE DataType_Mod
+ USE Floor_MOD
+ USE Domain_Mod 
+ USE BoundaryCond_Mod
+
+ integer :: i,ix,iy,iz
+ REAL :: a1,a2,a3,n1,n2,n3,step,x,y,z
+ 
+ step=0.1;
+ do i=1,NumBoundCell
+  BoundCell(i)%shad=1
+  ix=BoundCell(i)%ix
+  iy=BoundCell(i)%iy
+  iz=BoundCell(i)%iz
+  n1=BoundCell(i)%n1
+  n2=BoundCell(i)%n2
+  n3=BoundCell(i)%n3
+  a1=(xP(ix-1)+xP(ix))/2.
+  a2=(yP(iy-1)+yP(iy))/2.
+  a3=(zP(iz-1)+zP(iz))/2.
+  if(n1*radn1+n2*radn2+n3*radn3<=0)then
+   BoundCell(nb)%shad=0
+  else
+   do it=0,10000
+    x=a1+it*step*radn1
+    y=a2+it*step*radn2      
+    z=a3+it*step*radn3
+    if(x>xP(  ix))ix=ix+1
+    if(x<xP(ix-1))ix=ix-1
+    if(y>yP(  iy))iy=iy+1
+    if(y<yP(iy-1))iy=iy-1
+    if(z>zP(  iz))iz=iz+1
+    if(z<zP(iz-1))iz=iz-1
+    if(ix>nx.and.BCVel%East=='Period')then 
+     ix=1
+     x=xP(ix-1)
+    endif 
+    if(ix<1 .and.BCVel%West=='Period')then
+     ix=nx
+     x=xP(nx)
+    endif
+    if(iy>ny.and.BCVel%North=='Period')then
+     iy=1
+     y=yP(iy-1)
+    endif
+    if(iy<1 .and.BCVel%South=='Period')then
+     iy=ny
+     y=yP(ny)
+    endif
+    if(iz>nz.and.BCVel%Top=='Period')then
+     iz=1
+     z=zP(iz-1)
+    endif
+    if(iz<1 .and.BCVel%Bottom=='Period')then 
+     iz=nz
+     z=zP(nz)
+    endif
+    if(ix>nx.and.BCVel%East/='Period')exit
+    if(ix<1 .and.BCVel%West/='Period')exit 
+    if(iy>ny.and.BCVel%North/='Period')exit
+    if(iy<1 .and.BCVel%South/='Period')exit 
+    if(iz>nz.and.BCVel%Top/='Period')exit
+    if(iz<1 .and.BCVel%Bottom/='Period')exit 
+    IF(BoundCell3d(ix,iy,iz)/=0.AND.BoundCell3d(ix,iy,iz)/=i)THEN
+     BoundCell(i)%shad=0
+     exit
+    endif
+   enddo  
+  endif
+ enddo
+  
+end

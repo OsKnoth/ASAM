@@ -1,0 +1,52 @@
+COMMENT  Test for MUSCAT
+COMMENT  27-04-2018 (RC)
+COMMENT   ===================   Unit options   ======================
+
+UNIT GAS    0   COMMENT     Gas phase units     (0 = molec/cm3, 1 = mol/m3)
+UNIT AQUA   0   COMMENT     Aqueous phase units (0 = mol/l)
+
+COMMENT   ===========================================================
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + NV + TE = RHO
+COND:
+
+CLASS: MICROPHYS
+QV + NV = RHO
+NUCL:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + NC + TE = RHO 
+AUTO:
+
+CLASS: MICROPHYS
+RHO + RHOR + NC = RHO
+SELFR:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + NC + TE = RHO
+ACC:
+
+CLASS: MICROPHYS
+RHO + RHOV +  RHOC + RHOR + NR + TE = RHO 
+EVAP:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + RHOI + NC + NI + TE = RHO 
+FREEZEC:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + RHOI + NI + NR + TE = RHO 
+FREEZER:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + RHOI + RHOS + NS + TE = RHO
+AUTOI:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + NI + RHOI + TE = RHO 
+ICEDEP:
+
+CLASS: MICROPHYS
+RHO + RHOV + RHOC + RHOR + NC + NI + RHOI + TE = RHO 
+MELTI:

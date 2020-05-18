@@ -1,0 +1,383 @@
+MODULE Shadow_Mod
+
+ USE Kind_Mod
+ USE Parallel_Mod
+ USE DataType_Mod
+ USE Floor_MOD
+ USE Domain_Mod
+ USE BoundaryCond_Mod
+
+ IMPLICIT NONE
+
+ TYPE RayT
+  REAL(RealKind) :: x,y,z             !  x,y,z-position
+  LOGICAL  :: status,send,out   !  0-tot 1-aktiv
+  INTEGER  :: ix,iy,iz,ibcStart
+  INTEGER  :: ix0,iy0,iz0
+  INTEGER  :: iTarget,iOrigin
+ END TYPE RayT
+
+ TYPE ListT
+  TYPE(RayT),POINTER  :: r(:)
+  INTEGER             :: n,p
+ END TYPE ListT
+
+ TYPE BufferT
+  INTEGER,POINTER     :: i(:)
+ END TYPE BufferT
+
+CONTAINS
+
+ SUBROUTINE StartNewRays(L)
+  INTEGER :: i,ix,iy,iz,ib,ibLoc
+  REAL(RealKind) :: n1,n2,n3
+  REAL(RealKind) :: SunPos
+  TYPE(ListT) :: L(:)
+  TYPE(RayT),POINTER  :: r
+
+  DO ibLoc=1,nbLoc              ! start rays from boundarycells
+    ib=LocGlob(ibLoc)
+    CALL Set(Floor(ib))
+    ALLOCATE(L(ibLoc)%r(1:NumBoundCell))
+    L(ibLoc)%n=numBoundCell
+    DO i=1,NumBoundCell
+     r=>L(ibLoc)%r(i)
+     BoundCell(i)%shad=1
+     ix=BoundCell(i)%ix
+     iy=BoundCell(i)%iy
+     iz=BoundCell(i)%iz
+     n1=BoundCell(i)%n1G
+     n2=BoundCell(i)%n2G
+     n3=BoundCell(i)%n3G
+
+     r%x=BoundCell(i)%xFLS
+     r%y=BoundCell(i)%yFLS
+     r%z=BoundCell(i)%zFLS
+     r%send=.FALSE.
+     r%out=.FALSE.
+     r%ix=ix
+     r%iy=iy
+     r%iz=iz
+     r%ix0=ix
+     r%iy0=iy
+     r%iz0=iz
+     r%iBCStart=i
+     r%iOrigin=ib
+     r%iTarget=ib
+     SunPos=n1*radn1+n2*radn2+n3*radn3 ! normalenvektor sonnenabgewandt
+     IF (SunPos<=Zero) THEN
+      r%status=.FALSE.
+      r%send=.TRUE.
+     ELSE
+      r%status=.TRUE.
+     ENDIF
+    ENDDO
+  ENDDO
+ END SUBROUTINE
+
+
+ SUBROUTINE FollowRays(L)
+   INTEGER :: ibLoc,ib,i,j,ixb,iyb,izb,ix,iy,iz,it
+   REAL(RealKind) :: step,r1,r2,r3,d
+   REAL(RealKind) :: rxP,ryP,rzP
+   REAL(RealKind) :: rad2deg
+   TYPE(ListT) :: L(:)
+   TYPE(RayT),POINTER  :: r
+   LOGICAL :: Debug=.FALSE.
+
+   DO ibLoc=1,nbLoc              ! follow rays
+     ib=LocGlob(ibLoc)
+     CALL Set(Floor(ib))
+     IF(L(ibLoc)%n>0)THEN
+       DO i=1,L(ibLoc)%n
+         r=>L(ibLoc)%r(i)
+         ix=r%ix
+         iy=r%iy
+         iz=r%iz
+         IF (ix<ix0+1.OR.ix>ix1) THEN
+           WRITE(*,*) 'ib',ib,'ix,iy,iz',ix,iy,iz
+         END IF  
+         step=0.01d0*MIN(dx(ix),dy(iy),dz(iz))
+         IF (Sphere) THEN
+           step=0.01d0*MIN(dx(ix)*RadEarth,dy(iy)*RadEarth,dz(iz))
+         END IF
+         IF(r%status)THEN
+           DO !it=0,10000
+             r%x=r%x+step*radn1
+             r%y=r%y+step*radn2
+             r%z=r%z+step*radn3
+             r%ix=ix
+             r%iy=iy
+             r%iz=iz
+             IF (Sphere) THEN
+               rxP=ATAN2(r%y,r%x)
+               ryP=ASIN(r%z/(SQRT(r%x**2+r%y**2+r%z**2)))
+               rzP=SQRT(r%x**2+r%y**2+r%z**2)-RadEarth
+             ELSE
+               rxP=r%x
+               ryP=r%y
+               rzP=r%z
+             END IF
+             IF(rxP>xP(  ix)) THEN
+               ix=ix+1
+             END IF 
+             IF(rxP<=xP(ix-1)) THEN
+               ix=ix-1
+             END IF
+             IF(ryP>yP(  iy)) THEN
+               iy=iy+1
+             END IF
+             IF(ryP<=yP(iy-1)) THEN
+               iy=iy-1
+             END IF
+             IF(rzP>zP(  iz)) THEN
+               iz=iz+1
+             END IF
+             IF(rzP<=zP(iz-1)) THEN
+               iz=iz-1
+             END IF
+
+             IF (BoundCell3d(ix,iy,iz)/=0.AND.BoundCell3d(ix,iy,iz)/=r%iBCstart) THEN
+               j=BoundCell3d(ix,iy,iz)
+               ixb=BoundCell(j)%ix
+               iyb=BoundCell(j)%iy
+               izb=BoundCell(j)%iz
+               IF (ixb/=r%ix0.AND.iyb/=r%iy0.AND.izb/=r%iz0) THEN
+                 r1=r%x-BoundCell(j)%xFLS
+                 r2=r%y-BoundCell(j)%yFLS
+                 r3=r%z-BoundCell(j)%zFLS
+                 IF (Sphere) THEN
+                   d=r1*BoundCell(j)%n1G+r2*BoundCell(j)%n2G+r3*BoundCell(j)%n3G
+                 ELSE
+                   d=r1*BoundCell(j)%n1+r2*BoundCell(j)%n2+r3*BoundCell(j)%n3
+                 END IF
+                 IF(d<=2.0d0*step)THEN
+                   r%status=.FALSE.
+                   r%send=.TRUE.
+                   IF (ib==18) WRITE(*,*) 'Send1',r%ix,r%iy,r%iz
+                   EXIT
+                 ENDIF
+               ENDIF
+             ENDIF
+
+             IF (rzP>MaxHeight) THEN
+!              Aussenrand oder Höhe 
+               r%send=.TRUE.
+               IF (ib==18) WRITE(*,*) 'Send2',r%ix,r%iy,r%iz
+               r%status=.FALSE.
+               r%out=.TRUE.
+               EXIT
+             END IF  
+             IF(ix>ix1.or.ix<ix0+1.or.iy>iy1.or.iy<iy0+1.or.iz>iz1.or.iz<iz0+1) THEN  ! OSSI
+               IF (ib==18) WRITE(*,*) 'Send3',r%ix,r%iy,r%iz
+               r%send=.FALSE.
+               EXIT
+             ENDIF
+           ENDDO
+           IF (Debug.EQV..TRUE.) THEN
+             STOP
+           END IF
+         ENDIF
+       ENDDO
+     ENDIF
+   ENDDO
+ END SUBROUTINE
+
+
+ SUBROUTINE ExchangeShadow(L)
+   INTEGER :: i,in,ib,ib1,ibLoc,ibT,nItems(nbLoc),nItemsSend(nbLoc,nb),nItemsGet(nbLoc,nb),nItemsGetSum(nbLoc)
+   TYPE(ListT) :: L(:),LGet(nbLoc)
+   INTEGER :: req(2*nbLoc*nb),ireq,tag
+   INTEGER :: StatusArray(MPI_STATUS_SIZE,2*nb*nb)
+   TYPE(RayT),POINTER :: r
+   TYPE(RayT) :: rT
+   INTEGER    :: rayInt(18),sizeofray,offsetsb(nb),offsetrb
+   TYPE(BufferT) :: SendBuf(nbLoc,nb),RecvBuf(nbLoc)
+
+   sizeofray=18
+! WRITE(*,*) 'sizeof',sizeof(rT)
+ 
+   DO ibLoc=1,nbLoc              ! check end of rays and count items leaving to another block
+     ib=LocGlob(ibLoc)
+     CALL Set(Floor(ib))
+     nItemsSend(ibLoc,:)=0
+
+     IF(L(ibLoc)%n>0)THEN
+       DO i=1,L(ibLoc)%n           ! Count items to distribute
+         r=>L(ibLoc)%r(i)
+         IF (r%status)THEN
+           DO in=1,AnzahlNachbar
+             IF(Nachbars(in)%ix0<=r%ix.and.Nachbars(in)%ix1>=r%ix.and.&
+                Nachbars(in)%iy0<=r%iy.and.Nachbars(in)%iy1>=r%iy.and.&
+                Nachbars(in)%iz0<=r%iz.and.Nachbars(in)%iz1>=r%iz.and.&
+                (Nachbars(in)%nType(1:1)=='i'.or.Nachbars(in)%nType(1:1)=='p'))THEN
+               r%iTarget=Nachbars(in)%ib
+               r%send=.TRUE.
+               nItemsSend(ibLoc,r%iTarget)=nItemsSend(ibLoc,r%iTarget)+1
+               EXIT
+             ENDIF
+           ENDDO
+         ELSE IF(r%send)THEN
+           r%iTarget=r%iOrigin
+           nItemsSend(ibLoc,r%iTarget)=nItemsSend(ibLoc,r%iTarget)+1
+         ENDIF
+       EN DDO
+     END IF
+   END DO
+
+   ireq=0
+   DO ibLoc=1,nbLoc
+     DO ib=1,nb
+       ireq=ireq+1
+       tag=LocGlob(ibLoc)+nb*ib
+       CALL MPI_IRECV(nItemsGet(ibLoc,ib),1,MPI_INTEGER,blMPI(ib)%proc,tag,MPI_COMM_WORLD,req(ireq),MPIErr)
+     ENDDO
+   ENDDO
+
+   DO ibLoc=1,nbLoc
+     DO ib=1,nb
+       ireq=ireq+1
+       tag=ib+nb*LocGlob(ibLoc)
+       CALL MPI_ISEND(nItemsSend(ibLoc,ib),1,MPI_INTEGER,blMPI(ib)%proc,tag,MPI_COMM_WORLD,req(ireq),MPIErr)
+     ENDDO
+   ENDDO
+
+   CALL MPI_WAITALL(ireq,req(1:ireq),StatusArray,MPIErr)
+
+   DO ibLoc=1,nbLoc              ! allocate recieve list
+     ib1=LocGlob(ibLoc)
+     IF(SUM(nItemsGet(ibLoc,1:nb))>0)THEN
+       ALLOCATE(RecvBuf(ibLoc)%i(1+SUM(nItemsGet(ibLoc,1:nb))*sizeofray))
+     ENDIF
+     DO ib=1,nb
+       IF(nItemsSend(ibLoc,ib)>0)THEN
+         ALLOCATE(SendBuf(ibLoc,ib)%i(1+nItemsSend(ibLoc,ib)*sizeofray))    ! allocate Sendbuffers
+       ENDIF
+     ENDDO
+   ENDDO
+
+   DO ibLoc=1,nbLoc              ! fill sendbuffers
+     offsetsb=1
+     IF(L(ibLoc)%n>0)THEN
+       DO i=1,L(ibLoc)%n
+         rt=L(ibLoc)%r(i)
+         ib1=LocGlob(ibLoc)
+         IF(rt%send)THEN
+           SendBuf(ibLoc,rt%iTarget)%i(offsetsb(rt%iTarget):offsetsb(rt%iTarget)+sizeofray)=transfer(rt,&
+           SendBuf(ibLoc,rt%iTarget)%i(offsetsb(rt%iTarget):offsetsb(rt%iTarget)+sizeofray))
+           offsetsb(rt%iTarget)=offsetsb(rt%iTarget)+sizeofray
+         ENDIF
+       ENDDO
+     ENDIF
+   ENDDO
+
+   ireq=0
+   DO ibLoc=1,nbLoc               ! exchange items
+     ib1=LocGlob(ibLoc)
+     offsetrb=1
+     DO ib=1,nb
+       IF(nItemsGet(ibLoc,ib)/=0)THEN
+         ireq=ireq+1
+         tag=LocGlob(ibLoc)+nb*ib
+         CALL MPI_IRECV(RecvBuf(ibLoc)%i(offsetrb),nItemsGet(ibLoc,ib)*sizeofray,&
+                      MPI_INTEGER,blMPI(ib)%proc,tag,MPI_COMM_WORLD,req(ireq),MPIErr)
+         offsetrb=offsetrb+nItemsGet(ibLoc,ib)*sizeofray
+       ENDIF
+     ENDDO
+   ENDDO
+
+   DO ibLoc=1,nbLoc
+     ib1=LocGlob(ibLoc)
+     DO ib=1,nb
+       IF(nItemsSend(ibLoc,ib)/=0)THEN
+         ireq=ireq+1
+         tag=ib+nb*LocGlob(ibLoc)
+         CALL MPI_ISEND(Sendbuf(ibLoc,ib)%i(1),nItemsSend(ibLoc,ib)*sizeofray,&
+                     MPI_INTEGER,blMPI(ib)%proc,tag,MPI_COMM_WORLD,req(ireq),MPIErr)
+       ENDIF
+     ENDDO
+   ENDDO
+
+
+   CALL MPI_WAITALL(ireq,req(1:ireq),StatusArray,MPIErr)
+
+   ! forget list L and create new list from RecvBuf
+   DO ibLoc=1,nbLoc
+    IF(L(ibLoc)%n>0)THEN
+      DEALLOCATE(L(ibLoc)%r)
+    ENDIF
+   ENDDO
+
+   DO ibLoc=1,nbLoc
+     L(ibLoc)%n=SUM(nItemsGet(ibLoc,1:nb))
+!     write(*,*) MyID,ibLoc,": creating new list with",L(ibLoc)%n,"Items"
+     IF(L(ibLoc)%n>0)THEN
+!       write(*,*) MyID,ibLoc,"allocating new....",L(ibLoc)%n,"items"
+        ALLOCATE(L(ibLoc)%r(L(ibLoc)%n))
+
+       offsetrb=1
+       DO i=1,L(ibLoc)%n
+         L(ibLoc)%r(i)=transfer(recvBuf(ibLoc)%i(offsetrb:offsetrb+sizeofray),L(ibLoc)%r(i))
+         r=>L(ibLoc)%r(i)
+         offsetrb=offsetrb+sizeofray
+       ENDDO
+     ENDIF
+   ENDDO
+
+   DO ibLoc=1,nbLoc
+     IF(SUM(nItemsGet(ibLoc,1:nb))>0)THEN
+       DEALLOCATE(RecvBuf(ibLoc)%i)
+     ENDIF
+     DO ib=1,nb
+       IF(nItemsSend(ibLoc,ib)>0)THEN
+         DEALLOCATE(SendBuf(ibLoc,ib)%i)
+       ENDIF
+     ENDDO
+   ENDDO
+
+ END SUBROUTINE
+
+
+ SUBROUTINE CheckShadow(L)
+   INTEGER:: ibLoc,ib,i
+   TYPE(ListT) :: L(:)
+   TYPE(RayT),POINTER :: r
+
+   DO ibLoc=1,nbLoc              ! check for new shadowinformation
+     ib=LocGlob(ibLoc)
+     CALL Set(Floor(ib))
+     IF(L(ibLoc)%n>0)THEN
+       DO i=1,L(ibLoc)%n
+         r=>L(ibLoc)%r(i)
+         IF(r%iOrigin==ib.and.(.not.r%status))THEN
+           r%send=.FALSE.
+           IF (.NOT.r%out) THEN
+             BoundCell(BoundCell3d(r%ix0,r%iy0,r%iz0))%shad=0
+           END IF  
+         ENDIF
+       ENDDO
+     ENDIF
+   ENDDO
+ END SUBROUTINE
+
+
+ SUBROUTINE ShadowCompute
+  INTEGER :: i,in,ib,ibLoc,ibT,nItems(nbLoc),nItemsSend(nbLoc,nbLoc),nItemsGet(nbLoc)
+  TYPE(ListT) :: L(nbLoc),LGet(nbLoc)
+  TYPE(RayT),POINTER :: r
+
+  !radn2=0 !! 2D-Periodic in Y-Direction
+
+  CALL StartNewRays(L)
+
+  DO in=1,nb+3
+   WRITE(*,*) 'in',in
+   CALL FollowRays(L)
+   CALL ExchangeShadow(L)
+   CALL CheckShadow(L)
+  ENDDO
+
+ END SUBROUTINE
+
+
+END MODULE Shadow_Mod

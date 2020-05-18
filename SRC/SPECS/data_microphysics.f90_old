@@ -1,0 +1,190 @@
+! File %M% from Library %Q%
+! Version %I% from %G% extracted: %H%
+!+ Variables for the computation of synthetic satellite images
+!------------------------------------------------------------------------------
+
+MODULE data_microphysics
+
+!------------------------------------------------------------------------------
+!
+! Description:
+!  This data module contains all data necessary for the computation of 
+!  the microphysical processes. It replaces the common blocks in the 
+!  original microphysics routines written in fixed format
+!
+! Current Code Owner: IfT, Verena Gruetzun
+!  phone:  +49  341 235 2228
+!  fax:    +49  341 235 2139
+!  email:  gruetzun@tropos.de
+!
+! History:
+! Version    Date       Name
+! ---------- ---------- ----
+! 1.0   March 2005    Verena Gruetzun
+!  Initial release
+! !VERSION!  !DATE!     <Your name>
+!  <Modification comments>
+!
+! Code Description:
+! Language: Fortran 90.
+! Software Standards: "European Standards for Writing and
+! Documenting Exchangeable Fortran 90 Code".
+
+!
+! Modules used:
+!
+USE data_parameters, ONLY : &
+    ireals,        & ! KIND-type parameters for real variables
+    iintegers        ! KIND-type parameter for standard integer variables
+
+USE data_modelconfig,   ONLY:                                                &
+     ie,je,ke        ! number of gridpoints in zonal/meridional direction
+
+
+!==============================================================================
+
+IMPLICIT NONE
+
+!==============================================================================
+!   
+! Declarations must be of the form:
+! <type> <VariableName> ! Description/ purpose of variable
+! Declarations:
+
+!==============================================================================
+
+! Constants for the physics, former  COMMON /PHYSIK 
+!----------------------------------------------------------------
+
+  REAL  (KIND=ireals)              ::           &
+     RW,          & ! gas constant for wet air
+     mol_w,       & ! molality of water  (nicht enthalten?)
+     SIGMA0,      & ! surface tension of water     (nicht enthalten)
+     mol_AS,      & ! moles of soluble aerosol mass
+     mol_AI,      & ! moles of insoluble aerosol mass
+     rho_AS,      & ! density of soluble aerosol mass
+     rho_AI,      & ! density of insoluble aerosol mass
+     vantS,       & ! (Stoff-Konstante) 
+     E0,          & ! saturation ratio at ...      (Nicht enthalte?!)
+     C1,          & ! constant used to calculate saturation ratio
+     C2,          & !    "
+     mol_g (7),   & ! piece-wise linear function used for osmotic coefficient
+     phi_g (7),   & !    "
+     a_phi (7),   & !    "
+     b_phi (7),   & !    "
+     CAPPA,       & ! RDRY/cp
+     FAC34,       & ! 3/(4*pi)
+     FACT,        & ! 4/3 *pi rho_w
+     fact_AS,     & ! 4/3 *pi rho_AS
+     fact_AI        ! 4/3 *pi rho_AI
+
+
+
+! VG erst mal stellen wr das epsilon hierher bis uns etwas besseres einfaellt....
+  REAL  (KIND=ireals),       TARGET, ALLOCATABLE        ::           &
+!     epsilon_mp (JMAX)  ! Fraction of ...
+     epsilon_mp (:,:,:,:), &   ! Fraction of ...
+     r_dry (:),      &   ! dry aerosol radius
+     rho_old(:,:,:), &   ! for linear approximation of forcing, old value is 
+                         ! stored here
+     pp_old (:,:,:), &   ! as above
+     p_tot_old (:,:,:), &! as above
+     vmp (:,:),      &     ! droplet velocity per bin and height
+     ttend (:,:,:)       ! dynamical temperature tendency
+                       
+
+
+! Constants for the microphysics, former  COMMON /MIKROPH 
+!----------------------------------------------------------------
+
+
+  INTEGER  (KIND=iintegers)         ::           & 
+     J2l,         & ! calculation of bin number for 2\mu m drops
+     J2u,         & !     "
+     J5l,         & ! calculation of bin number for 5\mu m drops
+     J5u,         & !     "
+     ITERMAX        ! maximal number of iterations
+
+
+  REAL  (KIND=ireals)              ::           &
+     R0,          & ! serves to variate the class boundaries, 
+                    ! may be changedin routine sconst
+     PR,          & ! constant in apvert (?!)
+     TC,          & ! used for temperature dependence of water surface tension
+     mu,          & !     ?
+     b1,          & ! used for temperature dependence of water surface tension
+     b2,          & !     "
+     bb,          & !     "
+     ALPHA_C,     & ! constant in diffusion and heat conduction (... ?)
+     ALPHA_T,     & !     "
+     DEL_V,       & ! ? (size dependent par's , DIFFSTAR, KTHSTAR)
+     DEL_T,       & !     "
+     WEI_Q,       & ! weighing factor for bin shift
+     WEI_N,       & !     "
+     SC_cond,     & ! ? (boundaries for saturatin ratio)
+     !  SATTabs,  & ! (not used ?)
+     size_fact,   & ! stop criteria for iteration loop
+     accu_fact,   & !     "
+     step_fact      !     "
+
+
+! Constants for the numerics, former  COMMON /NUMERIK 
+!----------------------------------------------------------------
+
+  REAL  (KIND=ireals)              ::           &
+     DELTAT,      & ! internal time step
+     SMALL1,      & ! small constant 
+     QU1D3          ! 1/3
+
+
+! Constants for the spectral grid, former  COMMON /SPEKGRID/ 
+!----------------------------------------------------------------
+
+! VG JMAX ist noch irgendwo zu definieren.
+
+  REAL  (KIND=ireals),       TARGET, ALLOCATABLE     ::           &
+     DIFF21 (:),    & ! difference of two boundaries
+     MGRENZ (:),    & ! boundaries of classes - mass related
+     MMITTE (:),    & ! center of classes     - mass related 
+     RGRENZ (:),    & ! boundaries of classes - radius related
+     RMITTE (:)       ! center of classes     - radius related 
+
+
+! Constants for the spectral grid, former  COMMON /KOLLISION/ 
+!----------------------------------------------------------------
+
+  INTEGER  (KIND=iintegers), TARGET, ALLOCATABLE        ::           & 
+     KZIEL (:,:)   ! target bin for collision
+
+  REAL  (KIND=ireals),       TARGET, ALLOCATABLE        ::           &
+     KOLK1D (:), &
+                            ! one dimensional collision kernel (?)
+     KOLK (:,:), & ! collision kernel (?)
+     VMITTE (:)             ! ? (velocity?!) 
+
+
+! Data type for hydrometeors
+
+TYPE meteors
+   REAL (KIND=ireals),ALLOCATABLE        :: qc (:,:,:,:,:) ! drops / particles
+   REAL (KIND=ireals),ALLOCATABLE        :: bd (:,:,:,:,:) ! boundary value
+   REAL (KIND=ireals),ALLOCATABLE        :: v  (:,:)       ! falling velocity
+   REAL (KIND=ireals),ALLOCATABLE        :: qr (:,:)       ! accumulated precipitation at ground level
+   INTEGER (KIND=iintegers)              :: nbins          ! number of bins
+   INTEGER (KIND=iintegers)              :: nvars          ! number of variables per bin
+   CHARACTER (LEN=10)                    :: varname        ! descriptor of meteor
+END TYPE
+
+
+TYPE (meteors), ALLOCATABLE   :: tmeteors (:)
+
+END MODULE data_microphysics
+
+
+
+
+
+
+
+
+

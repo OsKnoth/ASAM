@@ -1,0 +1,159 @@
+#!/bin/csh
+
+rm -f junk
+rm -f spec.sav
+
+echo HERE
+#cnhb number of hidden bands (0-2) > 2200cm-1
+foreach cnhb (  2 )
+
+# pck =CKD2.1 p24=CKD2.4 Continuum
+#foreach conti ( pck  p24 )
+foreach conti ( p24  )
+echo LWSPECTOA $conti $cnhb
+
+#foreach atm ( esrt.lay dsrt.lay ktrop.lay kmls.lay kmlw.lay ksas.lay ksaw.lay)
+#foreach atm (ktrop.lay kmls.lay kmlw.lay ksas.lay ksaw.lay)
+
+foreach atm ( mylay.lay  ) #zh2o.lay kmls.lay
+echo '============================================================================='
+
+echo Atmosphere = ${atm} '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+
+#set lab1 = "WINDOW__ATMOSPHER__CONTI__AVG_______TOA_UP___________SFC_DOWN_________COS__WindoRad_TotLwRad__FLTrad__UNFrad___FLUX"
+#set lab2 = "___________________NUUM__SCHEME___WIN___TOT_LW______WIN___TOT_LW______VZA_______Wm-2sr-1_____-----TRMM_Window-----"
+#echo $lab1
+#echo $lab2
+
+#foreach icld (  72  22 33   )
+foreach icld (   72    ) 
+#foreach icld (     ) 
+# 72 = clear
+# 35 == sfc-1
+
+set ctau = 0.0
+set phase = 'WATER'
+set psz = 0.0
+set ctauz = 0.0
+
+#if ( ${icld} >= 25 && ${icld} < 35 ) then
+# set phase = 'WATER'
+# set pszz = ( 5.0 10.0 20.0  )
+#set pszz = (   10.0   )
+#set pszz = ( 6.0 8.0 10.0 12.0 15.0 20.0 30.0 )
+#set ctauz =  ( 0.1 0.5 1.0 2.0 4.0 8.0 16.0 32.0 64.0 128.0 )
+#set ctauz =  (  1.0 2.0 4.0 6.0 8.0 16.0 )
+#set ctauz =  (   2.0  )
+#endif
+
+#if ( ${icld} < 25 ) then
+# set phase = 'ICE'
+# set pszz = ( 20.0 60.0 120.  )
+# set pszz = (  60.   )
+# set ctauz = ( 0.1 0.5 1.0 2.0 4.0 8.0 16.0 32.0 64.0 128.0 )
+#endif
+
+#echo CTAUZ $phase  $ctauz
+#echo PSZZ $phase  $pszz
+#echo ICLD $phase $icld
+
+# foreach   ctau ( $ctauz )
+# foreach    psz ( $pszz  )
+# echo $phase  $icld $ctau $psz
+
+
+#echo 'Cloud particle size = ' ${psz}
+echo '---------------------------------------------------------------'
+
+#if ( ${icld} < 72 ) echo ${phase}'-Cloud ---> TAU ='$ctau 'at layer'${icld},' Cloud particle size = '${psz}
+#if ( ${ctau} == 0.0 ) echo --CLEAR --- 
+#echo Cloud Optical Depth = ${ctau}
+
+set idkfr = 2  
+
+set iwtas = 3  
+
+foreach ur ( 0.9 )
+#echo Radiance cosVZA = $ur
+
+foreach sfcalb ( 0.15)
+echo Surface Albedo = ${sfcalb}
+
+foreach lpar  ( T   )
+echo $lpar '<-- PAR H2O Absorption'
+
+foreach lband6a ( T  )
+echo $lband6a '<-- LBAND6a >4um treatment'
+
+foreach lchou (  T )
+echo $lchou '<-- CHOU O2&CO2 Absorption'
+
+foreach lray ( T )
+echo $lray '<-- Rayleigh T=10rayleighTau : F=1Tau'
+
+foreach sza  (  0.866025 )
+#foreach sza  (     1.0 0.866025  0.7071067 0.50000 0.258819 0.087155 0.0001)
+echo  ${sza} '<-- Cosine Solar Zenith'
+
+set ispec =  4
+echo $ispec '<-- Solar Spectrum'
+
+foreach atau (  0.0 ) #0.2
+#echo AOT@500nm = ${atau}
+
+set iaform = 3    
+echo IAFORM = ${iaform}
+echo     AOT@500nm = ${atau}  
+
+set aertyp = urban
+set ifg = 0
+
+set lab1 = '___________Pres____Temp____RH%____SWDN____SWUP___DIRECT___DIFFUSE__SWHEATR___LWDN___LWUP___WNDN___WNUP.....'
+echo $lab1
+
+foreach stream ( 2 )
+foreach csksw ( 0 ) 
+
+echo $csksw
+#if ( ($csksw == 0 && ${stream} == 2 ) || ($csksw == 3 && ${stream} == 4 ) ) then
+time driver ./testatms/${atm} ${stream} ${phase} ${sza} ${sfcalb} ${icld} ${psz} ${ctau} ${atau} ${aertyp} ${conti} ON 350.0 ${idkfr} ${iwtas} ${ur} ${lchou} ${lband6a} ${ispec} ${lpar} ${lray} ${iaform}  ${ifg}  ${cnhb} ${csksw}  
+#endif
+#| grep SEIJI
+
+cat fort.22 >> spec.sav
+#stream
+end
+
+#csksw
+end
+
+
+
+end
+end
+end
+
+end
+
+
+end
+end
+
+
+
+end
+end
+end
+
+
+end
+
+
+end
+
+
+end
+
+
+exit
+

@@ -1,0 +1,377 @@
+MODULE MatVec_Mod
+  USE Domain_Mod
+  USE JacAccGrav_Mod
+
+  IMPLICIT NONE
+CONTAINS
+
+SUBROUTINE MatVec1(b,x)
+
+  TYPE(PressureVelocity), TARGET :: b(:),x(:)  
+
+  IF (GradFull) THEN
+    CALL MatVecFull(b,x)
+  ELSE  
+    CALL MatVecDual(b,x)
+  END IF  
+
+END SUBROUTINE MatVec1
+
+SUBROUTINE MatVecDual(b,x)
+
+  TYPE(PressureVelocity), TARGET :: b(:),x(:)  
+
+  TYPE(PressureVelocity), POINTER :: BVec, XVec
+  INTEGER :: ix,iy,iz
+  REAL(RealKind), POINTER :: DTU(:,:,:)
+  REAL(RealKind), POINTER :: DTV(:,:,:)
+  REAL(RealKind), POINTER :: DTW(:,:,:)
+  REAL(RealKind), POINTER :: DUT(:,:,:)
+  REAL(RealKind), POINTER :: DUR(:,:,:)
+  REAL(RealKind), POINTER :: DTT(:,:,:)
+  REAL(RealKind), POINTER :: DUU(:,:,:)
+  REAL(RealKind), POINTER :: DUV(:,:,:)
+  REAL(RealKind), POINTER :: DUW(:,:,:)
+
+
+  b=Zero
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL Set(Floor(ib))
+    
+    BVec => b(ibLoc)
+    XVec => x(ibLoc)
+    DTU=>DTUG(ibLoc)%uF
+    DTV=>DTUG(ibLoc)%vF
+    DTW=>DTUG(ibLoc)%wF
+    DUT=>DUTG(ibLoc)%p
+    DUR=>DURG(ibLoc)%p
+    DTT=>DTTG(ibLoc)%p
+    DUU=>DUUG(ibLoc)%uF
+    DUV=>DUUG(ibLoc)%vF
+    DUW=>DUUG(ibLoc)%wF
+    IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixMu)) THEN
+      CALL MatVecP(BVec%p(1,:,:,:),LaplNeumann(ibLoc)%MatrixMu, XVec%p(1,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixMuMat)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixMuMat, XVec%p(:,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixT)) THEN
+      CALL MatVecP(BVec%p(1,:,:,:),LaplNeumann(ibLoc)%MatrixT, XVec%p(1,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixTB)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixTB, XVec%p(:,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixTR)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixTR, XVec%p(:,:,:,:)) 
+    END IF
+
+    BVec%p =-BVec%p
+    IF (MultiMu.OR.MultiTriT.OR.MultiEx) THEN
+      IF (TypeW/='ow'.OR.(TypeW=='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        BVec%u_w(:,:)=Half*VolC(ix0+1,iy0+1:iy1,iz0+1:iz1)*XVec%u_w(:,:)           &
+                     +beta0*dtP*FU(ix0,:,:)*DUT(ix0+1,:,:)*DUU(ix0,:,:)*XVec%p(1,ix0+1,:,:)
+      END IF
+      IF (TypeE/='oe'.OR.(TypeE=='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        BVec%u_e(:,:)=Half*VolC(ix1,iy0+1:iy1,iz0+1:iz1)*XVec%u_e(:,:)           &
+                     -beta0*dtP*FU(ix1,:,:)*DUT(ix1,:,:)*DUU(ix1,:,:)*XVec%p(1,ix1,:,:)
+      END IF    
+      IF (TypeS/='os'.OR.(TypeS=='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        BVec%v_s(:,:)=Half*VolC(ix0+1:ix1,iy0+1,iz0+1:iz1)*XVec%v_s(:,:)           &
+                     +beta0*dtP*FV(:,iy0,:)*DUT(:,iy0+1,:)*DUV(:,iy0,:)*XVec%p(1,:,iy0+1,:)
+      END IF
+      IF (TypeN/='on'.OR.(TypeN=='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        BVec%v_n(:,:)=Half*VolC(ix0+1:ix1,iy1,iz0+1:iz1)*XVec%v_n(:,:)           &
+                     -beta0*dtP*FV(:,iy1,:)*DUT(:,iy1,:)*DUV(:,iy1,:)*XVec%p(1,:,iy1,:)
+      END IF
+      IF (TypeB/='ob'.OR.(TypeB=='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        BVec%w_b(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz0+1)*XVec%w_b(:,:)           &
+                     +beta0*dtP*FW(:,:,iz0)*DUT(:,:,iz0+1)*DUW(:,:,iz0)*XVec%p(1,:,:,iz0+1)
+      END IF
+      IF (TypeT/='ot'.OR.(TypeT=='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        BVec%w_t(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz1)   * XVec%w_t(:,:)           &
+                     -beta0*dtP*FW(:,:,iz1)*DUT(:,:,iz1)*DUW(:,:,iz1)*XVec%p(1,:,:,iz1)
+      END IF
+    ELSE IF (MultiTriTB) THEN
+      IF (TypeW/='ow'.OR.(TypeW=='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        BVec%p(2,ix0+1,:,:)=BVec%p(2,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*XVec%u_w(:,:)
+        BVec%u_w(:,:)=Half*VolC(ix0+1,iy0+1:iy1,iz0+1:iz1)*XVec%u_w(:,:)           &
+                     +beta0*dtP*FU(ix0,:,:)*DUT(ix0+1,:,:)*DUU(ix0,:,:)*XVec%p(1,ix0+1,:,:)
+      END IF
+      IF (TypeE/='oe'.OR.(TypeE=='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        BVec%p(2,ix1,:,:)=BVec%p(2,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*XVec%u_e(:,:)
+        BVec%u_e(:,:)=Half*VolC(ix1,iy0+1:iy1,iz0+1:iz1)*XVec%u_e(:,:)           &
+                     -beta0*dtP*FU(ix1,:,:)*DUT(ix1,:,:)*DUU(ix1,:,:)*XVec%p(1,ix1,:,:)
+      END IF    
+      IF (TypeS/='os'.OR.(TypeS=='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        BVec%p(2,:,iy0+1,:)=BVec%p(2,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*XVec%v_s(:,:)
+        BVec%v_s(:,:)=Half*VolC(ix0+1:ix1,iy0+1,iz0+1:iz1)*XVec%v_s(:,:)           &
+                     +beta0*dtP*FV(:,iy0,:)*DUT(:,iy0+1,:)*DUV(:,iy0,:)*XVec%p(1,:,iy0+1,:)
+      END IF
+      IF (TypeN/='on'.OR.(TypeN=='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        BVec%p(2,:,iy1,:)=BVec%p(2,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*XVec%v_n(:,:)
+        BVec%v_n(:,:)=Half*VolC(ix0+1:ix1,iy1,iz0+1:iz1)*XVec%v_n(:,:)           &
+                     -beta0*dtP*FV(:,iy1,:)*DUT(:,iy1,:)*DUV(:,iy1,:)*XVec%p(1,:,iy1,:)
+      END IF
+      IF (TypeB/='ob'.OR.(TypeB=='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        BVec%p(2,:,:,iz0+1)=BVec%p(2,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*XVec%w_b(:,:)
+        BVec%w_b(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz0+1)*XVec%w_b(:,:)           &
+                     +beta0*dtP*FW(:,:,iz0)*DUT(:,:,iz0+1)*DUW(:,:,iz0)*XVec%p(1,:,:,iz0+1) &
+                     -Half*beta0*dtP*GravComp*VolC(ix0+1:ix1,iy0+1:iy1,iz0+1)*XVec%p(2,:,:,iz0+1) 
+      END IF
+      IF (TypeT/='ot'.OR.(TypeT=='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        BVec%p(2,:,:,iz1)   = BVec%p(2,:,:,iz1)   - beta0*dtP*FW(:,:,iz1)*XVec%w_t(:,:)
+        BVec%w_t(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz1)   * XVec%w_t(:,:)           &
+                     -beta0*dtP*FW(:,:,iz1)*DUT(:,:,iz1)*DUW(:,:,iz1)*XVec%p(1,:,:,iz1) &
+                     -Half*beta0*dtP*GravComp*VolC(ix0+1:ix1,iy0+1:iy1,iz1)*XVec%p(2,:,:,iz1) 
+      END IF
+    ELSE IF (MultiTriTR.OR.MultiMuTR) THEN
+      IF (TypeW/='ow'.OR.(TypeW/='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        BVec%p(2,ix0+1,:,:)=BVec%p(2,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*XVec%u_w(:,:)
+        BVec%u_w(:,:)=Half*VolC(ix0+1,iy0+1:iy1,iz0+1:iz1)*XVec%u_w(:,:)           &
+                     +beta0*dtP*DUU(ix0,:,:)*FU(ix0,:,:)*DUT(ix0+1,:,:)*XVec%p(1,ix0+1,:,:)  &
+                     +beta0*dtP*DUU(ix0,:,:)*FU(ix0,:,:)*DUR(ix0+1,:,:)*XVec%p(2,ix0+1,:,:)
+      END IF
+      IF (TypeE/='oe'.OR.(TypeW/='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        BVec%p(2,ix1,:,:)=BVec%p(2,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*XVec%u_e(:,:)
+        BVec%u_e(:,:)=Half*VolC(ix1,iy0+1:iy1,iz0+1:iz1)*XVec%u_e(:,:)           &
+                     -beta0*dtP*DUU(ix1,:,:)*FU(ix1,:,:)*DUT(ix1,:,:)*XVec%p(1,ix1,:,:)      &
+                     -beta0*dtP*DUU(ix1,:,:)*FU(ix1,:,:)*DUR(ix1,:,:)*XVec%p(2,ix1,:,:)
+      END IF    
+      IF (TypeS/='os'.OR.(TypeW/='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        BVec%p(2,:,iy0+1,:)=BVec%p(2,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*XVec%v_s(:,:)
+        BVec%v_s(:,:)=Half*VolC(ix0+1:ix1,iy0+1,iz0+1:iz1)*XVec%v_s(:,:)           &
+                     +beta0*dtP*DUV(:,iy0,:)*FV(:,iy0,:)*DUT(:,iy0+1,:)*XVec%p(1,:,iy0+1,:)    &
+                     +beta0*dtP*DUV(:,iy0,:)*FV(:,iy0,:)*DUR(:,iy0+1,:)*XVec%p(2,:,iy0+1,:)
+      END IF
+      IF (TypeN/='on'.OR.(TypeW/='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        BVec%p(2,:,iy1,:)=BVec%p(2,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*XVec%v_n(:,:)
+        BVec%v_n(:,:)=Half*VolC(ix0+1:ix1,iy1,iz0+1:iz1)*XVec%v_n(:,:)           &
+                     -beta0*dtP*DUV(:,iy1,:)*FV(:,iy1,:)*DUT(:,iy1,:)*XVec%p(1,:,iy1,:)      &
+                     -beta0*dtP*DUV(:,iy1,:)*FV(:,iy1,:)*DUR(:,iy1,:)*XVec%p(2,:,iy1,:)
+      END IF
+      IF (TypeB/='ob'.OR.(TypeW/='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        BVec%p(2,:,:,iz0+1)=BVec%p(2,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*XVec%w_b(:,:)
+        BVec%w_b(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz0+1)*XVec%w_b(:,:)           &
+                     +beta0*dtP*DUW(:,:,iz0)*FW(:,:,iz0)*DUT(:,:,iz0+1)*XVec%p(1,:,:,iz0+1)    &
+                     +beta0*dtP*DUW(:,:,iz0)*FW(:,:,iz0)*DUR(:,:,iz0+1)*XVec%p(2,:,:,iz0+1)    &
+                     -Half*beta0*dtP*GravComp*VolC(ix0+1:ix1,iy0+1:iy1,iz0+1)*XVec%p(2,:,:,iz0+1) 
+      END IF
+      IF (TypeT/='ot'.OR.(TypeW/='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        BVec%p(2,:,:,iz1)=BVec%p(2,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*XVec%w_t(:,:)
+        BVec%w_t(:,:)=Half*VolC(ix0+1:ix1,iy0+1:iy1,iz1)*XVec%w_t(:,:)           &
+                     -beta0*dtP*DUW(:,:,iz1)*FW(:,:,iz1)*DUT(:,:,iz1)*XVec%p(1,:,:,iz1)          &
+                     -beta0*dtP*DUW(:,:,iz1)*FW(:,:,iz1)*DUR(:,:,iz1)*XVec%p(2,:,:,iz1)          &
+                     -Half*beta0*dtP*GravComp*VolC(ix0+1:ix1,iy0+1:iy1,iz1)*XVec%p(2,:,:,iz1) 
+      END IF
+    END IF
+  END DO
+
+END SUBROUTINE MatVecDual
+
+SUBROUTINE MatVecFull(b,x)
+
+
+  TYPE(PressureVelocity), TARGET :: b(:),x(:)  
+
+  TYPE(PressureVelocity), POINTER :: BVec, XVec
+  INTEGER :: ix,iy,iz
+  REAL(RealKind), POINTER :: DTU(:,:,:)
+  REAL(RealKind), POINTER :: DTV(:,:,:)
+  REAL(RealKind), POINTER :: DTW(:,:,:)
+  REAL(RealKind), POINTER :: DUT(:,:,:)
+  REAL(RealKind), POINTER :: DUR(:,:,:)
+  REAL(RealKind), POINTER :: DTT(:,:,:)
+  REAL(RealKind), POINTER :: DUU(:,:,:)
+  REAL(RealKind), POINTER :: DUV(:,:,:)
+  REAL(RealKind), POINTER :: DUW(:,:,:)
+
+
+  b=Zero
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL Set(Floor(ib))
+    
+    BVec => b(ibLoc)
+    XVec => x(ibLoc)
+    DTU=>DTUG(ibLoc)%uF
+    DTV=>DTUG(ibLoc)%vF
+    DTW=>DTUG(ibLoc)%wF
+    DUT=>DUTG(ibLoc)%p
+    DUR=>DURG(ibLoc)%p
+    DTT=>DTTG(ibLoc)%p
+    DUU=>DUUG(ibLoc)%uF
+    DUV=>DUUG(ibLoc)%vF
+    DUW=>DUUG(ibLoc)%wF
+    IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixMu)) THEN
+      CALL MatVecP(BVec%p(1,:,:,:),LaplNeumann(ibLoc)%MatrixMu, XVec%p(1,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixMuMat)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixMuMat, XVec%p(:,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixT)) THEN
+      CALL MatVecP(BVec%p(1,:,:,:),LaplNeumann(ibLoc)%MatrixT, XVec%p(1,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixTB)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixTB, XVec%p(:,:,:,:)) 
+    ELSE IF (ASSOCIATED(LaplNeumann(ibLoc)%MatrixTR)) THEN
+      CALL MatVecP(BVec%p(:,:,:,:),LaplNeumann(ibLoc)%MatrixTR, XVec%p(:,:,:,:)) 
+    END IF
+
+    BVec%p =-BVec%p
+    IF (MultiMu.OR.MultiTriT.OR.MultiEx) THEN
+      IF (TypeW/='ow'.OR.(TypeW=='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        DO iz=iz0+1,iz1
+          DO iy=iy0+1,iy1
+            BVec%u_w(iy,iz)=Half*MetrXY(iy)*MetrXZ(iz)*dx(ix0+1)*FU(ix0,iy,iz)*XVec%u_w(iy,iz) &
+                     +beta0*dtP*FU(ix0,iy,iz)*DUT(ix0+1,iy,iz)*DUU(ix0,iy,iz)*XVec%p(1,ix0+1,iy,iz)
+          END DO           
+        END DO           
+      END IF
+      IF (TypeE/='oe'.OR.(TypeE=='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        DO iz=iz0+1,iz1
+          DO iy=iy0+1,iy1
+            BVec%u_e(iy,iz)=Half*MetrXY(iy)*MetrXZ(iz)*dx(ix1)*FU(ix1,iy,iz)*XVec%u_e(iy,iz) &
+                     -beta0*dtP*FU(ix1,iy,iz)*DUT(ix1,iy,iz)*DUU(ix1,iy,iz)*XVec%p(1,ix1,iy,iz)
+          END DO           
+        END DO           
+      END IF    
+      IF (TypeS/='os'.OR.(TypeS=='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        DO iz=iz0+1,iz1
+          DO ix=ix0+1,ix1
+            BVec%v_s(ix,iz)=Half*MetrYX(ix)*MetrYZ(iz)*dy(iy0+1)*FV(ix,iy0,iz)*XVec%v_s(ix,iz) &
+                     +beta0*dtP*FV(ix,iy0,iz)*DUT(ix,iy0+1,iz)*DUV(ix,iy0,iz)*XVec%p(1,ix,iy0+1,iz)
+          END DO           
+        END DO           
+      END IF
+      IF (TypeN/='on'.OR.(TypeN=='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        DO iz=iz0+1,iz1
+          DO ix=ix0+1,ix1
+            BVec%v_n(ix,iz)=Half*MetrYX(ix)*MetrYZ(iz)*dy(iy1)*FV(ix,iy1,iz)*XVec%v_n(ix,iz) &
+                     -beta0*dtP*FV(ix,iy1,iz)*DUT(ix,iy1,iz)*DUV(ix,iy1,iz)*XVec%p(1,ix,iy1,iz)
+          END DO           
+        END DO           
+      END IF
+      IF (TypeB/='ob'.OR.(TypeB=='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
+            BVec%w_b(ix,iy)=Half*dz(iz0+1)*FW(ix,iy,iz0)*XVec%w_b(ix,iy)           &
+                         +beta0*dtP*FW(ix,iy,iz0)*DUT(ix,iy,iz0+1)*DUW(ix,iy,iz0)*XVec%p(1,ix,iy,iz0+1)
+          END DO           
+        END DO           
+      END IF
+      IF (TypeT/='ot'.OR.(TypeT=='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
+            BVec%w_t(ix,iy)=Half*dz(iz1)*FW(ix,iy,iz1)*XVec%w_t(ix,iy)           &
+                         -beta0*dtP*FW(ix,iy,iz1)*DUT(ix,iy,iz1)*DUW(ix,iy,iz1)*XVec%p(1,ix,iy,iz1)
+          END DO           
+        END DO           
+      END IF
+    ELSE IF (MultiTriTB) THEN
+      IF (TypeW/='ow'.OR.(TypeW=='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        BVec%p(2,ix0+1,:,:)=BVec%p(2,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*XVec%u_w(:,:)
+        BVec%u_w(:,:)=Half*dx(ix0+1)*XVec%u_w(:,:)           &
+                     +beta0*dtP*DUT(ix0+1,:,:)*DUU(ix0,:,:)*XVec%p(1,ix0+1,:,:)
+      END IF
+      IF (TypeE/='oe'.OR.(TypeE=='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        BVec%p(2,ix1,:,:)=BVec%p(2,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*XVec%u_e(:,:)
+        BVec%u_e(:,:)=Half*dx(ix1)*XVec%u_e(:,:)           &
+                     -beta0*dtP*DUT(ix1,:,:)*DUU(ix1,:,:)*XVec%p(1,ix1,:,:)
+      END IF    
+      IF (TypeS/='os'.OR.(TypeS=='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        BVec%p(2,:,iy0+1,:)=BVec%p(2,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*XVec%v_s(:,:)
+        BVec%v_s(:,:)=Half*dy(iy0+1)*XVec%v_s(:,:)           &
+                     +beta0*dtP*DUT(:,iy0+1,:)*DUV(:,iy0,:)*XVec%p(1,:,iy0+1,:)
+      END IF
+      IF (TypeN/='on'.OR.(TypeN=='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        BVec%p(2,:,iy1,:)=BVec%p(2,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*XVec%v_n(:,:)
+        BVec%v_n(:,:)=Half*dy(iy1)*XVec%v_n(:,:)           &
+                     -beta0*dtP*DUT(:,iy1,:)*DUV(:,iy1,:)*XVec%p(1,:,iy1,:)
+      END IF
+      IF (TypeB/='ob'.OR.(TypeB=='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        BVec%p(2,:,:,iz0+1)=BVec%p(2,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*XVec%w_b(:,:)
+        BVec%w_b(:,:)=Half*dz(iz0+1)*XVec%w_b(:,:)           &
+                     +beta0*dtP*DUT(:,:,iz0+1)*DUW(:,:,iz0)*XVec%p(1,:,:,iz0+1) &
+                     -Half*beta0*dtP*GravComp*dz(iz0+1)*XVec%p(2,:,:,iz0+1) 
+      END IF
+      IF (TypeT/='ot'.OR.(TypeT=='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        BVec%p(2,:,:,iz1)=BVec%p(2,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*XVec%w_t(:,:)
+        BVec%w_t(:,:)=Half*dz(iz1)   * XVec%w_t(:,:)           &
+                     -beta0*dtP*FW(:,:,iz1)*DUT(:,:,iz1)*DUW(:,:,iz1)*XVec%p(1,:,:,iz1) &
+                     -Half*beta0*dtP*GravComp*dz(iz1)*XVec%p(2,:,:,iz1) 
+      END IF
+    ELSE IF (MultiTriTR.OR.MultiMuTR) THEN
+      IF (TypeW/='ow'.OR.(TypeW/='ow'.AND.BCP%West==1)) THEN     
+        BVec%p(1,ix0+1,:,:)=BVec%p(1,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*DTU(ix0,:,:)*DTT(ix0+1,:,:)*XVec%u_w(:,:)
+        BVec%p(2,ix0+1,:,:)=BVec%p(2,ix0+1,:,:)+beta0*dtP*FU(ix0,:,:)*XVec%u_w(:,:)
+        BVec%u_w(:,:)=Half*dx(ix0+1)*XVec%u_w(:,:)           &
+                     +beta0*dtP*DUU(ix0,:,:)*DUT(ix0+1,:,:)*XVec%p(1,ix0+1,:,:)  &
+                     +beta0*dtP*DUU(ix0,:,:)*DUR(ix0+1,:,:)*XVec%p(2,ix0+1,:,:)
+      END IF
+      IF (TypeE/='oe'.OR.(TypeE/='oe'.AND.BCP%East==1)) THEN     
+        BVec%p(1,ix1,:,:)=BVec%p(1,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*DTU(ix1,:,:)*DTT(ix1,:,:)*XVec%u_e(:,:)
+        BVec%p(2,ix1,:,:)=BVec%p(2,ix1,:,:)-beta0*dtP*FU(ix1,:,:)*XVec%u_e(:,:)
+        BVec%u_e(:,:)=Half*dx(ix1)*XVec%u_e(:,:)           &
+                     -beta0*dtP*DUU(ix1,:,:)*DUT(ix1,:,:)*XVec%p(1,ix1,:,:)      &
+                     -beta0*dtP*DUU(ix1,:,:)*DUR(ix1,:,:)*XVec%p(2,ix1,:,:)
+      END IF    
+      IF (TypeS/='os'.OR.(TypeW/='os'.AND.BCP%South==1)) THEN     
+        BVec%p(1,:,iy0+1,:)=BVec%p(1,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*DTV(:,iy0,:)*DTT(:,iy0+1,:)*XVec%v_s(:,:)
+        BVec%p(2,:,iy0+1,:)=BVec%p(2,:,iy0+1,:)+beta0*dtP*FV(:,iy0,:)*XVec%v_s(:,:)
+        BVec%v_s(:,:)=Half*dy(iy0+1)*XVec%v_s(:,:)           &
+                     +beta0*dtP*DUV(:,iy0,:)*DUT(:,iy0+1,:)*XVec%p(1,:,iy0+1,:)    &
+                     +beta0*dtP*DUV(:,iy0,:)*DUR(:,iy0+1,:)*XVec%p(2,:,iy0+1,:)
+      END IF
+      IF (TypeN/='on'.OR.(TypeW/='on'.AND.BCP%North==1)) THEN     
+        BVec%p(1,:,iy1,:)=BVec%p(1,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*DTV(:,iy1,:)*DTT(:,iy1,:)*XVec%v_n(:,:)
+        BVec%p(2,:,iy1,:)=BVec%p(2,:,iy1,:)-beta0*dtP*FV(:,iy1,:)*XVec%v_n(:,:)
+        BVec%v_n(:,:)=Half*dy(iy1)*XVec%v_n(:,:)           &
+                     -beta0*dtP*DUV(:,iy1,:)*DUT(:,iy1,:)*XVec%p(1,:,iy1,:)      &
+                     -beta0*dtP*DUV(:,iy1,:)*DUR(:,iy1,:)*XVec%p(2,:,iy1,:)
+      END IF
+      IF (TypeB/='ob'.OR.(TypeW/='ob'.AND.BCP%Bottom==1)) THEN     
+        BVec%p(1,:,:,iz0+1)=BVec%p(1,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*DTW(:,:,iz0)*DTT(:,:,iz0+1)*XVec%w_b(:,:)
+        BVec%p(2,:,:,iz0+1)=BVec%p(2,:,:,iz0+1)+beta0*dtP*FW(:,:,iz0)*XVec%w_b(:,:)
+        BVec%w_b(:,:)=Half*dz(iz0+1)*XVec%w_b(:,:)           &
+                     +beta0*dtP*DUW(:,:,iz0)*DUT(:,:,iz0+1)*XVec%p(1,:,:,iz0+1)    &
+                     +beta0*dtP*DUW(:,:,iz0)*DUR(:,:,iz0+1)*XVec%p(2,:,:,iz0+1)    &
+                     -Half*beta0*dtP*GravComp*dz(iz0+1)*XVec%p(2,:,:,iz0+1) 
+      END IF
+      IF (TypeT/='ot'.OR.(TypeW/='ot'.AND.BCP%Top==1)) THEN     
+        BVec%p(1,:,:,iz1)=BVec%p(1,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*DTW(:,:,iz1)*DTT(:,:,iz1)*XVec%w_t(:,:)
+        BVec%p(2,:,:,iz1)=BVec%p(2,:,:,iz1)-beta0*dtP*FW(:,:,iz1)*XVec%w_t(:,:)
+        BVec%w_t(:,:)=Half*dz(iz1)*XVec%w_t(:,:)           &
+                     -beta0*dtP*DUW(:,:,iz1)*DUT(:,:,iz1)*XVec%p(1,:,:,iz1)          &
+                     -beta0*dtP*DUW(:,:,iz1)*DUR(:,:,iz1)*XVec%p(2,:,:,iz1)          &
+                     -Half*beta0*dtP*GravComp*dz(iz1)*XVec%p(2,:,:,iz1) 
+      END IF
+    END IF
+  END DO
+
+END SUBROUTINE MatVecFull
+
+END MODULE MatVec_Mod

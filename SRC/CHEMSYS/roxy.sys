@@ -1,0 +1,57 @@
+COMMENT  Test for MUSCAT
+COMMENT  18-04-2018 (RC)
+COMMENT   ===================   Unit options   ======================
+
+UNIT GAS    0   COMMENT     Gas phase units     (0 = molec/cm3, 1 = mol/m3)
+UNIT AQUA   0   COMMENT     Aqueous phase units (0 = mol/l)
+COMMENT UNIT Dummy  0   COMMENT     Dummy Unit because 3 lines have to read in to create chem (Roxy, 16.04.2018) 
+
+COMMENT   ===========================================================
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + NV + TE = Rho
+COND:
+
+CLASS: MICROPHYS
+RhoV + NV = Rho
+NUCL:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + NC + TE = Rho 
+AUTO:
+
+CLASS: MICROPHYS
+Rho + RhoR + NC = Rho
+SELFR:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + NC + TE = Rho
+ACC:
+
+CLASS: MICROPHYS
+Rho + RhoV +  RhoC + RhoR + NR + TE = Rho 
+EVAP:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + RhoI + NC + NI + TE = Rho 
+FREEZEC:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + RhoI + NI + NR + TE = Rho 
+FREEZER:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + RhoI + RhoS + NS + TE = Rho
+AUTOI:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + NI + RhoI + TE = Rho 
+ICEDEP:
+
+CLASS: MICROPHYS
+Rho + RhoV + RhoC + RhoR + NC + NI + RhoI + TE = Rho 
+MELTI:
+
+CLASS: MICROPHYS
+UCL + UCR + VCL + VCR + WCL + WCR + TE = Rho
+DUMMY: COMMENT Necessary dry atmosphere

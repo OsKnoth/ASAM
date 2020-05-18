@@ -1,0 +1,216 @@
+MODULE Vosper_Mod
+
+  USE Kind_Mod
+  USE Parameter_Mod
+  USE Domain_Mod
+  USE Physics_Mod
+
+  IMPLICIT NONE 
+
+  REAL(RealKind), PARAMETER :: VelMax=1.0d0
+  REAL(RealKind), PARAMETER :: N=1.0d-2
+  REAL(RealKind), PARAMETER :: Rho0=1.0d0
+  REAL(RealKind), PARAMETER :: th0=283.16d0
+  REAL(RealKind), PARAMETER :: D0=1.0d0
+  REAL(RealKind), PARAMETER :: qvr=0.95d0
+  REAL(RealKind), PARAMETER :: L=10000.0d0
+  REAL(RealKind), PARAMETER :: h=5000.0d0
+  REAL(RealKind), PARAMETER :: x0=0.0e0
+  REAL(RealKind), PARAMETER :: y0=L
+  REAL(RealKind), PARAMETER :: z0=0.5d0*h
+  REAL(RealKind), PARAMETER :: rx=L
+  REAL(RealKind), PARAMETER :: ry=L
+  REAL(RealKind), PARAMETER :: rz=h
+  REAL(RealKind) :: uMax=0.0d0,vMax=0.0d0
+  REAL(RealKind) :: TkeMax=0.0d0,DisMax=0.0d0
+  REAL(RealKind) :: Froude=.5d0
+  REAL(RealKind) :: Height=5000.0d0
+  NAMELIST /Example/ uMax &
+                    ,vMax &
+                    ,Height &
+                    ,Froude 
+
+
+END MODULE Vosper_Mod
+
+SUBROUTINE InputExample(FileName)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  CHARACTER(*) :: FileName
+  INTEGER :: InputUnit,Pos
+  CHARACTER(300) :: Line
+
+! Find line
+  InputUnit=1
+  OPEN(UNIT=InputUnit,FILE=TRIM(FileName),STATUS='OLD')
+  DO
+    READ(InputUnit,*,END=1) Line
+    IF (INDEX(Line,'&Example')>0) THEN
+      BACKSPACE(InputUnit)
+      READ(InputUnit,NML=Example)
+      EXIT
+    END IF
+  END DO
+1 CONTINUE
+  CLOSE(UNIT=InputUnit)
+  WRITE(*,*) 'uMax=',uMax
+  WRITE(*,*) 'vMax=',vMax
+END SUBROUTINE InputExample
+
+FUNCTION RhoFun(x,y,z)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: RhoFun
+  REAL(RealKind) :: x,y,z
+  REAL(RealKind) :: S
+  S=N*N/Grav
+  RhoFun=Rho0*EXP(-S*z)*(One-Grav/(cp*th0*S)*(One-EXP(-S*z)))**(cv/Rd)
+END FUNCTION RhoFun
+
+FUNCTION ThProfFun(x,y,z)
+  USE Vosper_Mod
+  USE Rho_Mod 
+  IMPLICIT NONE
+  REAL(RealKind) :: ThProfFun
+  REAL(RealKind) :: x,y,z
+  REAL(RealKind) :: S
+  S=N*N/Grav
+  ThProfFun=th0*exp(z*S)*RhoFun(x,y,z)
+END FUNCTION ThProfFun
+
+FUNCTION QvProfFun(x,y,z)
+  USE Vosper_Mod
+  USE Rho_Mod 
+  USE ThProf_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QvProfFun
+  REAL(RealKind) :: x,y,z
+  REAL(RealKind) :: RhoLoc,ThLoc
+  RhoLoc=RhoFun(x,y,z)
+  ThLoc=thProfFun(x,y,z)
+  QvProfFun=qvr*qvs(RhoLoc,ThLoc,ThLoc)
+END FUNCTION QvProfFun
+
+FUNCTION UStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE Rho_Mod 
+  IMPLICIT NONE
+  REAL(RealKind) :: UStart
+  REAL(RealKind) :: x,y,z,Time
+  REAL(RealKind) :: yL,yR
+  REAL(RealKind) :: U0
+  UStart=uMax*RhoFun(x,y,z)
+END FUNCTION UStart
+
+FUNCTION UStartE(x,y,z,Time)
+  USE Vosper_Mod
+  USE UVW_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: UStartE
+  REAL(RealKind) :: x,y,z,Time
+  UStartE=UStart(x,y,z,Time)
+END FUNCTION UStartE
+
+FUNCTION VStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE Rho_Mod 
+  IMPLICIT NONE
+  REAL(RealKind) :: VStart
+  REAL(RealKind) :: x,y,z,Time
+  VStart=vMax*RhoFun(x,y,z)
+END FUNCTION VStart
+
+FUNCTION VStartE(x,y,z,Time)
+  USE Vosper_Mod
+  USE UVW_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: VStartE
+  REAL(RealKind) :: x,y,z,Time
+  VStartE=VStart(x,y,z,Time)
+END FUNCTION VStartE
+
+FUNCTION WStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE Rho_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: WStart
+  REAL(RealKind) :: x,y,z,Time
+  WStart=0.0d0*RhoFun(x,y,z)
+END FUNCTION WStart
+
+FUNCTION ThStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE ThProf_Mod
+  USE Rho_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: ThStart
+  REAL(RealKind) :: x,y,z,Time
+  REAL(RealKind) :: r
+
+  r=SQRT(((x-x0)/rx)**2+((y-y0)/ry)**2+((z-z0)/rz)**2)
+  ThStart=ThProfFun(x,y,z)
+  IF (r<=1.0d0) THEN
+    thStart=thStart+(1.0d0-r)*th0*(3.0d0/283.0d0)*RhoFun(x,y,z)
+  END IF
+
+END FUNCTION ThStart
+
+FUNCTION TkeStart(x,y,z,Time)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: TkeStart
+  REAL(RealKind) :: x,y,z,Time
+  TkeStart=TkeMax
+END FUNCTION TkeStart
+
+FUNCTION DisStart(x,y,z,Time)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DisStart
+  REAL(RealKind) :: x,y,z,Time
+  DisStart=DisMax
+END FUNCTION DisStart
+
+FUNCTION QvStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE QvProf_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QvStart
+  REAL(RealKind) :: x,y,z,Time
+  QvStart=QvProfFun(x,y,z)
+END FUNCTION QvStart
+
+FUNCTION QcStart(x,y,z,Time)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QcStart
+  REAL(RealKind) :: x,y,z,Time
+  QcStart=0.0d0
+END FUNCTION QcStart
+
+FUNCTION QrStart(x,y,z,Time)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: QrStart
+  REAL(RealKind) :: x,y,z,Time
+  QrStart=0.d0
+END FUNCTION QrStart
+
+FUNCTION DStart(x,y,z,Time)
+  USE Vosper_Mod
+  USE Rho_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DStart
+  REAL(RealKind) :: x,y,z,Time
+  DStart=D0*RhoFun(x,y,z)
+END FUNCTION DStart
+
+FUNCTION DummyStart(x,y,z,Time)
+  USE Vosper_Mod
+  IMPLICIT NONE
+  REAL(RealKind) :: DummyStart
+  REAL(RealKind) :: x,y,z,Time
+  DummyStart=0.0d0
+END FUNCTION DummyStart
+
+

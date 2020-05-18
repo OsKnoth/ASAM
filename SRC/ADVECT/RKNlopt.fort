@@ -1,0 +1,42 @@
+   nStage=3
+   nPhi=0
+   RKNlopt%nStage=nStage
+   RKNlopt%nPhi=nPhi
+   ALLOCATE(RKNlopt%aRunge(nStage+1,nStage))
+   ALLOCATE(RKNlopt%cRunge(nStage+1))
+   ALLOCATE(RKNlopt%dRunge(nStage+1,nStage))
+   ALLOCATE(RKNlopt%gRunge(nStage+1,nStage))
+   aRunge=>RKNlopt%aRunge
+   cRunge=>RKNlopt%cRunge
+   dRunge=>RKNlopt%dRunge
+   gRunge=>RKNlopt%gRunge
+   DO i=2,nStage+1
+     DO j=1,i-1
+       ALLOCATE(aRunge(i,j)%Koeff(0:nPhi))
+       aRunge(i,j)%Koeff=Zero
+     END DO
+   END DO
+   aRunge(2,1)%Koeff(0)=  0.28188460254625708     
+   aRunge(3,1)%Koeff(0)= -0.55344315967153113     
+   aRunge(3,2)%Koeff(0)=  0.97852992478807921     
+   aRunge(4,1)%Koeff(0)=  0.15075124165777098     
+   aRunge(4,2)%Koeff(0)= -0.22641498510476005     
+   aRunge(4,3)%Koeff(0)=  0.60423139125907510     
+   cRunge=Zero
+   cRunge(2)=aRunge(2,1)%Koeff(0)
+   cRunge(3)=aRunge(3,1)%Koeff(0)+aRunge(3,2)%Koeff(0)
+   cRunge(4)=aRunge(4,1)%Koeff(0)+aRunge(4,2)%Koeff(0)+aRunge(4,3)%Koeff(0)
+   dRunge=Zero
+   dRunge(3,2)=  0.71707038351368635     
+   dRunge(4,2)=  0.60463496925345761     
+   dRunge(4,3)=  0.32052622872142178     
+   gRunge=Zero
+   gRunge(3,2)=  0.33820608505286859     
+   gRunge(4,2)= -0.11457926646058203     
+   gRunge(4,3)=  0.14074542449199010     
+   DO i=2,nStage+1
+     DO j=1,i-1
+       aRunge(i,j)%Koeff=aRunge(i,j)%Koeff/cRunge(i)
+       gRunge(i,j)=gRunge(i,j)/cRunge(i)
+     END DO
+   END DO

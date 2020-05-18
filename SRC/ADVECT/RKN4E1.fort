@@ -1,0 +1,54 @@
+   nStage=4
+   RKN4E1%nStage=nStage
+   ALLOCATE(RKN4E1%aRunge(nStage+1,nStage))
+   ALLOCATE(RKN4E1%cRunge(nStage+1))
+   ALLOCATE(RKN4E1%dRunge(nStage+1,nStage))
+   ALLOCATE(RKN4E1%gRunge(nStage+1,nStage))
+   ALLOCATE(RKN4E1%dtRunge(nStage+1))
+   aRunge=>RKN4E1%aRunge
+   cRunge=>RKN4E1%cRunge
+   dRunge=>RKN4E1%dRunge
+   gRunge=>RKN4E1%gRunge
+   dtRunge=>RKN4E1%dtRunge
+   aRunge=Zero
+   aRunge(2,1)=  0.13629647842266179     
+   aRunge(3,1)=  0.28046239897933556     
+   aRunge(3,2)= -1.60351333596248577E-002
+   aRunge(4,1)=  0.90471335520843155     
+   aRunge(4,2)=  -1.0401118315403626     
+   aRunge(4,3)=  0.65233756348866223     
+   aRunge(5,1)=  6.71969845545695721E-002
+   aRunge(5,2)= -0.36562186260961194     
+   aRunge(5,3)= -0.15486147083521187     
+   aRunge(5,4)=  0.97036244446880304     
+ 
+   cRunge=Zero
+   cRunge(2)=  0.13629647842266179     
+   cRunge(3)=  0.48155366095621122     
+   cRunge(4)=  0.58375197724891603     
+   cRunge(5)=  0.99999999992067423     
+ 
+   dRunge=Zero
+   dRunge(3,2)=  0.91409281030389122     
+   dRunge(4,2)=   1.1427441739726025     
+   dRunge(4,3)= -0.29521124618847322     
+   dRunge(5,2)=  0.11296528223065300     
+   dRunge(5,3)=  0.33736941129609332     
+   dRunge(5,4)=  0.50374718311858491     
+ 
+   gRunge=Zero
+   gRunge(3,2)=  0.67895198329071216     
+   gRunge(4,2)=  -1.3897416407020489     
+   gRunge(4,3)=  0.50386457630169545     
+   gRunge(5,2)= -0.37532860828160519     
+   gRunge(5,3)=  0.32092502110855337     
+   gRunge(5,4)= -0.15825968894504380     
+ 
+   dtRunge=Zero
+   DO i=2,nStage+1
+     dtRunge(i)=SUM(aRunge(i,:))
+     DO j=1,i-1
+       aRunge(i,j)=aRunge(i,j)/dtRunge(i)
+       gRunge(i,j)=gRunge(i,j)/dtRunge(i)
+     END DO
+   END DO

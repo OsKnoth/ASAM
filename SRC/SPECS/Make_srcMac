@@ -1,0 +1,13 @@
+include ../${IN}
+
+include Objects_MP
+OBJ = $(MP_FILES) 
+
+$(LIB)/libspecs.a:$(OBJ)
+	$(F90) $(OPT) -I. $(KINCL) $(PCL) -c $?
+	@ar $(X64) rv $(LIB)/libspecs.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libspecs.a
+	@rm *.o
+	@for i in *.$(ModSuf); do \
+	mv $$i $(LIB); \
+	done
