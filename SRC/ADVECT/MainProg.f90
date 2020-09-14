@@ -457,8 +457,6 @@ PROGRAM MainProg
 
   IF (Parcel) THEN
     CALL InputAdiabatic(InputFileName,VecT)
-    CALL Allocate(VecAmb,VecT)
-    VecAmb=Zero
   END IF
   IF (Baum.OR.BaumFast) THEN 
     CALL ReadBaum(InputFileName) 
@@ -719,7 +717,10 @@ PROGRAM MainProg
   IF (Chemie) THEN
     IF (IniFile/='') THEN 
       CALL InitGas(VecT,RhoCell,IniFile)
+      CALL Allocate(VecAmb,VecT)
+      VecAmb=Zero
       CALL InitAmbientGas(VecAmb,IniFile)
+      CALL InitBoundaryGas(IniFile)
       PosDummy=Position('Dummy1')
       IF (PosDummy>0) THEN
         CALL VectorInit(PosDummy,VecT,DummyStart1,Time)

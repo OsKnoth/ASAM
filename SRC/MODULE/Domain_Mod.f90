@@ -124,7 +124,7 @@ MODULE Domain_Mod
   REAL(RealKind) :: zRauhBaum=0.1d0,distBaum=0.2d0 ! Hinneburg: gilt innerhalb Baumschicht (Testwerte)
 
   TYPE Domain_T
-    CHARACTER(2) :: TypeE,TypeW,TypeS,TypeN,TypeB,TypeT
+    CHARACTER(3) :: TypeE='',TypeW='',TypeS='',TypeN='',TypeB='',TypeT=''
     REAL(RealKind) :: Boundary
     INTEGER :: nx,ny,nz            ! number of cells in x-,y-,z-direction
     INTEGER :: nc                  ! number of cells of the block
@@ -233,7 +233,7 @@ MODULE Domain_Mod
   INTEGER :: RefineZ
   REAL(RealKind) :: Boundary
   INTEGER :: nrsoillayers
-  CHARACTER(2) :: TypeE,TypeW,TypeS,TypeN,TypeB,TypeT
+  CHARACTER(3) :: TypeE,TypeW,TypeS,TypeN,TypeB,TypeT
   REAL(RealKind) :: dphi
   REAL(RealKind) :: MaxHeight
 

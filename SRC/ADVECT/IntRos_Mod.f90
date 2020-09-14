@@ -200,7 +200,7 @@ SUBROUTINE StageRos(VelC,VelF,dtAct,Time)
       CALL VelocityFaceToCellLR(VelF,VelC)
       CALL BoundaryVelocity(VelC,TimeF)
     END IF
-    CALL BoundaryCondition(VelC,TimeF)
+    CALL BoundaryCondition(VelC,VelF,TimeF)
     CALL ExchangeCell(VelC)
     CALL PrepareF(VelC,VelF,TimeF)
     IF (iStage==1) THEN

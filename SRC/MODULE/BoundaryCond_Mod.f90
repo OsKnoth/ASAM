@@ -627,23 +627,6 @@ SUBROUTINE InputModelBC(FileName)
 25  CONTINUE
   END IF
 
-  IF (VectorComponentsM>NumMet) THEN ! Hinneburg
-    REWIND(InputUnit)
-    DO
-      READ(InputUnit,*,END=26) Line
-      IF (INDEX(Line,'&ModelBCgas')>0) THEN ! Hinneburg
-        BACKSPACE(InputUnit)
-        BCScal=BCVec(VectorComponentsM)
-        READ(InputUnit,NML=ModelBCgas)
-        DO ic=NumMet+1,VectorComponentsM
-          BCVec(ic)=BCScal
-        END DO
-        EXIT
-      END IF
-    END DO
-26  CONTINUE
-  END IF
-
 ! Signing BCVel='MeanFlow' from BCVec
 ! (one 'MeanValue' --> 'MeanFlow') ! Hinneburg (for CALL MeanProfileCompute)
 
@@ -699,7 +682,7 @@ SUBROUTINE InputModelBC(FileName)
 ! Fixing of all BCVec=Period in case of BCVel=Period
 
   IF (BCVel%West=='Period') THEN
-    DO ic=1,VectorComponentsM
+    DO ic=1,NumMet
       BCVec(ic)%West='Period'
     END DO
   END IF
@@ -764,6 +747,21 @@ SUBROUTINE InputModelBC(FileName)
     END IF
   END DO
 31 CONTINUE
+  IF (VectorComponentsM>NumMet) THEN ! Hinneburg
+    REWIND(InputUnit)
+    DO
+      READ(InputUnit,*,END=32) Line
+      IF (INDEX(Line,'&ModelBCGas')>0) THEN ! Hinneburg
+        BACKSPACE(InputUnit)
+        READ(InputUnit,NML=ModelBCgas)
+        DO ic=NumMet+1,VectorComponentsM
+          BCVec(ic)=BCScal
+        END DO
+        EXIT
+      END IF
+    END DO
+32  CONTINUE
+  END IF
   CLOSE(InputUnit)
 
   IF (MyId==0.AND.PrintNameLists) THEN

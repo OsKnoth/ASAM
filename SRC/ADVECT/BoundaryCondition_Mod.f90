@@ -3,6 +3,7 @@ MODULE BoundaryCondition_Mod
   USE Names_Mod
   USE Example_Mod
   USE Control_Mod
+  USE Chemie_Mod
 
   IMPLICIT NONE
 
@@ -74,12 +75,22 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
   INTEGER :: ix,iy,iz,ic
   REAL(RealKind) :: xPL,yPL,zPl
 
-  IF (TypeW=='ow') THEN
+  IF (TypeW(1:2)=='ow'.OR.TypeW=='iwo') THEN
     ix=ix0
     IF (BC%West=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           c(ix0,iy,iz,:)=c(ix0+1,iy,iz,:)
+        END DO
+      END DO
+    ELSE IF (BC%West=='InFlowOutFlow') THEN
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          IF (uF(ix0,iy,iz)>=0.0d0) THEN
+            c(ix0,iy,iz,:)=Rho(ix0,iy,iz,1)*VecAmb(ibLoc)%Vec(ic)%c(ix0,iy,iz,:)
+          ELSE
+            c(ix0,iy,iz,:)=c(ix0+1,iy,iz,:)
+          END IF
         END DO
       END DO
     ELSE IF (BC%West=='ZeroValue') THEN
@@ -110,12 +121,22 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
     END IF
   END IF
 
-  IF (TypeE=='oe') THEN
+  IF (TypeE(1:2)=='oe'.OR.TypeE=='ieo') THEN
     ix=ix1
     IF (BC%East=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           c(ix1+1,iy,iz,:)=c(ix1,iy,iz,:)
+        END DO
+      END DO
+    ELSE IF (BC%East=='InFlowOutFlow') THEN
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          IF (uF(ix1,iy,iz)<=0.0d0) THEN
+            c(ix1+1,iy,iz,:)=Rho(ix1+1,iy,iz,1)*VecAmb(ibLoc)%Vec(ic)%c(ix1+1,iy,iz,:)
+          ELSE
+            c(ix1+1,iy,iz,:)=c(ix1,iy,iz,:)
+          END IF
         END DO
       END DO
     ELSE IF (BC%East=='ZeroValue') THEN
@@ -146,12 +167,22 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
     END IF
   END IF
 
-  IF (TypeS=='os') THEN
+  IF (TypeS(1:2)=='os'.OR.TypeS=='iso') THEN
     iy=iy0
     IF (BC%South=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           c(ix,iy0,iz,:)=c(ix,iy0+1,iz,:)
+        END DO
+      END DO
+    ELSE IF (BC%South=='InFlowOutFlow') THEN
+      DO iz=iz0+1,iz1
+        DO ix=ix0+1,ix1
+          IF (vF(ix,iy0,iz)>=0.0d0) THEN
+            c(ix,iy0,iz,:)=Rho(ix,iy0,iz,1)*VecAmb(ibLoc)%Vec(ic)%c(ix,iy0,iz,:)
+          ELSE
+            c(ix,iy0,iz,:)=c(ix,iy0+1,iz,:)
+          END IF
         END DO
       END DO
     ELSE IF (BC%South=='ZeroValue') THEN
@@ -182,12 +213,22 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
     END IF
   END IF
 
-  IF (TypeN=='on') THEN
+  IF (TypeN(1:2)=='on'.OR.TypeN=='ino') THEN
     iy=iy1
     IF (BC%North=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           c(ix,iy1+1,iz,:)=c(ix,iy1,iz,:)
+        END DO
+      END DO
+    ELSE IF (BC%North=='InFlowOutFlow') THEN
+      DO iz=iz0+1,iz1
+        DO ix=ix0+1,ix1
+          IF (vF(ix,iy1,iz)<=0.0d0) THEN
+            c(ix,iy1+1,iz,:)=Rho(ix,iy1+1,iz,1)*VecAmb(ibLoc)%Vec(ic)%c(ix,iy1+1,iz,:)
+          ELSE
+            c(ix,iy1+1,iz,:)=c(ix,iy1,iz,:)
+          END IF
         END DO
       END DO
     ELSE IF (BC%North=='ZeroValue') THEN
@@ -218,7 +259,7 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
     END IF
   END IF
 
-  IF (TypeB=='ob') THEN
+  IF (TypeB(1:2)=='ob'.OR.TypeB=='ibo') THEN
     iz=iz0
     IF (BC%Bottom=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
@@ -260,7 +301,7 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
     END IF
   END IF
 
-  IF (TypeT=='ot') THEN
+  IF (TypeT(1:2)=='ot'.OR.TypeT=='ito') THEN
     iz=iz1
     IF (BC%Top=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
@@ -303,6 +344,47 @@ SUBROUTINE BoundaryCompute(Val,Time,ic)
   END IF
 
 END SUBROUTINE BoundaryCompute
+
+SUBROUTINE BoundaryFluxCompute(ic) 
+  INTEGER :: ic
+
+  IF (TypeW(1:2)=='ow'.OR.TypeW=='iwo') THEN
+    IF (BC%West=='InFlowOutFlow') THEN
+      c(ix0,:,:,:)=0.0d0
+    END IF
+  END IF
+
+  IF (TypeE(1:2)=='oe'.OR.TypeE=='ieo') THEN
+    IF (BC%East=='InFlowOutFlow') THEN
+      c(ix1+1,:,:,:)=0.0d0
+    END IF
+  END IF
+
+  IF (TypeS(1:2)=='os'.OR.TypeS=='iso') THEN
+    IF (BC%South=='InFlowOutFlow') THEN
+      c(:,iy0,:,:)=0.0d0
+    END IF
+  END IF
+
+  IF (TypeN(1:2)=='on'.OR.TypeN=='ino') THEN
+    IF (BC%North=='InFlowOutFlow') THEN
+      c(:,iy1+1,:,:)=0.0d0
+    END IF
+  END IF
+
+  IF (TypeB(1:2)=='ob'.OR.TypeB=='ibo') THEN
+    IF (BC%Bottom=='InFlowOutFlow') THEN
+      c(:,:,iz0,:)=0.0d0
+    END IF
+  END IF
+
+  IF (TypeT(1:2)=='ot'.OR.TypeT=='ito') THEN
+    IF (BC%Top=='InFlowOutFlow') THEN
+      c(:,:,iz1+1,:)=0.0d0
+    END IF
+  END IF
+
+END SUBROUTINE BoundaryFluxCompute
 
 SUBROUTINE BoundaryVelocityFace(VelocityFace,Time)
  
@@ -1040,15 +1122,44 @@ SUBROUTINE BoundaryConditionT(VectorCell,Time)
     END DO
   END DO
 END SUBROUTINE BoundaryConditionT
- 
-SUBROUTINE BoundaryCondition(VectorCell,Time)
+
+SUBROUTINE BoundaryFluxCondition(VectorCell)
  
   TYPE(Vector4Cell_T), TARGET :: VectorCell(:)
+ 
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL DomainSet(ib)
+    DO ic=LBOUND(VectorCell(ibLoc)%Vec,1)+1,UBOUND(VectorCell(ibLoc)%Vec,1)
+      c=>VectorCell(ibLoc)%Vec(ic)%c
+      BC=>BCVec(ic)
+      IF      (ic==  uPosL) THEN
+      ELSE IF (ic==  vPosL) THEN
+      ELSE IF (ic==  wPosL) THEN
+      ELSE IF (ic==  uPosR) THEN
+      ELSE IF (ic==  vPosR) THEN
+      ELSE IF (ic==  wPosR) THEN
+      ELSE 
+        CALL BoundaryFluxCompute(ic)
+      END IF
+    END DO
+  END DO
+
+END SUBROUTINE BoundaryFluxCondition
+
+SUBROUTINE BoundaryCondition(VectorCell,VelF,Time)
+ 
+  TYPE(Vector4Cell_T), TARGET :: VectorCell(:)
+  TYPE (VelocityFace_T), TARGET :: VelF(:)
   REAL(RealKind) :: Time
  
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL DomainSet(ib)
+    Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+    uF=>VelF(ibLoc)%uF
+    vF=>VelF(ibLoc)%vF
+    wF=>VelF(ibLoc)%wF
     DO ic=LBOUND(VectorCell(ibLoc)%Vec,1)+1,UBOUND(VectorCell(ibLoc)%Vec,1)
       c=>VectorCell(ibLoc)%Vec(ic)%c
       BC=>BCVec(ic)

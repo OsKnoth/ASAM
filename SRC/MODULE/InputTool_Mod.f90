@@ -34,13 +34,14 @@ SUBROUTINE ClearFile
 
 END SUBROUTINE ClearFile
 
-SUBROUTINE LineFile(Back,Start1,Start2,End,Name1,Name2 &
+SUBROUTINE LineFile(Back,Start1,Start2,End &
+                   ,Name1,Name2,Name3,Name4,Name5,Name6,Name7 &
                    ,R1,R2,R3,R4,R5,R6,R7,R8,R)
 
   LOGICAL :: Back
   CHARACTER(*), OPTIONAL :: Start1,Start2
   CHARACTER(*) :: End
-  CHARACTER(*), OPTIONAL :: Name1,Name2
+  CHARACTER(*), OPTIONAL :: Name1,Name2,Name3,Name4,Name5,Name6,Name7
   REAL(RealKind), OPTIONAL :: R1,R2,R3,R4,R5,R6,R7,R8 
   REAL(RealKind), OPTIONAL :: R(:) 
 
@@ -102,6 +103,31 @@ SUBROUTINE LineFile(Back,Start1,Start2,End,Name1,Name2 &
           READ(Line,*) Name2
           Line(INDEX(Line,TRIM(Name2)): &
                INDEX(Line,TRIM(Name2))+LEN(TRIM(Name2))-1)=' '
+        END IF
+        IF (PRESENT(Name3)) THEN
+          READ(Line,*) Name3
+          Line(INDEX(Line,TRIM(Name3)): &
+               INDEX(Line,TRIM(Name3))+LEN(TRIM(Name3))-1)=' '
+        END IF
+        IF (PRESENT(Name4)) THEN
+          READ(Line,*) Name4
+          Line(INDEX(Line,TRIM(Name4)): &
+               INDEX(Line,TRIM(Name4))+LEN(TRIM(Name4))-1)=' '
+        END IF
+        IF (PRESENT(Name5)) THEN
+          READ(Line,*) Name5
+          Line(INDEX(Line,TRIM(Name5)): &
+               INDEX(Line,TRIM(Name5))+LEN(TRIM(Name5))-1)=' '
+        END IF
+        IF (PRESENT(Name6)) THEN
+          READ(Line,*) Name6
+          Line(INDEX(Line,TRIM(Name6)): &
+               INDEX(Line,TRIM(Name6))+LEN(TRIM(Name6))-1)=' '
+        END IF
+        IF (PRESENT(Name7)) THEN
+          READ(Line,*) Name7
+          Line(INDEX(Line,TRIM(Name7)): &
+               INDEX(Line,TRIM(Name7))+LEN(TRIM(Name7))-1)=' '
         END IF
         DO i=1,LenWork
           LINE=ADJUSTL(Line)

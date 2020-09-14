@@ -270,12 +270,12 @@ SUBROUTINE StageRos(VelC,VelF,VelG,dt,Time)
 
   DO iStage=1,nStage
     TimeF=Time+Gamma1(iStage-1)*dt
+    CALL ExchangeCell(VelC)
     IF (uPosL>0) THEN
       CALL VelocityFaceToCellLR(VelF,VelC)
       CALL BoundaryVelocity(VelC,TimeF)
     END IF
-    CALL BoundaryCondition(VelC,TimeF)
-    CALL ExchangeCell(VelC)
+    CALL BoundaryCondition(VelC,VelF,TimeF)
     CALL PrepareF(VelC,VelF,TimeF)
     IF (iStage==1) THEN
       IF (JacTransport) THEN
@@ -781,7 +781,7 @@ SUBROUTINE ExpIntRk(VelF,VelC,dtAct,Time,ATol,RTol)
     CALL VelocityFaceToCellLR(VecVelF(iStage)%VecF,VecU)
     CALL BoundaryVelocity(VecU,Time+cRunge(iStage)*dtAct)
     CALL ExchangeCell(VecU)
-    CALL BoundaryCondition(VecVelC(iStage)%Vec,Time+cRunge(iStage)*dtAct)
+    CALL BoundaryCondition(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,Time+cRunge(iStage)*dtAct)
 !----------------------------------------
 !   Part of PrepareF
     CALL PrepareFEx(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time+cRunge(iStage)*dtAct)
@@ -892,7 +892,7 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
 !     CALL Copy(VelC,VelCOld)
       CALL Copy(VelF,VelFOld)
       RhsVecFF=Zero
-      CALL BoundaryCondition(VelC,Time)
+      CALL BoundaryCondition(VelC,VelF,Time)
       CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
       CALL Axpy(dTau,RhsVecFF,VelF)
       CALL Axpy(dTau,RhsVelFS,VelF)
@@ -907,7 +907,7 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
     END DO
   ELSE
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,Time)
+    CALL BoundaryCondition(VelC,VelF,Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(dTau,RhsVecFF,VelF)
     CALL Axpy(dTau,RhsVelFS,VelF)
@@ -968,7 +968,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
   END DO
   IF (ns>0) THEN
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,Time)
+    CALL BoundaryCondition(VelC,VelF,Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(Half*dTau,RhsVecFF,VelF)
     CALL Axpy(Half*dTau,RhsVelFS,VelF)
@@ -978,7 +978,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
       CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
       CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
       RhsVecFF=Zero
-      CALL BoundaryCondition(VelC,Time)
+      CALL BoundaryCondition(VelC,VelF,Time)
       CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
       CALL Axpy(dTau,RhsVecFF,VelF)
       CALL Axpy(dTau,RhsVelFS,VelF)
@@ -989,13 +989,13 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
     CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,Time)
+    CALL BoundaryCondition(VelC,VelF,Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(Half*dTau,RhsVecFF,VelF)
     CALL Axpy(Half*dTau,RhsVelFS,VelF)
   ELSE
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,Time)
+    CALL BoundaryCondition(VelC,VelF,Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(dTau,RhsVecFF,VelF)
     CALL Axpy(dTau,RhsVelFS,VelF)

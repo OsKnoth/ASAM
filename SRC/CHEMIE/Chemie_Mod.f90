@@ -2237,6 +2237,48 @@ SUBROUTINE InitGas(VecT,RhoCell,FileName)
 
 END SUBROUTINE InitGas
 
+SUBROUTINE InitBoundaryGas(FileName)
+
+  TYPE(Vector4Cell_T), POINTER :: VecT(:)
+  TYPE(ScalarCell_T), POINTER :: RhoCell(:)
+  CHARACTER(*) :: FileName
+
+  INTEGER :: Pos,iz
+  REAL(RealKind) :: c1,tAbs,p,cValue
+  CHARACTER(20) :: S1,S2,End,SpeciesName,GasUnit
+  CHARACTER(40) :: BoundaryW,BoundaryS,BoundaryE,BoundaryN,BoundaryB,BoundaryT
+  CHARACTER*300 :: Line
+  LOGICAL :: Back
+
+
+  S1='BEGIN_GAS'
+  S2='BEGIN_BOUNDARY'
+  End='END_BOUNDARY'
+
+  CALL OpenFile(FileName)
+  DO
+    CALL LineFile(Back,S1,S2,End,Name1=SpeciesName &
+                                ,Name2=BoundaryW &
+                                ,Name3=BoundaryS &
+                                ,Name4=BoundaryE &
+                                ,Name5=BoundaryN &
+                                ,Name6=BoundaryB &
+                                ,Name7=BoundaryT)
+    IF (Back) THEN
+      EXIT
+    END IF
+    Pos=Position(SpeciesName)
+    IF (Pos>0) THEN
+      DO ibLoc=1,nbLoc
+        ib=LocGlob(ibLoc)
+        CALL Set(Floor(ib))
+      END DO
+    END IF
+  END DO
+  CALL CloseFile
+
+END SUBROUTINE InitBoundaryGas
+
 SUBROUTINE InitAmbientGas(VecT,FileName)
 
   CHARACTER(*) :: FileName
@@ -2275,7 +2317,7 @@ SUBROUTINE InitAmbientGas(VecT,FileName)
         ELSE IF(TRIM(GasUnit)=='kg') THEN
           cValue=c1
         END IF
-         VecAmb(ibLoc)%Vec(Pos)%c(:,:,:,1)=cValue*VolC/(VolC+Eps)
+        VecAmb(ibLoc)%Vec(Pos)%c(:,:,:,1)=cValue*VolC/(VolC+Eps)
       END DO
     END IF
   END DO

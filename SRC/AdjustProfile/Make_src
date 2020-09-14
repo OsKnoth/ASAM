@@ -9,8 +9,8 @@ $(LIB)/libadjust.a: $(OBJ) Profile_Mod.f90
 	@if [ -f *.o ] ;\
           then  rm *.o ;\
          fi
-	$(F90_F) $(OPT1) -I. $(KINCL) -c $(PCL) $?
-	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $(PCL) Profile_Mod.f90
+	$(F77) $(OPT1) -fallow-argument-mismatch   -I. $(KINCL) -c $(PCL) $?
+	$(F90) $(OPTFREE) -fallow-argument-mismatch   -I. $(INCL) $(KINCL) -c $(PCL) Profile_Mod.f90
 	@ar $(X64) rv $(LIB)/libadjust.a *.o
 	@ar $(X64) ts $(LIB)/libadjust.a
 	@rm *.o

@@ -551,6 +551,7 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     END IF
   END DO
 
+  CALL BoundaryFluxCondition(Rhs)
   CALL ExchangeFlux(Rhs)
 
   DO ibLoc=1,nbLoc
@@ -971,6 +972,7 @@ SUBROUTINE FcnMetG(VectorCell,Velocityface,Rhs,Time,dt)
     END IF  
     CALL AdvectionCompute(PhiLim)
   END DO
+  CALL BoundaryFluxCondition(Rhs)
   CALL ExchangeFlux(Rhs)
 
   DO ibLoc=1,nbLoc
@@ -1031,6 +1033,7 @@ SUBROUTINE FcnMet(VectorCell,Velocityface,Rhs,Time,dt,VectorCellG)
         RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
         f=>Rhs(ibLoc)%Vec(ic)%c
         vFall=FallVelocity(ic)
+        BC=>BCVec(ic)
         IF (ic==RhoPos) THEN
           c=>VectorCell(ibLoc)%Vec(RhoPos)%c
           CALL AdvectionCompute(PhiLim)
@@ -1276,6 +1279,7 @@ SUBROUTINE FcnMet(VectorCell,Velocityface,Rhs,Time,dt,VectorCellG)
 !   END DO
 ! END IF !Precip
 
+  CALL BoundaryFluxCondition(Rhs)
   CALL ExchangeFlux(Rhs)
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)

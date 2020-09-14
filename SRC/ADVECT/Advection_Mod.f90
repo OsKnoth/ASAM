@@ -972,7 +972,7 @@ SUBROUTINE AdvectionComputeP(Phi,FallF,Species)
       END DO
     END DO
   END DO
-  IF (TypeW=='ow') THEN
+  IF (TypeW(1:2)=='ow'.OR.(TypeW=='iwo'.AND.BC%West=='InFlowOutFlow')) THEN
     DO iz=iz0+1,iz1
       DO iy=iy0+1,iy1
         Flux=Half*(ABS(uF(ix0,iy,iz))+uF(ix0,iy,iz))* &
@@ -982,7 +982,7 @@ SUBROUTINE AdvectionComputeP(Phi,FallF,Species)
       END DO
     END DO
   END IF
-  IF (TypeE=='oe') THEN
+  IF (TypeE(1:2)=='oe'.OR.(TypeE=='ieo'.AND.BC%East=='InFlowOutFlow')) THEN
     DO iz=iz0+1,iz1
       DO iy=iy0+1,iy1
         Flux=Half*(ABS(uF(ix1,iy,iz))-uF(ix1,iy,iz))* &
@@ -992,7 +992,7 @@ SUBROUTINE AdvectionComputeP(Phi,FallF,Species)
       END DO
     END DO
   END IF
-  IF (TypeS=='os') THEN
+  IF (TypeS(1:2)=='os'.OR.(TypeS=='iso'.AND.BC%South=='InFlowOutFlow')) THEN
     DO iz=iz0+1,iz1
       DO ix=ix0+1,ix1
         Flux=Half*(ABS(vF(ix,iy0,iz))+vF(ix,iy0,iz))* &
@@ -1002,7 +1002,7 @@ SUBROUTINE AdvectionComputeP(Phi,FallF,Species)
       END DO
     END DO
   END IF
-  IF (TypeN=='on') THEN
+  IF (TypeN(1:2)=='on'.OR.(TypeN=='ino'.AND.BC%North=='InFlowOutFlow')) THEN
     DO iz=iz0+1,iz1
       DO ix=ix0+1,ix1
         Flux=Half*(ABS(vF(ix,iy1,iz))-vF(ix,iy1,iz))* &

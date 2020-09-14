@@ -118,7 +118,7 @@ SUBROUTINE ExpIntPeer(VecVelF,VecVelC,dtAct,Time,ATol,RTol)
       CALL VelocityFaceToCellLR(VecVelF(iStage)%VecF,VecU)
       CALL BoundaryVelocity(VecU,Time)
       CALL ExchangeCell(VecU)
-      CALL BoundaryCondition(VecVelC(iStage)%Vec,Time)
+      CALL BoundaryCondition(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,Time)
 !----------------------------------------
 !   Part of PrepareF
     CALL PrepareFEx(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time)
@@ -195,7 +195,7 @@ SUBROUTINE ExpIntPeer(VecVelF,VecVelC,dtAct,Time,ATol,RTol)
     CALL VelocityFaceToCellLR(VecVelF(iStage)%VecF,VecU)
     CALL BoundaryVelocity(VecU,Time)
     CALL ExchangeCell(VecU)
-    CALL BoundaryCondition(VecVelC(iStage)%Vec,Time)
+    CALL BoundaryCondition(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,Time)
 !----------------------------------------
 !   Part of PrepareF
     CALL PrepareFEx(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time)
