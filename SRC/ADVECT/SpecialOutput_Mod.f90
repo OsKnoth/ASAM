@@ -896,7 +896,7 @@ SUBROUTINE ProfileVariablesCompute(VecC,Out,Time)
             rt=rLLoc+rVLoc
             Lv=LatHeat(T)
             Outc(ix,iy,iz,1)=T*((RhoDLoc*Rd*T)/p0)**(-Rd/(Cpd+Cpl*rt)) &
-                              *((RhoVLoc*Rv*T)/(SaturVapor(T)+Eps))**(-rvLoc*Rv/(Cpd+Cpl*rt)) &
+!                             *((RhoVLoc*Rv*T)/(SaturVapor(T)+Eps))**(-rvLoc*Rv/(Cpd+Cpl*rt)) &
                               *EXP(Lv*rvLoc/((Cpd+Cpl*rt)*T+Eps))
           END DO
         END DO
@@ -1098,7 +1098,7 @@ SUBROUTINE ComputeThEquiv(VecC,Out)
           rt=rLLoc+rVLoc
           Lv=LatHeat(Te)
           Outc(ix,iy,iz,1)=Te*((RhoDLoc*Rd*Te)/p0)**(-Rd/(Cpd+Cpl*rt)) &
-                           *((RhoVLoc*Rv*Te)/(SaturVapor(Te)+Eps))**(-rvLoc*Rv/(Cpd+Cpl*rt)) &
+!                          *((RhoVLoc*Rv*Te)/(SaturVapor(Te)+Eps))**(-rvLoc*Rv/(Cpd+Cpl*rt)) &
                            *EXP(Lv*rvLoc/((Cpd+Cpl*rt)*Te+Eps))
         END DO
       END DO

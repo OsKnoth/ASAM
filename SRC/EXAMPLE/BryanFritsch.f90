@@ -317,7 +317,7 @@ FUNCTION ThStart(x,y,z,zHeight,Time)
 
   IF (ProfIn) THEN
     IF (Load) THEN
-      CALL ReadProfile(cInt,thType,'thProf')
+      CALL ReadProfile(cInt,thType,'ThProf')
       Load=.FALSE.
     END IF
     ThStart=ProfileEqual(cInt,z)

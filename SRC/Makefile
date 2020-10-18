@@ -95,7 +95,7 @@ Average: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD Adju
 GridGen: GridD 
 	$(LINK) $(OPT) $(INCL) $(KGRIDINCL) -o GridGen\
         GRID/MainProg.f90 $(OP) $(OBJGRID) $(CURFIT) $(SURFIT) $(GK) $(CL) ;\
-        mv GridGen ../LIBGRID_$(MACH)/Grid.$(MACH);\
+        mv GridGen $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH);\
         rm -f ~/bin/Grid.$(MACH);\
         ln -s $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH) ~/bin/Grid.$(MACH);
 
@@ -127,7 +127,7 @@ ShapeOSD: ShapeD
         ln -s $(DEFPATH)/LIBGRID_$(MACH)/ShapeOSD.$(MACH) ~/bin/ShapeOSD.$(MACH);
 
 Adjust: dassl CgD ModD
-	$(LINK) $(OPT) $(INCL) $(KINCL) -o Adjust AdjustProfile/Profile_Mod.f90 AdjustProfile/ProfileMain.f90 AdjustProfile/DASSL/*.o\
+	$(LINK) $(OPT) -fallow-argument-mismatch $(INCL) $(KINCL) -o Adjust AdjustProfile/Profile_Mod.f90 AdjustProfile/ProfileMain.f90 AdjustProfile/DASSL/*.o\
         $(CGLIB) $(MODLIB);\
         mv Adjust ../bin/AdjustProfile.$(MACH);\
         rm -f ~/bin/AdjustProfile.$(MACH);\

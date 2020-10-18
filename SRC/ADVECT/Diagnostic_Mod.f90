@@ -4,10 +4,31 @@ MODULE Diagnostic_Mod
   USE Physics_Mod
   USE Thermodynamic_Mod
   USE Operator_Mod
+  USE Chemie_Mod
 
   IMPLICIT NONE
 
 CONTAINS
+
+FUNCTION TotalScalar(VectorCell,Name)
+  REAL(RealKind) :: TotalScalar
+  TYPE(Vector4Cell_T) :: VectorCell(:)
+  CHARACTER(*) :: Name
+
+  INTEGER :: Pos
+  REAL(RealKind) :: TotalScalarLoc
+
+  Pos=Position(Name)
+  TotalScalarLoc=0.0d0
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL DomainSet(ib)
+    TotalScalarLoc=TotalScalarLoc+SUM(VectorCell(ibLoc)%Vec(Pos)%c(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1,1)*VolB)
+  END DO
+  CALL MPI_Allreduce(TotalScalarLoc,TotalScalar,1,MPI_RealKind, &
+&                    MPI_SUM,MPI_Comm_World,MPIErr)
+
+END FUNCTION TotalScalar
 
 FUNCTION TotalValues(VectorCell,Velocityface)
   REAL(RealKind) :: TotalValues(1:6)

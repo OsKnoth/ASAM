@@ -1892,7 +1892,7 @@ FUNCTION DistanceHaus(x,y,z,DistSurf)
       EXIT
     END IF
   END DO S2
-! DistanceHaus=MIN(DistanceHaus,z)
+  DistanceHaus=MIN(DistanceHaus,z)
 END FUNCTION DistanceHaus
 
 FUNCTION BiQuadratic(x,y,z)

@@ -772,29 +772,49 @@ SUBROUTINE read_grid2(FileName)
         Floor(ib)%nz = Floor(ib)%iz1 - Floor(ib)%iz0
         Floor(ib)%nc = Floor(ib)%nx * Floor(ib)%ny * Floor(ib)%nz
 
-        Floor(ib)%TypeW='iw'
-        IF (Floor(ib)%igx0==domain%ix0.AND.BCVel%West/='Period') THEN
-          Floor(ib)%TypeW='ow'
+        Floor(ib)%TypeW(1:2)='iw'
+!       IF (Floor(ib)%igx0==domain%ix0.AND.BCVel%West/='Period') THEN
+        IF (Floor(ib)%igx0==domain%ix0) THEN
+          IF (BCVel%West/='Period') THEN
+            Floor(ib)%TypeW(1:2)='ow'
+          ELSE
+            Floor(ib)%TypeW='iwo'
+          END IF 
         END IF 
-        Floor(ib)%TypeE='ie'
-        IF (Floor(ib)%igx1==domain%ix1.AND.BCVel%East/='Period') THEN
-          Floor(ib)%TypeE='oe'
+        Floor(ib)%TypeE(1:2)='ie'
+!       IF (Floor(ib)%igx1==domain%ix1.AND.BCVel%East/='Period') THEN
+        IF (Floor(ib)%igx1==domain%ix1) THEN
+          IF (BCVel%East/='Period') THEN
+            Floor(ib)%TypeE(1:2)='oe'
+          ELSE  
+            Floor(ib)%TypeE='ieo'
+          END IF 
         END IF 
-        Floor(ib)%TypeS='is'
-        IF (Floor(ib)%igy0==domain%iy0.AND.BCVel%South/='Period') THEN
-          Floor(ib)%TypeS='os'
+        Floor(ib)%TypeS(1:2)='is'
+!       IF (Floor(ib)%igy0==domain%iy0.AND.BCVel%South/='Period') THEN
+        IF (Floor(ib)%igy0==domain%iy0) THEN
+          IF (BCVel%South/='Period') THEN
+            Floor(ib)%TypeS(1:2)='os'
+          ELSE  
+            Floor(ib)%TypeS='iso'
+          END IF  
         END IF 
-        Floor(ib)%TypeN='in'
-        IF (Floor(ib)%igy1==domain%iy1.AND.BCVel%North/='Period') THEN
-          Floor(ib)%TypeN='on'
+        Floor(ib)%TypeN(1:2)='in'
+!       IF (Floor(ib)%igy1==domain%iy1.AND.BCVel%North/='Period') THEN
+        IF (Floor(ib)%igy1==domain%iy1) THEN
+          IF (BCVel%North/='Period') THEN
+            Floor(ib)%TypeN(1:2)='on'
+          ELSE  
+            Floor(ib)%TypeN='ino'
+          END IF  
         END IF 
-        Floor(ib)%TypeB='ib'
+        Floor(ib)%TypeB(1:2)='ib'
         IF (Floor(ib)%igz0==domain%iz0.AND.BCVel%Bottom/='Period') THEN
-          Floor(ib)%TypeB='ob'
+          Floor(ib)%TypeB(1:2)='ob'
         END IF 
-        Floor(ib)%TypeT='it'
+        Floor(ib)%TypeT(1:2)='it'
         IF (Floor(ib)%igz1==domain%iz1.AND.BCVel%Top/='Period') THEN
-          Floor(ib)%TypeT='ot'
+          Floor(ib)%TypeT(1:2)='ot'
         END IF 
       END DO  ! ib
     ELSE IF (INDEX(Line,'#SelfMultiblock1')>0.AND.SelfMultiBlock) THEN
@@ -889,29 +909,49 @@ SUBROUTINE read_grid2(FileName)
             Floor(ib)%nz = Floor(ib)%iz1 - Floor(ib)%iz0
             Floor(ib)%nc = Floor(ib)%nx * Floor(ib)%ny * Floor(ib)%nz
 
-            Floor(ib)%TypeW='iw'
-            IF (Floor(ib)%igx0==domain%ix0.AND.BCVel%West/='Period') THEN
-              Floor(ib)%TypeW='ow'
+            Floor(ib)%TypeW(1:2)='iw'
+!           IF (Floor(ib)%igx0==domain%ix0.AND.BCVel%West/='Period') THEN
+            IF (Floor(ib)%igx0==domain%ix0) THEN
+              IF (BCVel%West/='Period') THEN
+                Floor(ib)%TypeW(1:2)='ow'
+              ELSE
+                Floor(ib)%TypeW='iwo'
+              END IF 
             END IF 
-            Floor(ib)%TypeE='ie'
-            IF (Floor(ib)%igx1==domain%ix1.AND.BCVel%East/='Period') THEN
-              Floor(ib)%TypeE='oe'
+            Floor(ib)%TypeE(1:2)='ie'
+!           IF (Floor(ib)%igx1==domain%ix1.AND.BCVel%East/='Period') THEN
+            IF (Floor(ib)%igx1==domain%ix1) THEN
+              IF (BCVel%East/='Period') THEN
+                Floor(ib)%TypeE(1:2)='oe'
+              ELSE  
+                Floor(ib)%TypeE='ieo'
+              END IF 
             END IF 
-            Floor(ib)%TypeS='is'
-            IF (Floor(ib)%igy0==domain%iy0.AND.BCVel%South/='Period') THEN
-              Floor(ib)%TypeS='os'
+            Floor(ib)%TypeS(1:2)='is'
+!           IF (Floor(ib)%igy0==domain%iy0.AND.BCVel%South/='Period') THEN
+            IF (Floor(ib)%igy0==domain%iy0) THEN
+              IF (BCVel%South/='Period') THEN
+                Floor(ib)%TypeS(1:2)='os'
+              ELSE  
+                Floor(ib)%TypeS='iso'
+              END IF  
             END IF 
-            Floor(ib)%TypeN='in'
-            IF (Floor(ib)%igy1==domain%iy1.AND.BCVel%North/='Period') THEN
-              Floor(ib)%TypeN='on'
+            Floor(ib)%TypeN(1:2)='in'
+!           IF (Floor(ib)%igy1==domain%iy1.AND.BCVel%North/='Period') THEN
+            IF (Floor(ib)%igy1==domain%iy1) THEN
+              IF (BCVel%North/='Period') THEN
+                Floor(ib)%TypeN(1:2)='on'
+              ELSE  
+                Floor(ib)%TypeN='ino'
+              END IF  
             END IF 
-            Floor(ib)%TypeB='ib'
+            Floor(ib)%TypeB(1:2)='ib'
             IF (Floor(ib)%igz0==domain%iz0.AND.BCVel%Bottom/='Period') THEN
-              Floor(ib)%TypeB='ob'
+              Floor(ib)%TypeB(1:2)='ob'
             END IF 
-            Floor(ib)%TypeT='it'
+            Floor(ib)%TypeT(1:2)='it'
             IF (Floor(ib)%igz1==domain%iz1.AND.BCVel%Top/='Period') THEN
-              Floor(ib)%TypeT='ot'
+              Floor(ib)%TypeT(1:2)='ot'
             END IF 
             ix0=ix1
             ib=ib+1

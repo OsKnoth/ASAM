@@ -88,6 +88,8 @@ PROGRAM MainProg
   LOGICAL :: FinishNudging
   LOGICAL :: FinishTendency
 
+  REAL(RealKind) :: tt
+
   CALL start_MPI
 
   CALL Random_seed(size=SizeSeed)
@@ -211,6 +213,7 @@ PROGRAM MainProg
 
 
 ! -- Meteorologie --
+  WRITE(*,*) 'Meteorologie '
   CALL Allocate(VelF1)
   VelF1=Zero
   VecT=Zero
@@ -255,11 +258,8 @@ PROGRAM MainProg
     CALL ExchangeCell(RhoCell)
     CALL Allocate(PreCell)
   ELSE
-    WRITE(*,*) 'Allocate(RhoCell)'
     CALL Allocate(RhoCell)
-    WRITE(*,*) 'RhoCell=1.0d0'
     RhoCell=1.0d0
-    WRITE(*,*) 'Ende '
   END IF
 
   IF ( uPosL>0)  THEN
@@ -329,7 +329,6 @@ PROGRAM MainProg
       CALL VectorInitCanopyFunction(thPos,VecT,ThStartSoil,Time)
     END IF
   END IF
-  WRITE(*,*) 'Vor ThPos==0.AND.Chemie'
   IF (ThPos==0.AND.Chemie) THEN
     CALL Allocate(TAbsCell,1,1)
     TAbsCell=300.0d0
@@ -938,6 +937,10 @@ PROGRAM MainProg
         WRITE(*,*) 'dtAct',dtAct
       END IF
       CALL Ros3MetC(VecT,VelF1,VecG,dtAct,Time,ATol,RTol)
+      Temp=TotalScalar(VecT,'RHO')
+      IF (MyId==0) THEN
+        WRITE(*,*) 'TotalRho',Temp
+      END IF  
     ELSE IF (Method(3:4)=='RK'.OR.Method(3:4)=='EB'.OR.Method(3:5)=='MIS') THEN
       CALL InitExpIntRk(VecT)
       CALL TimeStepCFL(VelF1,dtAct,ns)

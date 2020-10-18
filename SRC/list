@@ -1,100 +1,13 @@
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoL,RhoC,RhoR
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoLe,RhoC,RhoRi
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoL,RhoC,RhoR
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoLL,RhoCL,RhoRL
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoLe,RhoC,RhoRi
-ADVECT/Advection_Mod.f90:  REAL(RealKind) :: RhoCoarse,RhoFine,VolCoarse,VolFine
-ADVECT/Buoyancy_Mod.f90:  !REAL(RealKind), POINTER:: RhoC(:,:,:,:)
-ADVECT/Buoyancy_Mod.f90:  REAL(RealKind) :: RhoCoarse,VolCoarse
-ADVECT/Buoyancy_Mod.f90:  REAL(RealKind) :: RhoCoarse,VolCoarse
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: RhoC,LenLoc
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,disC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,omeC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/DiffKoeff_Mod.f90:  REAL(RealKind) :: tkeHC,tkeVC,rhoC
-ADVECT/MainRead.f90:  INTEGER        :: RhoVIndex,RhoRIndex,RhoIIndex,RhoCIndex
-ADVECT/MainRead.f90:  CHARACTER (LEN = *), PARAMETER :: RhoC_NAME       ="RhoC"
-ADVECT/MainRead.f90:  INTEGER :: RhoV_varid, RhoC_varid, RhoI_varid, RhoR_varid
-ADVECT/MainRead.f90:  CHARACTER (LEN = *), PARAMETER :: RhoC_UNITS   = " "
-ADVECT/Names_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/Names_Mod.f90:  REAL(RealKind), POINTER :: RhoCRhs(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/SpecialOutput_Mod.f90:  REAL(RealKind), POINTER :: RhoC(:,:,:,:)
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,omeC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,omeC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,disC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,disC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,rhoC,Factor
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,omeC,rhoC
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: tkeC,rhoC,Factor
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: thC,rhoC,tkeHC,tkeVC,tkeG
-ADVECT/Turbulence_Mod.f90:  REAL(RealKind) :: dthdz,thC,rhoC,tkeHC,tkeVC,tkeG
-CANOPY/Canopy_Mod.f90:  REAL(RealKind), PRIVATE, POINTER :: RhoCloud(:,:,:,:)
-CHEMIE/Adiabatic_Mod.f90:  REAL(RealKind) :: w,dpdh,dpdt,RhoCs2
-CHEMIE/Chemie_Mod.f90:  TYPE(ScalarCell_T), POINTER :: RhoC
-CHEMIE/Chemie_Mod.f90:  TYPE(ScalarCell_T), POINTER :: RhoCell(:)
-EXAMPLE/DomainDecomposition.f90:  REAL(RealKind) :: u,v,w,Rho,RhoV,RhoC,p
-EXAMPLE/Durran.f90:  REAL(RealKind) :: u,v,w,Rho,RhoV,RhoC,p
-EXAMPLE/Haus.f90:  REAL(RealKind) :: u,v,w,Rho,RhoV,RhoC,p
-EXAMPLE/TurbChannel.f90:  REAL(RealKind) :: u,v,w,Rho,RhoV,RhoC,p
-INIT/Output_Mod.f90:  LOGICAL :: RhoCOut
-INIT/Output_Mod.f90:  LOGICAL :: TimeProfileRhoC=.FALSE.
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T) :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T) :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T), OPTIONAL :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T), OPTIONAL :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T), OPTIONAL :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T), OPTIONAL :: RhoCell(:)
-INIT/Output_Mod.f90:  TYPE(ScalarCell_T), OPTIONAL :: RhoCell(:)
-INIT/Output_Mod.f90:    TYPE(ScalarCell_T) :: RhoCell(:)
-MATRIX/Rhs_Mod.f90:  REAL(RealKind) :: RhoC(ix0:ix1+1,iy0:iy1+1,iz0:iz1+1,1)
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: T,p,RhoD,RhoV,RhoC,RhoI,PotM
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: RhsPotM,PotM,QRhs,RhoD,RhoV,RhoC,RhoI,Rm,Cpml,Cvml,T,p
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: Lv,Lil,Cp_eff,eLoc,DpDRhoV,DpDRhoC
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: RhsRhoV,RhsRhoC,RhsPotM
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: mytheta,rho,rhod,rhov,rhoc,rhor,rhoi,rhos,nv,nc,nr,ni,ns                                         ! inner cell values
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: mythetazr,rhozr,rhodzr,rhovzr,rhoczr,rhorzr,rhoizr,rhoszr,nvzr,nczr,nrzr,nizr,nszr,cpmlzr,rmlzr  ! upper cell values
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: mythetazl,rhozl,rhodzl,rhovzl,rhoczl,rhorzl,rhoizl,rhoszl,nvzl,nczl,nrzl,nizl,nszl,cpmlzl,rmlzl  ! lower cell values
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: drhoTh,drho,drhod,drhov,drhoc,drhor,drhoi,drhos,dnv,dnc,dnr,dni,dns,dcpml,drml                   ! inner cell rates
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: Rho,RhoD,RhoV,RhoC,RhoR,RhoI,RhoS,T,p,PotM,RelHum
-MICROPHYS/ISDACMicroPhysics_Mod.f90:  REAL(RealKind) :: RhoD,RhoV,RhoC,RhoR,RhoI,RhoS,T,p,PotM,RelHum
-MICROPHYS/MicroPhysics_Mod.f90:  TYPE(ScalarCell_T), POINTER :: RhoCell(:)
-MICROPHYS/ParameterMicrophys_Mod.f90:    REAL(RealKind) :: RhoC
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: T,p,RhoD,RhoV,RhoC,RhoI,PotM
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: RhsPotM,PotM,QRhs,RhoD,RhoV,RhoC,RhoI,Rm,Cpml,Cvml,T,p
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: Lv,Lil,Cp_eff,eLoc,DpDRhoV,DpDRhoC
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: RhsRhoV,RhsRhoC,RhsPotM
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: mytheta,rho,rhod,rhov,rhoc,rhor,rhoi,rhos,nv,nc,nr,ni,ns                                         ! inner cell values
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: mythetazr,rhozr,rhodzr,rhovzr,rhoczr,rhorzr,rhoizr,rhoszr,nvzr,nczr,nrzr,nizr,nszr,cpmlzr,rmlzr  ! upper cell values
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: mythetazl,rhozl,rhodzl,rhovzl,rhoczl,rhorzl,rhoizl,rhoszl,nvzl,nczl,nrzl,nizl,nszl,cpmlzl,rmlzl  ! lower cell values
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: drhoTh,drho,drhod,drhov,drhoc,drhor,drhoi,drhos,dnv,dnc,dnr,dni,dns,dcpml,drml                   ! inner cell rates
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: Rho,RhoD,RhoV,RhoC,RhoR,RhoI,RhoS,T,p,PotM,RelHum
-MICROPHYS/TwoMomentBulkMicroPhysics_Mod.f90:  REAL(RealKind) :: RhoD,RhoV,RhoC,RhoR,RhoI,RhoS,T,p,PotM,RelHum
-MODULE/Control_Mod.f90:  INTEGER :: RhoCPos
-MODULE/Control_Mod.f90:  INTEGER :: RhoCPosEnv
-MODULE/Control_Mod.f90:  INTEGER :: RhoCPosJac
-MODULE/Control_Mod.f90:  REAL(RealKind) :: RhoCRTol
-MODULE/Control_Mod.f90:  REAL(RealKind) :: RhoCATol
-MODULE/Physics_Mod.f90:  TYPE (ScalarCell_T), POINTER :: RhoCProfG(:)=>NULL()
-MODULE/Physics_Mod.f90:  TYPE (ScalarCell_T), POINTER :: RhoCell(:)=>NULL()
-MULTI/JacAccGrav_Mod.f90:  REAL(RealKind) :: RhoCoarse,RhoFine,RhoFace
-MULTI/JacAccGrav_Mod.f90:  REAL(RealKind) :: RhoCoarse,RhoFine,RhoFace
-MULTI/JacAccGrav_Mod.f90:  REAL(RealKind) :: rvLoc,rlLoc,qdLoc,RhoCLoc,qlLoc,Cvml
-SOIL/Soil_Mod.f90:  REAL(RealKind), PRIVATE, POINTER :: RhoC(:,:,:,:)
+               _
+   _       _ _(_)_     |  Documentation: https://docs.julialang.org
+  (_)     | (_) (_)    |
+   _ _   _| |_  __ _   |  Type "?" for help, "]?" for Pkg help.
+  | | | | | | |/ _` |  |
+  | | |_| | | | (_| |  |  Version 1.5.0 (2020-08-01)
+ _/ |\__'_|_|_|\__'_|  |  Official https://julialang.org/ release
+|__/                   |
+
+[?2004h[0K[32m[1mjulia> [0m[0m[7C[7C[0K[32m[1mjulia> [0m[0m[7C[7C^C
+
+[0K[32m[1mjulia> [0m[0m[7C[7C
+[?2004l[0m

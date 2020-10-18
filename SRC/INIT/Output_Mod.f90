@@ -507,9 +507,10 @@ SUBROUTINE InputOutputSpecial(FileName)
 
   INTEGER :: i
 
-  S1='BEGIN_SPECIAL'
-  S2='BEGIN_OUTPUT'
-  End='END_OUTPUT'
+  S1='BEGIN_OUTPUT'
+  S2='BEGIN_SPECIAL'
+  End='END_SPECIAL'
+
   CALL OpenFile(FileName)
 
   LenOutSpecial=0
@@ -2019,7 +2020,6 @@ SUBROUTINE gmvScalarWrite(Vec,iPos,name,it,RhoCell,Prof,VecC,Type,UnitKonv)
                      xN(Cell)=Vec(ibb)%Vec(iPos)%c(ix,iy,iz,it) &
                                   /(VecC(ibb)%Vec(iNC)%c(ix,iy,iz,it)+Eps) 
                    ELSE IF (Type=='KG_KG') THEN           
-                     WRITE(*,*) 'KG_KG'
                      xN(Cell)=Vec(ibb)%Vec(iPos)%c(ix,iy,iz,it) &
                                   /(RhoCell(ibb)%c(ix,iy,iz,1)+Eps)
                    END IF               

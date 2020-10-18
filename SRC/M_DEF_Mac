@@ -1,6 +1,6 @@
 DEFPATH = /Users/knoth/ASAMComp
 ASAMPATH = /Users/knoth/Documents/GitHub/ASAM
-COMPPATH=/Users/knoth/ASAM/Comp/ParExample
+COMPPATH=/Users/knoth/ASAMComp/ParExample
 ModSuf=mod
 
 #OPTFREE = -O2 -ffree-form -ffixed-line-length-none -ffree-line-length-none 
@@ -37,7 +37,7 @@ KSHAPEINCL_O = -I$(DEFPATH)/LIBSHAPE_Mac
 KINCL_D     = -I$(DEFPATH)/LIB_MacD
 KINCLGRID_D = -I$(DEFPATH)/LIBGRID_MacD
 KCHEMINCL   =-I$(DEFPATH)/LIBCHEMSYS_Mac
-PARMETIS    = -L/Users/knoth/Documents/GitHub/ASAM/SparseLinearSolver/metis-5.1.0/build/Darwin-x86_64/libmetis -lmetis -lm -llapack -lblas
+PARMETIS    = -L$(DEFPATH)/SparseLinearSolver/metis-5.1.0/build/Darwin-x86_64/libmetis -lmetis -lm -llapack -lblas
 NETCDF      = -L/usr/local/lib -lcurl    -L/usr/local/lib -lnetcdf -L/usr/local/lib -lnetcdff 
 NETCDF     += -L/usr/local/lib -lhdf5_hl -L/usr/local/lib -lhdf5   -L/usr/local/lib -lz
 NETCDF     += -L/usr/local/lib -lz       -L/usr/local/lib -lsz 

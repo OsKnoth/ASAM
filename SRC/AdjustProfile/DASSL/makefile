@@ -1,4 +1,4 @@
-F=gfortran
+F=gfortran -fallow-argument-mismatch
 F90=gfortran
 
 .SUFFIXES: .o .f
