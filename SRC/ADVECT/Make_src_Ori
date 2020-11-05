@@ -22,6 +22,9 @@ OBJ = RungeKuttaMethods_Mod.f90\
       IntSub_Mod.f90\
       TimeStep_Mod.f90\
       Int_Mod.f90\
+#     IntRos_Mod.f90\
+      IntLinPeer_Mod.f90 \
+      IntPeer_Mod.f90\
       SpecialOutput_Mod.f90
 
 $(LIB)/libadvect.a: $(OBJ)

@@ -48,7 +48,8 @@ MODULE Vector4Cell_Mod
   END TYPE SpMatrix4Cell_T
 
   TYPE JacSpMatrix4_T
-    TYPE (SpMatrix4Cell_T), POINTER :: JacSLU=>NULL()
+    TYPE (SpMatrix4Cell_T), POINTER :: JacSMetLU=>NULL()
+    TYPE (SpMatrix4Cell_T), POINTER :: JacSChemLU=>NULL()
     TYPE (SpDiag), POINTER :: JacTMom=>NULL()
     TYPE (SpDiag), POINTER :: JacTPot=>NULL()
     TYPE (SpDiag), POINTER :: JacFall=>NULL()

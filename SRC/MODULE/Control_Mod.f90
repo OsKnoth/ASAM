@@ -163,6 +163,7 @@ MODULE Control_Mod
   INTEGER :: tracer1PosJac
   INTEGER :: tracer2PosJac
   INTEGER, ALLOCATABLE :: IndexMet(:,:)
+  INTEGER, ALLOCATABLE :: IndexTher(:,:)
 
 ! Zeitsteuerung
   LOGICAL :: ErrControl
@@ -226,6 +227,8 @@ MODULE Control_Mod
   INTEGER :: VectorComponentsM
   INTEGER :: VectorComponentsME
   INTEGER :: VectorComponentsT
+  INTEGER :: VectorComponentsMet
+  INTEGER :: VectorComponentsChem
   INTEGER, ALLOCATABLE :: PosE2Pos(:)
   INTEGER :: xOrder,yOrder,zOrder
   INTEGER :: xCoarse,yCoarse,zCoarse

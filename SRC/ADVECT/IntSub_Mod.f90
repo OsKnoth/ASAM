@@ -14,8 +14,7 @@ MODULE IntSub_Mod
 
   IMPLICIT NONE
 
-  TYPE(JacSpMatrix4_T), POINTER :: JacMet(:)
-  TYPE(JacSpMatrix4_T), POINTER :: JacChem(:)
+  TYPE(JacSpMatrix4_T), POINTER :: JacTrans(:)
 
   TYPE(PressureVelocity), PRIVATE, SAVE, POINTER :: b(:),x(:)
 

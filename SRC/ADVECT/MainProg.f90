@@ -4,8 +4,8 @@ PROGRAM MainProg
   USE Init_Mod
   USE JacAccGrav_Mod
   USE Int_Mod
-  USE IntPeer_Mod
-  USE IntLinPeer_Mod
+! USE IntPeer_Mod
+! USE IntLinPeer_Mod
   USE ReadOutput_Mod
   USE Emission_Mod
   USE Koagulation_Mod
@@ -42,10 +42,11 @@ PROGRAM MainProg
 
   TYPE(VelocityFace_T), POINTER :: VelF1(:)
   TYPE(VecVelocityFace_T), POINTER :: VecVelF(:)
-  TYPE(Vector4Cell_T), POINTER :: VecT(:)
+  TYPE(Vector4Cell_T), POINTER :: VecMet(:)
+  TYPE(Vector4Cell_T), POINTER :: VecChem(:)
   TYPE(Vector4Cell_T), POINTER :: VecG(:)
-  TYPE(VecVector4Cell_T), POINTER :: VecVecT(:)
-  TYPE(Vector4Cell_T), POINTER :: VecTP(:)
+  TYPE(VecVector4Cell_T), POINTER :: VecVecMet(:)
+  TYPE(Vector4Cell_T), POINTER :: VecMetP(:)
   REAL(RealKind) :: Temp,RhoLoc,rRand
   INTEGER :: Iter,iForce
   INTEGER :: iInt,ix,iy,iz
@@ -143,15 +144,17 @@ PROGRAM MainProg
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   IF (ChemieFile/='') THEN 
-    WRITE(*,*) 'InputSystem(ChemieFile)'
+    WRITE(*,*) 'InputSystem(ChemieFile)',TRIM(ChemieFile)
     CALL InputSystem(ChemieFile)
   END IF
 
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
   CALL SetIndices
-  CALL Allocate(JacMet)
-  JacMet=Zero
-  CALL AllocateVec4Chemie(VecT,VectorComponentsT)
+  CALL Allocate(JacTrans)
+  JacTrans=Zero
+  CALL AllocateVec4Chemie(VecMet,VectorComponentsMet)
+  CALL AllocateVec4Chemie(VecChem,VectorComponentsChem)
+  WRITE(*,*) 'Nach CALL AllocateVec4Chemie(VecChem,VectorComponentsChem)'
 
   CALL InitPrandtlNumber(InputFileName)
 
@@ -173,7 +176,8 @@ PROGRAM MainProg
     ALLOCATE(MeanProfile(0:VectorComponentsT,Domain%ix0+1:Domain%ix1))
   END IF
 
-  Vect=Zero
+  VecMet=Zero
+  VecChem=Zero
 !   -- Eingabe Chemie --
   IF (Chemie.AND.DataFile/='') THEN 
   
@@ -216,7 +220,7 @@ PROGRAM MainProg
   WRITE(*,*) 'Meteorologie '
   CALL Allocate(VelF1)
   VelF1=Zero
-  VecT=Zero
+  VecMet=Zero
 
   Time=StartTime
   IF (Shallow) THEN
@@ -232,10 +236,10 @@ PROGRAM MainProg
   CALL Allocate(RhoProfG)
   IF (RhoPos>0) THEN
     ALLOCATE(RhoCell(nbLoc))
-    CALL Assign(RhoCell,VecT,RhoPos)
+    CALL Assign(RhoCell,VecMet,RhoPos)
     CALL ScalarInit(RhoProfG,RhoProf,Time)
     CALL ExchangeCell(RhoProfG)
-    CALL VectorInit(RhoPos,VecT,RhoFun,Time)
+    CALL VectorInit(RhoPos,VecMet,RhoFun,Time)
     CALL Allocate(PreCell)
     CALL Allocate(DivCell)
     CALL Allocate(EStartCell)
@@ -263,36 +267,36 @@ PROGRAM MainProg
   END IF
 
   IF ( uPosL>0)  THEN
-    CALL VectorInit(uPosL,VecT,UStart,Time)
-    CALL Mult(RhoCell,VecT,uPosL)
+    CALL VectorInit(uPosL,VecMet,UStart,Time)
+    CALL Mult(RhoCell,VecMet,uPosL)
     CALL Allocate(uCell)
   END IF
   IF ( uPosR>0)  THEN
-    CALL VectorInit(uPosR,VecT,UStart,Time)
-    CALL Mult(RhoCell,VecT,uPosR)
+    CALL VectorInit(uPosR,VecMet,UStart,Time)
+    CALL Mult(RhoCell,VecMet,uPosR)
   END IF
   IF ( vPosL>0) THEN
-    CALL VectorInit(vPosL,VecT,vStart,Time)
-    CALL Mult(RhoCell,VecT,vPosL)
+    CALL VectorInit(vPosL,VecMet,vStart,Time)
+    CALL Mult(RhoCell,VecMet,vPosL)
     CALL Allocate(vCell)
   END IF
   IF ( vPosR>0) THEN
-    CALL VectorInit(vPosR,VecT,vStart,Time)
-    CALL Mult(RhoCell,VecT,vPosR)
+    CALL VectorInit(vPosR,VecMet,vStart,Time)
+    CALL Mult(RhoCell,VecMet,vPosR)
   END IF
   IF ( wPosL>0) THEN
-    CALL VectorInit(wPosL,VecT,wStart,Time)
-    CALL Mult(RhoCell,VecT,wPosL)
+    CALL VectorInit(wPosL,VecMet,wStart,Time)
+    CALL Mult(RhoCell,VecMet,wPosL)
     CALL Allocate(wCell)
   END IF
   IF ( wPosR>0) THEN
-    CALL VectorInit(wPosR,VecT,wStart,Time)
-    CALL Mult(RhoCell,VecT,wPosR)
+    CALL VectorInit(wPosR,VecMet,wStart,Time)
+    CALL Mult(RhoCell,VecMet,wPosR)
   END IF
   IF ( thPos>0) THEN
-    CALL VectorInit(thPos,VecT,ThStart,Time)
+    CALL VectorInit(thPos,VecMet,ThStart,Time)
 !   CALL BoundaryInit('Skin',TStart,Time)
-    CALL Mult(RhoCell,VecT,thPos)
+    CALL Mult(RhoCell,VecMet,thPos)
     CALL Allocate(thProfG)
     CALL ScalarInit(thProfG,thProfFun,Time)
     CALL Mult(RhoProfG,thProfG)
@@ -310,23 +314,23 @@ PROGRAM MainProg
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
-        DEALLOCATE(VecT(ibLoc)%Vec(thPos)%cB)
-        ALLOCATE(VecT(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
-        DEALLOCATE(VecT(ibLoc)%Vec(RhoVPos)%cB)
-        ALLOCATE(VecT(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
+        DEALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
+        DEALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
       END DO
-      CALL VectorInitSoilFunction(thPos,VecT,ThStartSoil,Time)
+      CALL VectorInitSoilFunction(thPos,VecMet,ThStartSoil,Time)
     ELSE IF (Canopy) THEN
       CALL InitCanopy
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
-        DEALLOCATE(VecT(ibLoc)%Vec(thPos)%cB)
-        ALLOCATE(VecT(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
-        DEALLOCATE(VecT(ibLoc)%Vec(RhoVPos)%cB)
-        ALLOCATE(VecT(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
+        DEALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
+        DEALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
       END DO
-      CALL VectorInitCanopyFunction(thPos,VecT,ThStartSoil,Time)
+      CALL VectorInitCanopyFunction(thPos,VecMet,ThStartSoil,Time)
     END IF
   END IF
   IF (ThPos==0.AND.Chemie) THEN
@@ -337,27 +341,27 @@ PROGRAM MainProg
   END IF  
     
   IF (EnPos>0) THEN
-    CALL VectorInit(EnPos,VecT,EnStart,Time)
-    CALL Mult(RhoCell,VecT,EnPos)
+    CALL VectorInit(EnPos,VecMet,EnStart,Time)
+    CALL Mult(RhoCell,VecMet,EnPos)
   END IF  
   IF ( RhoVPos>0) THEN
     CALL Allocate(RhoVProfG)
     CALL ScalarInit(RhoVProfG,QvStart,Time)
     CALL ExchangeCell(RhoVProfG)
     CALL Mult(RhoProfG,RhoVProfG)
-    CALL VectorInit(RhoVPos,VecT,QvStart,Time)
+    CALL VectorInit(RhoVPos,VecMet,QvStart,Time)
     IF (DynamicSoil) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
       END DO
-      CALL VectorInitSoilFunction(RhoVPos,VecT,QvStartSoil,Time)
+      CALL VectorInitSoilFunction(RhoVPos,VecMet,QvStartSoil,Time)
     ELSE IF (Canopy) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
       END DO
-      CALL VectorInitCanopyFunction(RhoVPos,VecT,QvStartSoil,Time)
+      CALL VectorInitCanopyFunction(RhoVPos,VecMet,QvStartSoil,Time)
     END IF
   END IF
   IF ( RhoCPos>0) THEN
@@ -365,14 +369,14 @@ PROGRAM MainProg
     RhoCProfG=Zero
     CALL ExchangeCell(RhoCProfG)
     CALL Mult(RhoProfG,RhoCProfG)
-    CALL VectorInit(RhoCPos,VecT,QcStart,Time)
-    CALL Mult(RhoCell,VecT,RhoCPos)
+    CALL VectorInit(RhoCPos,VecMet,QcStart,Time)
+    CALL Mult(RhoCell,VecMet,RhoCPos)
   ELSE 
     CALL Allocate(RhoLCell)
   END IF
   IF ( RhoRPos>0) THEN
-    CALL VectorInit(RhoRPos,VecT,QrStart,Time)
-    CALL Mult(RhoCell,VecT,RhoRPos)
+    CALL VectorInit(RhoRPos,VecMet,QrStart,Time)
+    CALL Mult(RhoCell,VecMet,RhoRPos)
     IF (PrecipRain.AND.RainSurf) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
@@ -381,8 +385,8 @@ PROGRAM MainProg
     END IF
   END IF
   IF ( RhoIPos>0) THEN
-    CALL VectorInit(RhoIPos,VecT,QiStart,Time)
-    CALL Mult(RhoCell,VecT,RhoIPos)
+    CALL VectorInit(RhoIPos,VecMet,QiStart,Time)
+    CALL Mult(RhoCell,VecMet,RhoIPos)
     IF (PrecipIce.AND.IceSurf) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
@@ -391,8 +395,8 @@ PROGRAM MainProg
     END IF
   END IF
   IF ( RhoSPos>0) THEN
-    CALL VectorInit(RhoSPos,VecT,QsStart,Time)
-    CALL Mult(RhoCell,VecT,RhoSPos)
+    CALL VectorInit(RhoSPos,VecMet,QsStart,Time)
+    CALL Mult(RhoCell,VecMet,RhoSPos)
     IF (PrecipSnow.AND.SnowSurf) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
@@ -401,61 +405,61 @@ PROGRAM MainProg
     END IF
   END IF
   IF ( nvPos>0) THEN
-    CALL VectorInit(nvPos,VecT,nvStart,Time)
+    CALL VectorInit(nvPos,VecMet,nvStart,Time)
   END IF
   IF ( ncPos>0) THEN
-    CALL VectorInit(ncPos,VecT,ncStart,Time)
+    CALL VectorInit(ncPos,VecMet,ncStart,Time)
   END IF
   IF ( nrPos>0) THEN
-    CALL VectorInit(nrPos,VecT,nrStart,Time)
+    CALL VectorInit(nrPos,VecMet,nrStart,Time)
   END IF
   IF ( niPos>0) THEN
-    CALL VectorInit(niPos,VecT,niStart,Time)
+    CALL VectorInit(niPos,VecMet,niStart,Time)
   END IF
   IF ( nsPos>0) THEN
-    CALL VectorInit(nsPos,VecT,nsStart,Time)
+    CALL VectorInit(nsPos,VecMet,nsStart,Time)
   END IF
   IF (tkePos>0) THEN
-    CALL VectorInit(tkePos,VecT,TkeStart,Time)
-    CALL Mult(RhoCell,VecT,tkePos)
+    CALL VectorInit(tkePos,VecMet,TkeStart,Time)
+    CALL Mult(RhoCell,VecMet,tkePos)
   END IF
   IF (tkeHPos>0) THEN
-    CALL VectorInit(tkeHPos,VecT,TkeHStart,Time)
-    CALL Mult(RhoCell,VecT,tkeHPos)
+    CALL VectorInit(tkeHPos,VecMet,TkeHStart,Time)
+    CALL Mult(RhoCell,VecMet,tkeHPos)
   END IF
   IF (tkeVPos>0) THEN
-    CALL VectorInit(tkeVPos,VecT,TkeVStart,Time)
-    CALL Mult(RhoCell,VecT,tkeVPos)
+    CALL VectorInit(tkeVPos,VecMet,TkeVStart,Time)
+    CALL Mult(RhoCell,VecMet,tkeVPos)
   END IF
   IF (disPos>0) THEN
-    CALL VectorInit(disPos,VecT,DisStart,Time)
-    CALL Mult(RhoCell,VecT,disPos)
+    CALL VectorInit(disPos,VecMet,DisStart,Time)
+    CALL Mult(RhoCell,VecMet,disPos)
   END IF
   IF (omePos>0) THEN
-    CALL VectorInit(omePos,VecT,OmeStart,Time)
-    CALL Mult(RhoCell,VecT,omePos)
+    CALL VectorInit(omePos,VecMet,OmeStart,Time)
+    CALL Mult(RhoCell,VecMet,omePos)
   END IF
   IF (LenPos>0) THEN
-    CALL VectorInit(LenPos,VecT,LenStart,Time)
-    CALL Mult(RhoCell,VecT,LenPos)
+    CALL VectorInit(LenPos,VecMet,LenStart,Time)
+    CALL Mult(RhoCell,VecMet,LenPos)
   END IF
   IF (Tracer1Pos>0) THEN
-    CALL VectorInit(Tracer1Pos,VecT,Tracer1Start,Time)
+    CALL VectorInit(Tracer1Pos,VecMet,Tracer1Start,Time)
   END IF
   IF (Tracer2Pos>0) THEN
-    CALL VectorInit(Tracer2Pos,VecT,Tracer2Start,Time)
+    CALL VectorInit(Tracer2Pos,VecMet,Tracer2Start,Time)
   END IF
-  CALL PerturbProfile(VecT)
-  CALL ExchangeCell(VecT)
+  CALL PerturbProfile(VecMet)
+  CALL ExchangeCell(VecMet)
   IF (uPosL*uPosR>0) THEN
-    CALL VelocityCellToFaceLR(VecT,VelF1,VelF1,Time)
+    CALL VelocityCellToFaceLR(VecMet,VelF1,VelF1,Time)
     CALL BoundaryVelocity(VelF1,Time)
   ELSE
     CALL VelocityInit(VelF1,UStart,VStart,WStart,Time)
   END IF
 
   IF (Parcel) THEN
-    CALL InputAdiabatic(InputFileName,VecT)
+    CALL InputAdiabatic(InputFileName,VecMet)
   END IF
   IF (Baum.OR.BaumFast) THEN 
     CALL ReadBaum(InputFileName) 
@@ -486,9 +490,9 @@ PROGRAM MainProg
       CALL InputWRFnc(InputFileName)
       Time1=StartTime
       Time2=Time1+TimeIncr
-      CALL ReadWRFnc(VecEnv1,InputFileNameWRF,Time1,VecT)
-      CALL ExchangeCell(VecT)
-      CALL VelocityCellToFaceLR(VecT,VelF1,VelF1,Time)
+      CALL ReadWRFnc(VecEnv1,InputFileNameWRF,Time1,VecMet)
+      CALL ExchangeCell(VecMet)
+      CALL VelocityCellToFaceLR(VecMet,VelF1,VelF1,Time)
       CALL ReadWRFnc(VecEnv2,InputFileNameWRF,Time2)
     CASE('Init')
       IF ( uPosEnv>0) THEN
@@ -544,16 +548,16 @@ PROGRAM MainProg
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
         IF (uPosEnv>0) THEN
-          VecEnv1(ibLoc)%Vec(uPosEnv)%c=VecEnv1(ibLoc)%Vec(uPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
-          VecEnv2(ibLoc)%Vec(uPosEnv)%c=VecEnv2(ibLoc)%Vec(uPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
+          VecEnv1(ibLoc)%Vec(uPosEnv)%c=VecEnv1(ibLoc)%Vec(uPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
+          VecEnv2(ibLoc)%Vec(uPosEnv)%c=VecEnv2(ibLoc)%Vec(uPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
         END IF  
         IF (vPosEnv>0) THEN
-          VecEnv1(ibLoc)%Vec(vPosEnv)%c=VecEnv1(ibLoc)%Vec(vPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
-          VecEnv2(ibLoc)%Vec(vPosEnv)%c=VecEnv2(ibLoc)%Vec(vPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
+          VecEnv1(ibLoc)%Vec(vPosEnv)%c=VecEnv1(ibLoc)%Vec(vPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
+          VecEnv2(ibLoc)%Vec(vPosEnv)%c=VecEnv2(ibLoc)%Vec(vPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
         END IF  
         IF (wPosEnv>0) THEN
-          VecEnv1(ibLoc)%Vec(wPosEnv)%c=VecEnv1(ibLoc)%Vec(wPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
-          VecEnv2(ibLoc)%Vec(wPosEnv)%c=VecEnv2(ibLoc)%Vec(wPosEnv)%c*VecT(ibLoc)%Vec(RhoPos)%c
+          VecEnv1(ibLoc)%Vec(wPosEnv)%c=VecEnv1(ibLoc)%Vec(wPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
+          VecEnv2(ibLoc)%Vec(wPosEnv)%c=VecEnv2(ibLoc)%Vec(wPosEnv)%c*VecMet(ibLoc)%Vec(RhoPos)%c
         END IF  
       END DO  
   END SELECT    
@@ -675,16 +679,16 @@ PROGRAM MainProg
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
       DO iz=iz0+1,iz1
-        VecT(ibLoc)%Vec(uPosL)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(1)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(uPosR)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(1)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(vPosL)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(2)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(vPosR)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(2)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(ThPos)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(3)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(RhoVPos)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(4)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
-        VecT(ibLoc)%Vec(RhoPos)%c(:,:,iz,1)=RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(uPosL)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(1)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(uPosR)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(1)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(vPosL)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(2)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(vPosR)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(2)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(ThPos)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(3)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(RhoVPos)%c(:,:,iz,1)=NudgingProfile1(ibLoc)%Vec(4)%c(iz)*RhoProfile1(ibLoc)%Vec(1)%c(iz)
+        VecMet(ibLoc)%Vec(RhoPos)%c(:,:,iz,1)=RhoProfile1(ibLoc)%Vec(1)%c(iz)
       END DO  
     END DO
-    CALL VelocityCellToFaceLR(VecT,VelF1,VelF1,Time)
+    CALL VelocityCellToFaceLR(VecMet,VelF1,VelF1,Time)
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
@@ -693,13 +697,13 @@ PROGRAM MainProg
           DO iy=iy0+1,iy1
             DO ix=ix0+1,ix1
               CALL Random_Number(rRand)
-              VecT(ibLoc)%Vec(ThPos)%c(ix,iy,iz,1)=VecT(ibLoc)%Vec(ThPos)%c(ix,iy,iz,1)+1.0d-2*rRand
+              VecMet(ibLoc)%Vec(ThPos)%c(ix,iy,iz,1)=VecMet(ibLoc)%Vec(ThPos)%c(ix,iy,iz,1)+1.0d-2*rRand
             END DO  
           END DO
         END IF  
       END DO  
     END DO
-    CALL ExchangeCell(VecT)
+    CALL ExchangeCell(VecMet)
   END IF  
 ! Initialize BoundCells
   DO ibLoc=1,nbLoc
@@ -711,48 +715,23 @@ PROGRAM MainProg
   END DO
 
   ! -- Project VelF1
-  CALL PrepareF(VecT,VelF1,Time)
+  CALL PrepareF(VecMet,VelF1,Time)
   CALL IniJacAccGrav
   IF (Chemie) THEN
     IF (IniFile/='') THEN 
-      CALL InitGas(VecT,RhoCell,IniFile)
-      CALL Allocate(VecAmb,VecT)
+      CALL InitGas(VecChem,RhoCell,IniFile)
+      CALL Allocate(VecAmb,VecChem)
       VecAmb=Zero
       CALL InitAmbientGas(VecAmb,IniFile)
       CALL InitBoundaryGas(IniFile)
-      PosDummy=Position('Dummy1')
-      IF (PosDummy>0) THEN
-        CALL VectorInit(PosDummy,VecT,DummyStart1,Time)
-        CALL Mult(RhoCell,VecT,PosDummy)
-      END IF
-      PosDummy=Position('Dummy2')
-      IF (PosDummy>0) THEN
-        CALL VectorInit(PosDummy,VecT,DummyStart2,Time)
-        CALL Mult(RhoCell,VecT,PosDummy)
-      END IF
-      PosDummy=Position('Dummy3')
-      IF (PosDummy>0) THEN
-        CALL VectorInit(PosDummy,VecT,DummyStart3,Time)
-        CALL Mult(RhoCell,VecT,PosDummy)
-      END IF
-      PosDummy=Position('Dummy4')
-      IF (PosDummy>0) THEN
-        CALL VectorInit(PosDummy,VecT,DummyStart4,Time)
-        CALL Mult(RhoCell,VecT,PosDummy)
-      END IF
-    ELSE
-      DO i=NumMet+1,VectorComponentsT 
-        CALL VectorInit(i,VecT,DummyStart,Time)
-        CALL Mult(RhoCell,VecT,i)
-      END DO
     END IF
   END IF
 
   IF (Aerosol) THEN
     CALL InitGrid
-    CALL InitAerosol(VecT,IniFile)
+    CALL InitAerosol(VecChem,IniFile)
     CALL InitAmbientAero(VecAmb,IniFile)
-    CALL Limiter(VecT,VecT)
+    CALL Limiter(VecChem,VecChem)
     CALL InitKoagulation
     CALL InitActivity
   END IF
@@ -767,33 +746,33 @@ PROGRAM MainProg
     END IF
   END IF
   IF (ThetaKind=='PreEn') THEN
-    CALL PrepareEn(VecT,VelF1,Time)
+    CALL PrepareEn(VecMet,VelF1,Time)
   END IF  
   IF (dtP>0.0d0.AND.JacSound) THEN
-    CALL AllocateVec4Chemie(VecTP,VectorComponentsT)
+    CALL AllocateVec4Chemie(VecMetP,VectorComponentsT)
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
-      DEALLOCATE(VecTP(ibLoc)%Vec(thPos)%cB)
-      ALLOCATE(VecTP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:1))
+      DEALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB)
+      ALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:1))
     END DO
-    CALL Copy(VecT,VecTP)
+    CALL Copy(VecMet,VecMetP)
     GravComp=0.0d0
-    CALL JacAccGrav(VecTP)
-    VecTP=Zero
+    CALL JacAccGrav(VecMetP)
+    VecMetP=Zero
     IF (Anelastic.OR.PseudoIn) THEN
-      CALL ProjectVelface(dtP,VelF1,VecTP,VecT,VecG=VecG)
+      CALL ProjectVelface(dtP,VelF1,VecMetP,VecMet,VecG=VecG)
     ELSE  
-      CALL ProjectVelface(dtP,VelF1,VecTP,VecT)
+      CALL ProjectVelface(dtP,VelF1,VecMetP,VecMet)
     END IF  
-    CALL Deallocate(VecTP)
+    CALL Deallocate(VecMetP)
     IF (ThetaKind=='PreEn') THEN
-      CALL PrepareEn(VecT,VelF1,Time)
+      CALL PrepareEn(VecMet,VelF1,Time)
     END IF  
   END IF  
   GravComp=Grav
   Time=StartTime
-  CALL PrepareF(VecT,VelF1,Time)
+  CALL PrepareF(VecMet,VelF1,Time)
 
   !Time=0.0e0 ??
 
@@ -801,14 +780,14 @@ PROGRAM MainProg
   IF (Position('aNUMBER')>0) THEN
     ATol(Position('aNUMBER'))=1.0d10*aTolG
   END IF
-  CALL ExchangeCell(VecT)
+  CALL ExchangeCell(VecMet)
 
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   CALL InputModelOutput(InputFileName)
-  CALL SpecialOutput(VecT,VecG,VelF1,StartTime)
+  CALL SpecialOutput(VecMet,VecG,VelF1,StartTime)
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
-  CALL Output(StartTime,VelF1,VecT,VecT)
+  CALL Output(StartTime,VelF1,VecMet,VecMet)
 
   dtAct=dtStart
   dt=dtStart
@@ -816,28 +795,28 @@ PROGRAM MainProg
 ! Output Profile
   IF (ProfOut) THEN
     IF (uPosl>0) THEN
-      CALL VelocityFaceToCellLR(VelF1,VecT)
+      CALL VelocityFaceToCellLR(VelF1,VecMet)
     END IF  
-    CALL OutputProfile(VecT,VecT,ProfileSTART)
+    CALL OutputProfile(VecMet,VecMet,ProfileSTART)
   END IF
 
 ! Mean Profiles
   IF (BCVel%West  =='MeanFlow'.OR.BCVel%East =='MeanFlow'.OR. &
       BCVel%South =='MeanFlow'.OR.BCVel%North=='MeanFlow'.OR. &
       BCVel%Bottom=='MeanFlow'.OR.BCVel%Top  =='MeanFlow') THEN
-    CALL VelocityFaceToCellLR(VelF1,VecT)
-    CALL MeanProfileCompute(VecT)
+    CALL VelocityFaceToCellLR(VelF1,VecMet)
+    CALL MeanProfileCompute(VecMet)
   END IF
 
   IF (Anelastic) THEN
     VecG=Zero
   END IF  
   IF (Method(3:6)=='Peer') THEN
-    ALLOCATE(VecVecT(1:3))
-    VecVecT(3)%Vec=>VecT
+    ALLOCATE(VecVecMet(1:3))
+    VecVecMet(3)%Vec=>VecMet
     DO i=1,2
-      CALL Allocate(VecVecT(i)%Vec,0,VectorComponentsM)
-      CALL Copy(VecT,VecVecT(i)%Vec)
+      CALL Allocate(VecVecMet(i)%Vec,0,VectorComponentsM)
+      CALL Copy(VecMet,VecVecMet(i)%Vec)
     END DO
     ALLOCATE(VecVeLF(1:3))
     VecVelF(3)%VecF=>VelF1
@@ -849,9 +828,9 @@ PROGRAM MainProg
 
 ! Write SpeciesName
   IF (MyId==0) THEN
-    WRITE(*,*) ' .chem-file ::  i  ,  SpeciesName  ,  SIZE(VecT(1)%Vec(i)%c,4)  ,  Position(SpeciesName(i))'
+    WRITE(*,*) ' .chem-file ::  i  ,  SpeciesName  ,  SIZE(VecMet(1)%Vec(i)%c,4)  ,  Position(SpeciesName(i))'
     DO i=1,SIZE(SpeciesName)
-      WRITE(*,*) i,SpeciesName(i),SIZE(VecT(1)%Vec(i)%c,4),Position(SpeciesName(i))
+      WRITE(*,*) i,SpeciesName(i),SIZE(VecMet(1)%Vec(i)%c,4),Position(SpeciesName(i))
     END DO
   END IF  
 
@@ -879,25 +858,25 @@ PROGRAM MainProg
   CALL PointSurfaceNMLOutput(InputFileName,CheckSurfPoint)
   IF (CheckSurfPoint) CALL PointSurfaceDataTable(InputFileName)
 
-  IF (CheckMean) CALL OutputMeanProfile(VecT,Time) !!ML.
+  IF (CheckMean) CALL OutputMeanProfile(VecMet,Time) !!ML.
   IF (CheckColumnX) THEN
-    CALL OutputColumnXProfile(VecT,Time) !!ML.
+    CALL OutputColumnXProfile(VecMet,Time) !!ML.
   END IF  
   IF (CheckColumnZ) THEN
-    CALL OutputColumnZProfile(VecT,Time) !!ML.
+    CALL OutputColumnZProfile(VecMet,Time) !!ML.
   END IF    
-  IF (CheckSurfMean) CALL OutputMeanSurface(VecT,Time)
-  IF (CheckSurfPoint) CALL OutputPointSurface(VecT,Time)
+  IF (CheckSurfMean) CALL OutputMeanSurface(VecMet,Time)
+  IF (CheckSurfPoint) CALL OutputPointSurface(VecMet,Time)
 
-  CALL ReadRestart(VecT,VelF1,Time,InputFileName)
-  CALL AllocateVec4Chemie(VecTP,VectorComponentsT)
+  CALL ReadRestart(VecMet,VelF1,Time,InputFileName)
+  CALL AllocateVec4Chemie(VecMetP,VectorComponentsT)
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL Set(Floor(ib))
-    DEALLOCATE(VecTP(ibLoc)%Vec(thPos)%cB)
-    ALLOCATE(VecTP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:SIZE(VecT(ibLoc)%Vec(thPos)%cB,2)))
+    DEALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB)
+    ALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:SIZE(VecMet(ibLoc)%Vec(thPos)%cB,2)))
   END DO
-  CALL Copy(VecT,VecTP)
+  CALL Copy(VecMet,VecMetP)
 
   IF (MyID==0) WRITE(*,*) 'Starting time integration loop, ',Method
   DO iInt=1,EndIter
@@ -922,11 +901,11 @@ PROGRAM MainProg
       WRITE(*,*);  WRITE(*,*) ' Number of Steps  ::  ',iInt, ' Time  ::  ', Time
     END IF
     IF (Wind) THEN
-      CALL UpdateWind(VelF1,VecT,dtAct)
+      CALL UpdateWind(VelF1,VecMet,dtAct)
     END IF
     CALL UpdateBoundary(Time) 
     IF ((ThetaKind=='PreEn'.OR.ThetaKind=='Exner').AND.EnPos>0.AND.PressureUpdate) THEN
-      CALL PressureEnergyCompute(VecT,VelF1) 
+      CALL PressureEnergyCompute(VecMet,VelF1) 
     END IF
     IF (dtAct<Time*1.d-12) THEN 
       IF (MyId==0) WRITE(*,*) 'dtAct/Time < 1.d-12' 
@@ -936,67 +915,67 @@ PROGRAM MainProg
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'dtAct',dtAct
       END IF
-      CALL Ros3MetC(VecT,VelF1,VecG,dtAct,Time,ATol,RTol)
-      Temp=TotalScalar(VecT,'RHO')
+      CALL Ros3MetC(VecMet,VecChem,VelF1,VecG,dtAct,Time,ATol,RTol)
+      Temp=TotalScalar(VecMet,'RHO')
       IF (MyId==0) THEN
         WRITE(*,*) 'TotalRho',Temp
       END IF  
     ELSE IF (Method(3:4)=='RK'.OR.Method(3:4)=='EB'.OR.Method(3:5)=='MIS') THEN
-      CALL InitExpIntRk(VecT)
+      CALL InitExpIntRk(VecMet)
       CALL TimeStepCFL(VelF1,dtAct,ns)
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'dtAct',dtAct,Time
       END IF
-      CALL ExpIntRk(VelF1,VecT,dtAct,Time,ATol,RTol)
+!     CALL ExpIntRk(VelF1,VecMet,dtAct,Time,ATol,RTol)
     ELSE IF (Method(3:6)=='Peer') THEN
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'Peer dtAct',dtAct,Time
       END IF
-      CALL InitExpIntPeer(VecVecT(1)%Vec)
+!     CALL InitExpIntPeer(VecVecMet(1)%Vec)
       CALL TimeStepCFL(VelF1,dtAct,ns)
-      CALL ExpIntPeer(VecVelF,VecVecT,dtAct,Time,ATol,RTol)
+!     CALL ExpIntPeer(VecVelF,VecVecMet,dtAct,Time,ATol,RTol)
     ELSE IF (Method(4:8)=='LPeer') THEN
-      CALL IntLinPeer(VelF1,VecT,dtAct,Time,ATol,RTol)
+!     CALL IntLinPeer(VelF1,VecMet,dtAct,Time,ATol,RTol)
     ELSE
       IF (MyId==0) WRITE(*,*) 'Falsche Methode'
       EXIT
     END IF
     IF ( Time>EndTime*(1.d0-1.d-12))THEN 
       Time=EndTime+1.d-12
-      CALL PrepareF(VecT,VelF1,Time)
-      CALL SpecialOutput(VecT,VecG,VelF1,Time)
-      CALL Output(Time,VelF1,VecT,VecT)
-      IF (CheckMean) CALL OutputMeanProfile(VecT,Time) !ML.
+      CALL PrepareF(VecMet,VelF1,Time)
+      CALL SpecialOutput(VecMet,VecG,VelF1,Time)
+      CALL Output(Time,VelF1,VecMet,VecMet)
+      IF (CheckMean) CALL OutputMeanProfile(VecMet,Time) !ML.
       IF (CheckColumnX) THEN
-        CALL OutputColumnXProfile(VecT,Time) !ML.
+        CALL OutputColumnXProfile(VecMet,Time) !ML.
       END IF  
       IF (CheckColumnZ) THEN
-        CALL OutputColumnZProfile(VecT,Time) !ML.
+        CALL OutputColumnZProfile(VecMet,Time) !ML.
       END IF  
-      IF (CheckSurfMean) CALL OutputMeanSurface(VecT,Time)
-      IF (CheckSurfPoint) CALL OutputPointSurface(VecT,Time)
+      IF (CheckSurfMean) CALL OutputMeanSurface(VecMet,Time)
+      IF (CheckSurfPoint) CALL OutputPointSurface(VecMet,Time)
       EXIT
     END IF
-    CALL PrepareF(VecT,VelF1,Time)
-    CALL SpecialOutput(VecT,VecG,VelF1,Time)
-    CALL Output(Time,VelF1,VecT,VecT)
-    IF (CheckMean) CALL OutputMeanProfile(VecT,Time)!ML.
-    IF (CheckColumnX) CALL OutputColumnXProfile(VecT,Time)!ML.
+    CALL PrepareF(VecMet,VelF1,Time)
+    CALL SpecialOutput(VecMet,VecG,VelF1,Time)
+    CALL Output(Time,VelF1,VecMet,VecMet)
+    IF (CheckMean) CALL OutputMeanProfile(VecMet,Time)!ML.
+    IF (CheckColumnX) CALL OutputColumnXProfile(VecMet,Time)!ML.
     IF (CheckColumnZ) THEN
-      CALL OutputColumnZProfile(VecT,Time)!ML.
+      CALL OutputColumnZProfile(VecMet,Time)!ML.
     END IF
-    IF (CheckSurfMean) CALL OutputMeanSurface(VecT,Time)
-    IF (CheckSurfPoint) CALL OutputPointSurface(VecT,Time)
+    IF (CheckSurfMean) CALL OutputMeanSurface(VecMet,Time)
+    IF (CheckSurfPoint) CALL OutputPointSurface(VecMet,Time)
 !   Mean Profiles
     IF (BCVel%West  =='MeanFlow'.OR.BCVel%East =='MeanFlow'.OR. &
         BCVel%South =='MeanFlow'.OR.BCVel%North=='MeanFlow'.OR. &
         BCVel%Bottom=='MeanFlow'.OR.BCVel%Top  =='MeanFlow') THEN
-      CALL VelocityFaceToCellLR(VelF1,VecT)
-      CALL MeanProfileCompute(VecT)
+      CALL VelocityFaceToCellLR(VelF1,VecMet)
+      CALL MeanProfileCompute(VecMet)
     END IF
-    CALL WriteRestart(VecT,VelF1,Time,InputFileName)
+    CALL WriteRestart(VecMet,VelF1,Time,InputFileName)
 !   Check for NaN
-    IF (ISNAN(DOT(VecT,VecT))) THEN
+    IF (ISNAN(DOT(VecMet,VecMet))) THEN
       CALL MPI_Finalize(MPIErr)
       IF (MyID==0) WRITE(*,*) 'NaN. Stopped'
       STOP
@@ -1010,8 +989,8 @@ PROGRAM MainProg
 
 ! Output Profile
   IF (ProfOut) THEN
-    CALL VelocityFaceToCellLR(VelF1,VecT)
-    CALL OutputProfile(VecT,VecT,ProfileEND)
+    CALL VelocityFaceToCellLR(VelF1,VecMet)
+    CALL OutputProfile(VecMet,VecMet,ProfileEND)
   END IF
   CALL MPI_Finalize(MPIErr)
 

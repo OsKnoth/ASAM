@@ -204,9 +204,9 @@ SUBROUTINE StageRos(VelC,VelF,dtAct,Time)
     CALL ExchangeCell(VelC)
     CALL PrepareF(VelC,VelF,TimeF)
     IF (iStage==1) THEN
-      JacMet=Zero
+      JacTrans=Zero
       dt=dtAct
-      CALL Jac(VelC,VelF,JacMet,Time)
+      CALL Jac(VelC,VelF,JacTrans,Time)
       IF (uPosL>0.AND.PGradient) THEN
         dtP=dtAct
         CALL JacAccGrav(VelC)
@@ -223,10 +223,10 @@ SUBROUTINE StageRos(VelC,VelF,dtAct,Time)
     Tol=BiCGStabTol
     VecIncrC(iStage)%Vec=Zero
     IF (Source) THEN
-      CALL SolveSourceSp(RhsVec,JacMet)
+      CALL SolveSourceSp(RhsVec,JacTrans)
     END IF
     IF (Transport) THEN
-      CALL BICGStabSp(JacMet,VecIncrC(iStage)%Vec,RhsVec,Iter,Tol)
+      CALL BICGStabSp(JacTrans,VecIncrC(iStage)%Vec,RhsVec,Iter,Tol)
     ELSE
       Iter=0
       CALL Copy(RhsVec,VecIncrC(iStage)%Vec)

@@ -13,7 +13,7 @@ MODULE Chemie_Mod
   IMPLICIT NONE
 
   REAL(RealKind) :: ChargeGes
-  INTEGER :: nSpc,nGas,nSoluble,nPartic,nSolid,nKat,nreak
+  INTEGER :: nSpc,nGas,nSoluble,nPartic,nSolid,nKat,nMet,nreak
   INTEGER :: nAqua
   INTEGER, PRIVATE :: NumHenry,NumHenryPas
   INTEGER :: nReakGas    &
@@ -36,7 +36,7 @@ MODULE Chemie_Mod
             ,nReakSSpec  &
             ,nReakMicro
 
-  INTEGER :: nges
+  INTEGER :: nGes,nGesChem,nGesMet
 
   TYPE (Reaction_T), POINTER :: ReactionFirst
   TYPE (Reaction_T), POINTER :: GasPhotoFirst &
@@ -268,61 +268,85 @@ SUBROUTINE AllocateVec4Chemie(Vec,VecComponents)
 END SUBROUTINE AllocateVec4Chemie
 
 
-SUBROUTINE Allocate_Jac(JacChemie)
+SUBROUTINE Allocate_Jac(JacTrans)
 
-  TYPE(JacSpMatrix4_T), POINTER :: JacChemie(:)
+  TYPE(JacSpMatrix4_T), POINTER :: JacTrans(:)
 
   INTEGER :: i,iAct,j,jj,jAct,n,nzr
   INTEGER :: Rank(2)
-  TYPE(SpRowColDiag), POINTER :: StructLU
-  TYPE(SpMatrix4Cell_T), POINTER :: JacSLU
+  TYPE(SpRowColDiag), POINTER :: StructLUMet
+  TYPE(SpRowColDiag), POINTER :: StructLUChem
+  TYPE(SpMatrix4Cell_T), POINTER :: JacSChemLU
+  TYPE(SpMatrix4Cell_T), POINTER :: JacSMetLU
 
-  ALLOCATE(StructLU)
-  ALLOCATE(JacChemie(nbLoc))
-  CALL Jacstr_LU(StructLU)
+  ALLOCATE(StructLUMet)
+  ALLOCATE(StructLUChem)
+  ALLOCATE(JacTrans(nbLoc))
+  CALL Jacstr_LUChem(StructLUChem)
+  CALL Jacstr_LUMet(StructLUMet)
+  STOP
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL Set(Floor(ib))
-    ALLOCATE(JacChemie(ibLoc)%JacTMom)
-    CALL SpNullify(JacChemie(ibLoc)%JacTMom)
-    CALL Allocate(JacChemie(ibLoc)%JacTMom,7)
+    ALLOCATE(JacTrans(ibLoc)%JacTMom)
+    CALL SpNullify(JacTrans(ibLoc)%JacTMom)
+    CALL Allocate(JacTrans(ibLoc)%JacTMom,7)
     IF (TkeSGS.OR.NoTke.OR.TkeSmag.OR.DynSmag) THEN
-      ALLOCATE(JacChemie(ibLoc)%JacTPot)
-      CALL SpNullify(JacChemie(ibLoc)%JacTPot)
-      CALL Allocate(JacChemie(ibLoc)%JacTPot,7)
+      ALLOCATE(JacTrans(ibLoc)%JacTPot)
+      CALL SpNullify(JacTrans(ibLoc)%JacTPot)
+      CALL Allocate(JacTrans(ibLoc)%JacTPot,7)
     ELSE
-      JacChemie(ibLoc)%JacTPot=>JacChemie(ibLoc)%JacTMom
+      JacTrans(ibLoc)%JacTPot=>JacTrans(ibLoc)%JacTMom
     END IF
-    ALLOCATE(JacChemie(ibLoc)%JacFall)
-    CALL SpNullify(JacChemie(ibLoc)%JacFall)
-    CALL Allocate(JacChemie(ibLoc)%JacFall,2)
-    ALLOCATE(JacChemie(ibLoc)%JacFallRhoL)
-    CALL SpNullify(JacChemie(ibLoc)%JacFallRhoL)
-    CALL Allocate(JacChemie(ibLoc)%JacFallRhoL,2)
-    ALLOCATE(JacChemie(ibLoc)%JacSLU)
-    JacSLU=>JacChemie(ibLoc)%JacSLU
-    JacSLU%Struct=>StructLU
-    n=StructLU%n
-    nzr=StructLU%RowPtr(n+1)-1
-    JacSLU%n=n
-    JacSLU%nMaxVec=MAX(nFrac,1)
-    ALLOCATE(JacSLU%Mat(nzr))
+    ALLOCATE(JacTrans(ibLoc)%JacFall)
+    CALL SpNullify(JacTrans(ibLoc)%JacFall)
+    CALL Allocate(JacTrans(ibLoc)%JacFall,2)
+    ALLOCATE(JacTrans(ibLoc)%JacFallRhoL)
+    CALL SpNullify(JacTrans(ibLoc)%JacFallRhoL)
+    CALL Allocate(JacTrans(ibLoc)%JacFallRhoL,2)
+    ALLOCATE(JacTrans(ibLoc)%JacSChemLU)
+    JacSChemLU=>JacTrans(ibLoc)%JacSChemLU
+    JacSChemLU%Struct=>StructLUChem
+    n=StructLUChem%n
+    nzr=StructLUChem%RowPtr(n+1)-1
+    JacSChemLU%n=n
+    JacSChemLU%nMaxVec=MAX(nFrac,1)
+    ALLOCATE(JacSChemLU%Mat(nzr))
     DO i=1,n
-      iAct=StructLU%InvPer(i)
+      iAct=StructLUChem%InvPer(i)
       IF (TypeSpecies(iAct)=='GAS') THEN
         Rank(1)=1
       ELSE
         Rank(1)=nFrac
       END IF
-      DO jj=StructLU%RowPtr(i),StructLU%RowPtr(i+1)-1
-        j=StructLU%ColInd(jj)
-        jAct=StructLU%InvPer(j)
+      DO jj=StructLUChem%RowPtr(i),StructLUChem%RowPtr(i+1)-1
+        j=StructLUChem%ColInd(jj)
+        jAct=StructLUChem%InvPer(j)
         IF (TypeSpecies(jAct)=='GAS') THEN
           Rank(2)=1
         ELSE
           Rank(2)=nFrac
         END IF
-        CALL ALLOCATE(JacSLU%Mat(jj),Rank)
+        CALL ALLOCATE(JacSChemLU%Mat(jj),Rank)
+      END DO
+    END DO
+
+    ALLOCATE(JacTrans(ibLoc)%JacSMetLU)
+    JacSMetLU=>JacTrans(ibLoc)%JacSMetLU
+    JacSMetLU%Struct=>StructLUMet
+    n=StructLUMet%n
+    nzr=StructLUMet%RowPtr(n+1)-1
+    JacSMetLU%n=n
+    JacSMetLU%nMaxVec=MAX(nFrac,1)
+    ALLOCATE(JacSMetLU%Mat(nzr))
+    DO i=1,n
+      iAct=StructLUMet%InvPer(i)
+      DO jj=StructLUMet%RowPtr(i),StructLUMet%RowPtr(i+1)-1
+        j=StructLUMet%ColInd(jj)
+        jAct=StructLUMet%InvPer(j)
+        Rank(1)=1
+        Rank(2)=1
+        CALL ALLOCATE(JacSMetLU%Mat(jj),Rank)
       END DO
     END DO
   END DO
@@ -376,9 +400,9 @@ FUNCTION PositionAero(Species)
 
 END FUNCTION PositionAero
 
-SUBROUTINE Jacstr_LU(LU)
+SUBROUTINE Jacstr_LUChem(LUChem)
 
-  TYPE (SpRowColDiag), POINTER :: LU
+  TYPE (SpRowColDiag), POINTER :: LUChem
 
   TYPE (SpRowColD) :: A
 
@@ -386,20 +410,19 @@ SUBROUTINE Jacstr_LU(LU)
   INTEGER, ALLOCATABLE :: Struct(:)
   LOGICAL :: ins
   TYPE (Reaction_T), POINTER :: Current
-  INTEGER :: PosMet(20)
   INTEGER :: iPos
 
 ! Initialisierung von  rwptrj und clindj
  
 
-  A%n=nges
-  A%m=nges
-  A%len=20*nges
+  A%n=nGesChem
+  A%m=nGesChem
+  A%len=20*nGesChem
   CALL SpNullify(A)
   CALL Allocate(A)
 
 ! Insert diagonal
-  DO i=1,nges
+  DO i=1,nGesChem
     CALL SpInsert(A,i,i,ins)   
   END DO
   A%Restr=0
@@ -447,44 +470,87 @@ SUBROUTINE Jacstr_LU(LU)
     A%Restr(Position('RHO'))=-1
   END IF
 
+
+! Symbolic Factorization
+
+  CALL SymbLU(A)
+  CALL SpNullify(LUChem)
+  LUChem=A
+  CALL Deallocate(A)
+
+! Belegung der lokalen Anteile 
+
+  Current=>ReactionFirst
+  DO WHILE(ASSOCIATED(Current))
+    istr=0
+    ALLOCATE(Struct(Current%NumSpecies &
+                   *(Current%NumSpeciesLeftAktiv+Current%NumSpeciesRightAktiv)))
+    DO i=1,Current%NumSpeciesLeftAktiv
+      DO l=1,Current%NumSpecies
+        DO k=LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)),&
+             LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)+1)-1
+          IF (LUChem%Permu(Current%SpeciesLeft(i)).eq.LUChem%ColInd(k)) THEN
+            istr=istr+1
+            Struct(istr)=k
+          END IF
+        END DO
+      END DO
+    END DO
+    IF(TRIM(Current%ClassR)=='DISS'.OR. &
+       TRIM(Current%ClassR)=='SOLID'.OR. &
+       TRIM(Current%ClassR)=='HENRY'.OR. &
+       TRIM(Current%ClassR)=='MICROPHYS') THEN
+      DO i=1,Current%NumSpeciesRightAktiv
+        DO l=1,Current%NumSpecies
+          DO k=LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)),&
+               LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)+1)-1
+            IF (LUChem%Permu(Current%SpeciesRight(i)).eq.LUChem%ColInd(k)) THEN
+              istr=istr+1
+              Struct(istr)=k
+            END IF
+          END DO
+        END DO
+      END DO
+    END IF
+    ALLOCATE(Current%struct(istr))
+    DO i=1,istr
+       Current%struct(i)=Struct(i)
+    END DO
+    DEALLOCATE(struct)
+    Current=>Current%Next
+  END DO
+
+END SUBROUTINE Jacstr_LUChem
+
+SUBROUTINE Jacstr_LUMet(LU)
+
+  TYPE (SpRowColDiag), POINTER :: LU
+
+  TYPE (SpRowColD) :: A
+
+  INTEGER :: i,k,l,istr,Shift
+  INTEGER, ALLOCATABLE :: Struct(:)
+  LOGICAL :: ins
+  INTEGER :: PosMet(20)
+  INTEGER :: iPos
+
+! Initialisierung von  rwptrj und clindj
+ 
+
+  A%n=nGesMet
+  A%m=nGesMet
+  A%len=20*nGesMet
+  CALL SpNullify(A)
+  CALL Allocate(A)
+
+! Insert diagonal
+  DO i=1,nGesMet
+    CALL SpInsert(A,i,i,ins)   
+  END DO
+  A%Restr=0
+
 ! Insert meteorological variables
   NumMet=0
-  IF (Position('UCL')>0) THEN
-    NumMet=NumMet+1
-    uPosLJac=NumMet
-    uPosL=Position('UCL')
-    PosMet(NumMet)=uPosL
-  END IF
-  IF (Position('UCR')>0) THEN
-    NumMet=NumMet+1
-    uPosRJac=NumMet
-    uPosR=Position('UCR')
-    PosMet(NumMet)=uPosR
-  END IF
-  IF (Position('VCL')>0) THEN
-    NumMet=NumMet+1
-    vPosLJac=NumMet
-    vPosL=Position('VCL')
-    PosMet(NumMet)=vPosL
-  END IF
-  IF (Position('VCR')>0) THEN
-    NumMet=NumMet+1
-    vPosRJac=NumMet
-    vPosR=Position('VCR')
-    PosMet(NumMet)=vPosR
-  END IF
-  IF (Position('WCL')>0) THEN
-    NumMet=NumMet+1
-    wPosLJac=NumMet
-    wPosL=Position('WCL')
-    PosMet(NumMet)=wPosL
-  END IF
-  IF (Position('WCR')>0) THEN
-    NumMet=NumMet+1
-    wPosRJac=NumMet
-    wPosR=Position('WCR')
-    PosMet(NumMet)=wPosR
-  END IF
   IF (Position('TE')>0) THEN
     NumMet=NumMet+1
     thPosJac=NumMet
@@ -496,42 +562,6 @@ SUBROUTINE Jacstr_LU(LU)
     EnPosJac=NumMet
     EnPos=Position('EN')
     PosMet(NumMet)=EnPos
-  END IF
-  IF (Position('TKE')>0) THEN
-    NumMet=NumMet+1
-    tkePosJac=NumMet
-    tkePos=Position('TKE')
-    PosMet(NumMet)=tkePos
-  END IF
-  IF (Position('DIS')>0) THEN
-    NumMet=NumMet+1
-    disPosJac=NumMet
-    disPos=Position('DIS')
-    PosMet(NumMet)=disPos
-  END IF
-  IF (Position('OME')>0) THEN
-    NumMet=NumMet+1
-    omePosJac=NumMet
-    omePos=Position('OME')
-    PosMet(NumMet)=omePos
-  END IF
-  IF (Position('TKEH')>0) THEN
-    NumMet=NumMet+1
-    tkeHPosJac=NumMet
-    tkeHPos=Position('TKEH')
-    PosMet(NumMet)=tkeHPos
-  END IF
-  IF (Position('TKEV')>0) THEN
-    NumMet=NumMet+1
-    tkeVPosJac=NumMet
-    tkeVPos=Position('TKEV')
-    PosMet(NumMet)=tkeVPos
-  END IF
-  IF (Position('LEN')>0) THEN
-    NumMet=NumMet+1
-    LenPosJac=NumMet
-    LenPos=Position('LEN')
-    PosMet(NumMet)=LenPos
   END IF
   IF (Position('RHO')>0) THEN
     NumMet=NumMet+1
@@ -605,17 +635,77 @@ SUBROUTINE Jacstr_LU(LU)
     nsPos=Position('NS')
     PosMet(NumMet)=nsPos
   END IF
-  IF (Position('TRACER1')>0) THEN 
+  IF (Position('UCL')>0) THEN
     NumMet=NumMet+1
-    tracer1PosJac=NumMet
-    tracer1Pos=Position('TRACER1')
-    PosMet(NumMet)=tracer1Pos
+    uPosLJac=NumMet
+    uPosL=Position('UCL')
+    PosMet(NumMet)=uPosL
   END IF
-  IF (Position('TRACER2')>0) THEN 
+  IF (Position('UCR')>0) THEN
     NumMet=NumMet+1
-    tracer2PosJac=NumMet
-    tracer2Pos=Position('TRACER2')
-    PosMet(NumMet)=tracer2Pos
+    uPosRJac=NumMet
+    uPosR=Position('UCR')
+    PosMet(NumMet)=uPosR
+  END IF
+  IF (Position('VCL')>0) THEN
+    NumMet=NumMet+1
+    vPosLJac=NumMet
+    vPosL=Position('VCL')
+    PosMet(NumMet)=vPosL
+  END IF
+  IF (Position('VCR')>0) THEN
+    NumMet=NumMet+1
+    vPosRJac=NumMet
+    vPosR=Position('VCR')
+    PosMet(NumMet)=vPosR
+  END IF
+  IF (Position('WCL')>0) THEN
+    NumMet=NumMet+1
+    wPosLJac=NumMet
+    wPosL=Position('WCL')
+    PosMet(NumMet)=wPosL
+  END IF
+  IF (Position('WCR')>0) THEN
+    NumMet=NumMet+1
+    wPosRJac=NumMet
+    wPosR=Position('WCR')
+    PosMet(NumMet)=wPosR
+  END IF
+  IF (Position('TKE')>0) THEN
+    NumMet=NumMet+1
+    tkePosJac=NumMet
+    tkePos=Position('TKE')
+    PosMet(NumMet)=tkePos
+  END IF
+  IF (Position('DIS')>0) THEN
+    NumMet=NumMet+1
+    disPosJac=NumMet
+    disPos=Position('DIS')
+    PosMet(NumMet)=disPos
+  END IF
+  IF (Position('OME')>0) THEN
+    NumMet=NumMet+1
+    omePosJac=NumMet
+    omePos=Position('OME')
+    PosMet(NumMet)=omePos
+  END IF
+  IF (Position('TKEH')>0) THEN
+    NumMet=NumMet+1
+    tkeHPosJac=NumMet
+    tkeHPos=Position('TKEH')
+    PosMet(NumMet)=tkeHPos
+  END IF
+  IF (Position('TKEV')>0) THEN
+    NumMet=NumMet+1
+    tkeVPosJac=NumMet
+    tkeVPos=Position('TKEV')
+    PosMet(NumMet)=tkeVPos
+  END IF
+  IF (Position('LEN')>0) THEN
+    NumMet=NumMet+1
+    LenPosJac=NumMet
+    LenPos=Position('LEN')
+    PosMet(NumMet)=LenPos
   END IF
   ALLOCATE(IndexMet(NumMet,NumMet))
   DO i=1,NumMet
@@ -632,47 +722,6 @@ SUBROUTINE Jacstr_LU(LU)
   LU=A
   CALL Deallocate(A)
 
-! Belegung der lokalen Anteile 
-
-  Current=>ReactionFirst
-  DO WHILE(ASSOCIATED(Current))
-    istr=0
-    ALLOCATE(Struct(Current%NumSpecies &
-                   *(Current%NumSpeciesLeftAktiv+Current%NumSpeciesRightAktiv)))
-    DO i=1,Current%NumSpeciesLeftAktiv
-      DO l=1,Current%NumSpecies
-        DO k=LU%RowPtr(LU%Permu(Current%Species(l)%Species)),&
-             LU%RowPtr(LU%Permu(Current%Species(l)%Species)+1)-1
-          IF (LU%Permu(Current%SpeciesLeft(i)).eq.LU%ColInd(k)) THEN
-            istr=istr+1
-            Struct(istr)=k
-          END IF
-        END DO
-      END DO
-    END DO
-    IF(TRIM(Current%ClassR)=='DISS'.OR. &
-       TRIM(Current%ClassR)=='SOLID'.OR. &
-       TRIM(Current%ClassR)=='HENRY'.OR. &
-       TRIM(Current%ClassR)=='MICROPHYS') THEN
-      DO i=1,Current%NumSpeciesRightAktiv
-        DO l=1,Current%NumSpecies
-          DO k=LU%RowPtr(LU%Permu(Current%Species(l)%Species)),&
-               LU%RowPtr(LU%Permu(Current%Species(l)%Species)+1)-1
-            IF (LU%Permu(Current%SpeciesRight(i)).eq.LU%ColInd(k)) THEN
-              istr=istr+1
-              Struct(istr)=k
-            END IF
-          END DO
-        END DO
-      END DO
-    END IF
-    ALLOCATE(Current%struct(istr))
-    DO i=1,istr
-       Current%struct(i)=Struct(i)
-    END DO
-    DEALLOCATE(struct)
-    Current=>Current%Next
-  END DO
 ! Belegung der Meteorologie
   DO i=1,NumMet
     DO l=1,NumMet
@@ -685,7 +734,7 @@ SUBROUTINE Jacstr_LU(LU)
     END DO
   END DO
 
-END SUBROUTINE Jacstr_LU
+END SUBROUTINE Jacstr_LUMet
 
 SUBROUTINE SetPosition
 
@@ -936,14 +985,17 @@ SUBROUTINE InputSystem(FileName)
   END DO
 
   READ(Unit,*) nspc
+  READ(Unit,*) nMet
   READ(Unit,*) nGas
   READ(Unit,*) nSoluble
   READ(Unit,*) nPartic
   READ(Unit,*) nSolid
   READ(Unit,*) nKat
-  nges=nspc-nkat
+  nGes=nspc-nkat
+  nGesChem=nGes-nMet
+  nGesMet=nMet
   nAqua=nSoluble+nSolid
-  VectorComponentsT=nges
+  VectorComponentsT=nGes
 
   DO i=1,3
     READ(Unit,*) 

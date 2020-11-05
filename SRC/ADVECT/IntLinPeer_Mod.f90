@@ -265,9 +265,9 @@ SUBROUTINE InitLinPeer(VelC,VelF,dtAct,Time)
       END IF
       beta0=beta0Loc
       IF (JacTransport) THEN
-        JacMet=Zero
+        JacTrans=Zero
         dt=dtAct
-        CALL Jac(VelC,VelF,JacMet,Time)
+        CALL Jac(VelC,VelF,JacTrans,Time)
       END IF  
       IF (uPosL>0.AND.PGradient.AND.JacSound) THEN
         dtP=dtAct
@@ -365,8 +365,8 @@ SUBROUTINE StageLinPeerGL(VelC,VelF,dtAct,Time)
     IF (iStage==1) THEN
       dt=dtAct
       IF (JacTransport) THEN
-        JacMet=Zero
-        CALL Jac(VelC,VecVelF(iStage)%VecF,JacMet,Time)
+        JacTrans=Zero
+        CALL Jac(VelC,VecVelF(iStage)%VecF,JacTrans,Time)
       END IF  
       IF (uPosL>0.AND.PGradient.AND.JacSound) THEN
         dtP=dtAct
@@ -384,10 +384,10 @@ SUBROUTINE StageLinPeerGL(VelC,VelF,dtAct,Time)
     IncrC=Zero
     IF (JacTransport) THEN
       IF (Source) THEN
-        CALL SolveSourceSp(RhsVec,JacMet)
+        CALL SolveSourceSp(RhsVec,JacTrans)
       END IF
       IF (Transport) THEN
-        CALL BICGStabSp(JacMet,IncrC,RhsVec,Iter,Tol)
+        CALL BICGStabSp(JacTrans,IncrC,RhsVec,Iter,Tol)
       ELSE
         Iter=0
         CALL Copy(RhsVec,IncrC)
@@ -491,10 +491,10 @@ SUBROUTINE StageLinPeerJeb(VelC,VelF,dtAct,Time)
     IncrC=Zero
     IF (JacTransport) THEN
       IF (Source) THEN
-        CALL SolveSourceSp(RhsVec,JacMet)
+        CALL SolveSourceSp(RhsVec,JacTrans)
       END IF
       IF (Transport) THEN
-        CALL BICGStabSp(JacMet,IncrC,RhsVec,Iter,Tol)
+        CALL BICGStabSp(JacTrans,IncrC,RhsVec,Iter,Tol)
       ELSE
         Iter=0
         CALL Copy(RhsVec,IncrC)
@@ -530,9 +530,9 @@ SUBROUTINE StageLinPeerJeb(VelC,VelF,dtAct,Time)
         beta0=GammaLinPeer(1)
       END IF  
       IF (JacTransport) THEN
-        JacMet=Zero
+        JacTrans=Zero
         dt=dtAct
-        CALL Jac(VelC,VelF,JacMet,Time)
+        CALL Jac(VelC,VelF,JacTrans,Time)
       END IF  
       IF (uPosL>0.AND.PGradient.AND.JacSound) THEN
         dtP=dtAct
