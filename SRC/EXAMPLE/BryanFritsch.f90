@@ -253,9 +253,15 @@ FUNCTION ThProfFun(x,y,z,zHeight,Time)
   LOGICAL, SAVE :: Load=.TRUE.
   REAL(RealKind) :: S
 
+  INTEGER :: i
+
   IF (ProfIn) THEN
     IF (Load) THEN
       CALL ReadProfile(cInt,thType,'ThProf')
+      DO i=1,UBOUND(cInt,1)
+        WRITE(*,*) 'cInt',i,cInt(i,:)
+      END DO  
+
       Load=.FALSE.
     END IF
     ThProfFun=ProfileEqual(cInt,z)

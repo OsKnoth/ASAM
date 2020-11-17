@@ -129,7 +129,7 @@ ShapeOSD: ShapeD
 Adjust: dassl CgD ModD
 	$(LINK) $(OPT) -fallow-argument-mismatch $(INCL) $(KINCL) -o Adjust AdjustProfile/Profile_Mod.f90 AdjustProfile/ProfileMain.f90 AdjustProfile/DASSL/*.o\
         $(CGLIB) $(MODLIB);\
-        mv Adjust ../bin/AdjustProfile.$(MACH);\
+        mv Adjust $(DEFPATH)/bin/AdjustProfile.$(MACH);\
         rm -f ~/bin/AdjustProfile.$(MACH);\
         ln -s $(DEFPATH)/bin/AdjustProfile.$(MACH) ~/bin/AdjustProfile.$(MACH);\
 

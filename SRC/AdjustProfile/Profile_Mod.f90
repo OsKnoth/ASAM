@@ -18,6 +18,9 @@ MODULE Profile_Mod
   INTEGER, PRIVATE :: TempPos=0
   INTEGER, PRIVATE :: QvPos=0
   INTEGER, PRIVATE :: RhPos=0
+  INTEGER, PRIVATE :: rtPos=0
+  INTEGER, PRIVATE :: rvPos=0
+  INTEGER, PRIVATE :: ThetaEPos=0
   INTEGER, PRIVATE :: uWindPos=0
   INTEGER, PRIVATE :: vWindPos=0
   INTEGER, PRIVATE :: wWindPos=0
@@ -223,6 +226,8 @@ SUBROUTINE Res(z,y,yprime,delta,ires,rpar,ipar)
       CALL ResMoistQV(z,y,yprime,delta,ires,rpar,ipar)
     CASE('MoistQVPot')
       CALL ResMoistQVPot(z,y,yprime,delta,ires,rpar,ipar)
+    CASE('MoistThetaE')
+      CALL ResMoistThetaE(z,y,yprime,delta,ires,rpar,ipar)
   END SELECT  
 
 END SUBROUTINE Res
@@ -493,6 +498,59 @@ SUBROUTINE JacResMoistRhoV(z,y,yprime,pd,cj,rpar,ipar)
 
 END SUBROUTINE JacResMoistRhoV
 
+SUBROUTINE ResMoistThetaE(z,y,yprime,delta,ires,rpar,ipar)
+
+  INTEGER :: ires,ipar(*)
+  REAL(RealKind) :: z,y(*),yprime(*),delta(*),rpar(*)
+
+  REAL(RealKind) :: ThetaEu,ThetaEo,zu,zo
+  REAL(RealKind) :: rtu,rto
+  REAL(RealKind) :: p,pPrime,Te,ThetaE,Rho,RhoD,RhoQv,rt
+  REAL(RealKind) :: Rm,Cpml,rv,p_vs,T_C,a,b,p_d,L
+
+! p = y(1)
+! Rho = y(2)
+! Te = y(3)
+! rt = y(4)
+! rv = y(5)
+! RhoQv = y(6)
+! ThetaE = y(7)
+
+
+
+  p = y(1)
+  Rho = y(2)
+  Te = y(3)
+  rt = y(4)
+  rv = y(5)
+  Rhoqv = y(6)
+  ThetaE = y(7)
+  pPrime   =yPrime(1)
+
+  zu=Rpar(1)
+  zo=Rpar(2)
+  ThetaEu=Rpar(3)
+  ThetaEo=Rpar(4)
+  rtu=Rpar(5)
+  rto=Rpar(6)
+
+  RhoD=Rho/(1.0d0+rt)
+  p_d=Rd*RhoD*Te
+  T_C=Te-273.15
+  p_vs=611.2d0*exp(17.62d0*T_C/(243.12d0+T_C))
+  L=L00-(Cpl-Cpv)*Te
+  Delta(1)=pPrime+Grav*Rho
+  Delta(2)=p-(Rd*RhoD+Rv*Rhoqv)*Te
+  Delta(3)=ThetaE-Te*(p_d/p0)**(-Rd/  &
+        (cpd+cpl*rt))*EXP(L*rv/((cpd+cpl*rt)*Te))
+  Delta(4)=rt-((z-zu)*rto+(zo-z)*rtu)/(zo-zu)
+  Delta(5)=Rhoqv-RhoD*rv
+  Delta(6)=ThetaE-((z-zu)*ThetaEo+(zo-z)*ThetaEu)/(zo-zu)
+  a=p_vs/(Rv*Te)-rhoqv
+  b=Rho-Rhoqv-RhoD
+  Delta(7)=a+b-SQRT(a*a+b*b)
+END SUBROUTINE ResMoistThetaE
+
 SUBROUTINE ResMoistQV(z,y,yprime,delta,ires,rpar,ipar)
 
   INTEGER :: ires,ipar(*)
@@ -706,7 +764,7 @@ SUBROUTINE JacResMoistQVPot(z,y,yprime,pd,cj,rpar,ipar)
 END SUBROUTINE JacResMoistQVPot
 
 SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart,&
-                    uWindStart,vWindStart,wWindStart)
+                    ThetaEStart,rtStart,uWindStart,vWindStart,wWindStart)
 
   REAL(RealKind) :: y(:),yprime(:),rpar(:)
   INTEGER :: ipar(:)
@@ -715,6 +773,8 @@ SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart
   REAL(RealKind), OPTIONAL :: TeStart
   REAL(RealKind), OPTIONAL :: ThDStart
   REAL(RealKind), OPTIONAL :: QVStart
+  REAL(RealKind), OPTIONAL :: ThetaEStart
+  REAL(RealKind), OPTIONAL :: rtStart
   REAL(RealKind), OPTIONAL :: uWindStart
   REAL(RealKind), OPTIONAL :: vWindStart
   REAL(RealKind), OPTIONAL :: wWindStart
@@ -868,6 +928,54 @@ SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart
         y(5)=y(6)*SatVap(y(2))/(Rv*y(2))
       ELSE IF (PRESENT(QVStart).AND.y(RhoVPos)==0.0d0) THEN
         y(RhoVPos)=y(QvPos)*y(RhoPos)
+      END IF  
+      yPrime(1)=-y(RhoPos)*Grav
+      rpar(1)=0.0d0
+      rpar(2)=1.0d0
+    CASE('MoistThetaE')
+      neq=7
+      PrePos=1
+      RhoPos=2
+      TempPos=3
+      rtPos=4
+      rvPos=5
+      RhoVPos=6
+      ThetaEPos=7
+      IF (PRESENT(preStart)) THEN
+        y(PrePos)=preStart
+      ELSE
+        IF (y(PrePos)==0.0d0) THEN
+          y(PrePos)=1.0d5 
+        END IF  
+      END IF  
+      IF (PRESENT(teStart)) THEN
+        y(TempPos)=teStart
+        rpar(3)=teStart
+        rpar(4)=teStart
+        y(ThDPos)=teStart
+      ELSE
+        y(TempPos)=293.15
+        y(ThDPos)=293.15
+        rpar(3)=293.15
+        rpar(4)=293.15
+      END IF  
+      IF (PRESENT(ThetaEStart)) THEN
+        y(ThetaEPos)=ThetaEStart
+        rpar(3)=ThetaEStart
+        rpar(4)=ThetaEStart
+        y(TempPos)=y(ThetaEPos)*(y(PrePos)/p0)**(Rd/Cpd)
+        y(RhoPos)=y(PrePos)/(Rd*y(TempPos))
+      END IF
+      IF (PRESENT(rtStart)) THEN
+        y(rtPos)=rtStart
+        rpar(5)=rtStart
+        rpar(6)=rtStart
+      END IF  
+      IF (y(ThPos)==0.0d0) THEN
+        y(ThPos)=y(TempPos)*(p0/y(PrePos))**(Rd/Cpd)
+      END IF  
+      IF (y(RhoPos)==0.0d0) THEN
+        y(RhoPos)=y(PrePos)/(Rd*y(2))
       END IF  
       yPrime(1)=-y(RhoPos)*Grav
       rpar(1)=0.0d0
@@ -1074,7 +1182,7 @@ SUBROUTINE CreateProfile()
 
 END SUBROUTINE CreateProfile
 
-SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
+SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,ThetaE,rt,uWind,vWind,wWind)
 
   USE Kind_Mod
 
@@ -1085,6 +1193,8 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   REAL(RealKind), OPTIONAL :: ThD(:)
   REAL(RealKind), OPTIONAL :: RH(:)
   REAL(RealKind), OPTIONAL :: QV(:)
+  REAL(RealKind), OPTIONAL :: ThetaE(:)
+  REAL(RealKind), OPTIONAL :: rt(:)
   REAL(RealKind), OPTIONAL :: uWind(:)
   REAL(RealKind), OPTIONAL :: vWind(:)
   REAL(RealKind), OPTIONAL :: wWind(:)
@@ -1101,6 +1211,8 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   REAL(RealKind) :: PreStart    = 1013.25d2
   REAL(RealKind) :: RelHumStart = 0.00d0
   REAL(RealKind) :: QVStart=1.d-4
+  REAL(RealKind) :: ThetaEStart=320.0d0
+  REAL(RealKind) :: rtStart=1.d-2
   REAL(RealKind) :: uWindStart=0.00d0
   REAL(RealKind) :: vWindStart=0.00d0
   REAL(RealKind) :: wWindStart=0.00d0
@@ -1151,6 +1263,8 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
       QvStart=QV(1) !9.d-4 !QV(1) !2.d-4
       CALL InputRes(y,yprime,rpar,ipar,PreStart,ThDStart=ThDStart,QVStart=QvStart,&
                     uWindStart=uWindStart,vWindStart=vWindStart,wWindStart=wWindStart)
+    ELSE IF (PRESENT(ThetaE)) THEN
+      CALL InputRes(y,yprime,rpar,ipar,PreStart,ThetaEStart=ThetaEStart,rtStart=rtStart)
     END IF  
     DO  
       rwork=0.0d0
@@ -1176,6 +1290,9 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
         rpar(6)=QVStart
         y(QvPos)=QVStart
 !       CALL InputRes(y,yprime,rpar,ipar,PreStart,TeStart=TeStart,QVStart=QVStart)
+      ELSE IF (PRESENT(ThetaE)) THEN
+        rpar(3)=ThetaEStart
+        rpar(4)=ThetaEStart
       END IF  
     END DO  
   ELSE  
@@ -1306,7 +1423,7 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
     info(11)=1 ! DDASSL computes consisten initial values
     z=Height(1)
     zOut=Height(1)-1.d-6
-    CALL DDASSL (RES, NEQ, T, z, YPRIME, zOut, INFO, RTOL, ATOL, &
+    CALL DDASSL (RES, NEQ, z, Y, YPRIME, zOut, INFO, RTOL, ATOL, &
                 IDID, RWORK, LRW, IWORK, LIW, RPAR, IPAR, JAC)
   END IF  
   rwork=0.0d0
