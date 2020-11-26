@@ -31,7 +31,8 @@ MODULE Int_Mod
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: RhsVecFS(:)
   TYPE (VecVelocityFace_T), POINTER, PRIVATE, SAVE :: VecRhsVecFS(:)
   TYPE (VecVector4Cell_T), POINTER, PRIVATE, SAVE :: VecRhsVecCS(:)
-  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelCOld(:)
+  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VecMetOld(:)
+  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VecChemOld(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelGOld(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelC1(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelC2(:)
@@ -244,7 +245,8 @@ SUBROUTINE InitRos3MetC(VecMet,VecChem)
       CALL Allocate(VecIncrF(i)%VecF)
       VecIncrF(i)%VecF=Zero
     END DO
-    CALL Allocate(VelCOld,VecMet)
+    CALL Allocate(VecMetOld,VecMet)
+    CALL Allocate(VecChemOld,VecChem)
     CALL Allocate(VelFOld)
     IF (Anelastic.OR.PseudoIn) THEN
       ALLOCATE(VecIncrCG(nStage))
@@ -282,7 +284,7 @@ SUBROUTINE StageRos(VecMet,VecChem,VelF,VelG,dt,Time)
       CALL VelocityFaceToCellLR(VelF,VecMet)
       CALL BoundaryVelocity(VecMet,TimeF)
     END IF
-    CALL BoundaryCondition(VecMet,VelF,TimeF)
+    CALL BoundaryCondition(VecMet,VecChem,VelF,TimeF)
     CALL PrepareF(VecMet,VelF,TimeF)
     IF (iStage==1) THEN
       IF (JacTransport) THEN
@@ -310,16 +312,18 @@ SUBROUTINE StageRos(VecMet,VecChem,VelF,VelG,dt,Time)
       CALL ScaleV(dt,VecIncrCG(iStage)%Vec)
     END IF  
     IF (JacTransport) THEN
-      Iter=BiCGStabMaxIter
-      Tol=BiCGStabTol
       VecIncrMetC(iStage)%Vec=Zero
       VecIncrChemC(iStage)%Vec=Zero
       IF (Source) THEN
         CALL SolveSourceMetSp(RhsVecMet,JacTrans)
-        CALL SolveSourceChemSp(RhsVecMet,JacTrans)
+        CALL SolveSourceChemSp(RhsVecChem,JacTrans)
       END IF
       IF (Transport) THEN
+        Tol=BiCGStabTol
+        Iter=BiCGStabMaxIter
         CALL BICGStabMetSp(JacTrans,VecIncrMetC(iStage)%Vec,RhsVecMet,Iter,Tol)
+        Tol=BiCGStabTol
+        Iter=BiCGStabMaxIter
         CALL BICGStabChemSp(JacTrans,VecIncrChemC(iStage)%Vec,RhsVecChem,Iter,Tol)
       ELSE
         Iter=0
@@ -339,9 +343,11 @@ SUBROUTINE StageRos(VecMet,VecChem,VelF,VelG,dt,Time)
       CALL VelocityCellToFaceLR(VecIncrMetC(iStage)%Vec,VecIncrF(iStage)%VecF,VelF,TimeF)
       IF ((JacSound.AND.uPosL>0.AND.PGradient).OR.Anelastic.OR.PseudoIn) THEN
         IF (Anelastic.OR.PseudoIn) THEN
-          CALL ProjectVelFace(dt,VecIncrF(iStage)%VecF,VecIncrMetC(iStage)%Vec,VelCOld,VecG=VecIncrCG(iStage)%Vec) 
+          CALL ProjectVelFace(dt,VecIncrF(iStage)%VecF,VecIncrMetC(iStage)%Vec,VecMetOld &
+                                                      ,VecIncrChemC(iStage)%Vec,VecChemOld,VecG=VecIncrCG(iStage)%Vec) 
         ELSE  
-          CALL ProjectVelFace(dt,VecIncrF(iStage)%VecF,VecIncrMetC(iStage)%Vec,VelCOld) 
+          CALL ProjectVelFace(dt,VecIncrF(iStage)%VecF,VecIncrMetC(iStage)%Vec,VecMetOld, &
+                                                       VecIncrChemC(iStage)%Vec,VecChemOld) 
         END IF  
       END IF  
       CALL VelocityFaceToCellLR(VecIncrF(iStage)%VecF,VecIncrMetC(iStage)%Vec)
@@ -353,7 +359,8 @@ SUBROUTINE StageRos(VecMet,VecChem,VelF,VelG,dt,Time)
       CALL VelocityInit(VelF,UStart,VStart,WStart,Time+Gamma1(iStage)*dt)   
     END IF
     CALL ExchangeCell(VecIncrMetC(iStage)%Vec)
-    CALL Copy(VelCOld,VecMet)
+    CALL Copy(VecMetOld,VecMet)
+    CALL Copy(VecChemOld,VecChem)
     DO jStage=1,iStage
       CALL Axpy(alpha(iStage,jStage),VecIncrMetC(jStage)%Vec,VecMet)
       CALL Axpy(alpha(iStage,jStage),VecIncrChemC(jStage)%Vec,VecChem)
@@ -438,7 +445,8 @@ SUBROUTINE StageRosParcel(VecMet,VecChem,VelF,dt,Time)
     CALL Copy(RhsVecChem,VecIncrChemC(iStage)%Vec)
     CALL ExchangeCell(VecIncrMetC(iStage)%Vec)
     CALL ExchangeCell(VecIncrChemC(iStage)%Vec)
-    CALL Copy(VelCOld,VecMet)
+    CALL Copy(VecMetOld,VecMet)
+    CALL Copy(VecChemOld,VecChem)
     DO jStage=1,iStage
       CALL Axpy(alpha(iStage,jStage),VecIncrMetC(jStage)%Vec,VecMet)
       CALL Axpy(alpha(iStage,jStage),VecIncrChemC(jStage)%Vec,VecChem)
@@ -769,7 +777,7 @@ SUBROUTINE InitExpIntRK(VecMet)
     END DO
     CALL Allocate(SoundFac)
 
-    CALL Allocate(VelCOld,VecMet)
+    CALL Allocate(VecMetOld,VecMet)
     CALL Allocate(VelFOld)
 
     CALL Allocate(VelFFast)
@@ -807,7 +815,7 @@ SUBROUTINE ExpIntRk(VelF,VelC,dtAct,Time,ATol,RTol)
     CALL VelocityFaceToCellLR(VecVelF(iStage)%VecF,VecU)
     CALL BoundaryVelocity(VecU,Time+cRunge(iStage)*dtAct)
     CALL ExchangeCell(VecU)
-    CALL BoundaryCondition(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,Time+cRunge(iStage)*dtAct)
+    CALL BoundaryCondition(VecVelC(iStage)%Vec,VelF=VecVelF(iStage)%VecF,Time=Time+cRunge(iStage)*dtAct)
 !----------------------------------------
 !   Part of PrepareF
     CALL PrepareFEx(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time+cRunge(iStage)*dtAct)
@@ -915,10 +923,10 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
   END DO
   IF (ns>0) THEN
     DO is=1,ns
-!     CALL Copy(VelC,VelCOld)
+!     CALL Copy(VelC,VecMetOld)
       CALL Copy(VelF,VelFOld)
       RhsVecFF=Zero
-      CALL BoundaryCondition(VelC,VelF,Time)
+      CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
       CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
       CALL Axpy(dTau,RhsVecFF,VelF)
       CALL Axpy(dTau,RhsVelFS,VelF)
@@ -933,7 +941,7 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
     END DO
   ELSE
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,VelF,Time)
+    CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(dTau,RhsVecFF,VelF)
     CALL Axpy(dTau,RhsVelFS,VelF)
@@ -994,7 +1002,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
   END DO
   IF (ns>0) THEN
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,VelF,Time)
+    CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(Half*dTau,RhsVecFF,VelF)
     CALL Axpy(Half*dTau,RhsVelFS,VelF)
@@ -1004,7 +1012,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
       CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
       CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
       RhsVecFF=Zero
-      CALL BoundaryCondition(VelC,VelF,Time)
+      CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
       CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
       CALL Axpy(dTau,RhsVecFF,VelF)
       CALL Axpy(dTau,RhsVelFS,VelF)
@@ -1015,13 +1023,13 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
     CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,VelF,Time)
+    CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(Half*dTau,RhsVecFF,VelF)
     CALL Axpy(Half*dTau,RhsVelFS,VelF)
   ELSE
     RhsVecFF=Zero
-    CALL BoundaryCondition(VelC,VelF,Time)
+    CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
     CALL FcnMetFastU(VelC,VelF,PreFacF,RhsVecFF,Time)
     CALL Axpy(dTau,RhsVecFF,VelF)
     CALL Axpy(dTau,RhsVelFS,VelF)
@@ -1064,7 +1072,8 @@ SUBROUTINE Ros3MetC(VecMet,VecChem,VelF,VecG,dtAct,Time,ATol,RTol)
 
   CALL InitRos3MetC(VecMet,VecChem)
   CALL Copy(VelF,VelFOld)
-  CALL Copy(VecMet,VelCOld)
+  CALL Copy(VecMet,VecMetOld)
+  CALL Copy(VecChem,VecChemOld)
   IF (Anelastic.OR.PseudoIn) THEN
     CALL Copy(VecG,VelGOld)
   END IF
@@ -1081,8 +1090,8 @@ SUBROUTINE Ros3MetC(VecMet,VecChem,VelF,VecG,dtAct,Time,ATol,RTol)
         CALL VelocityFaceToCellLR(VecIncrF(1)%VecF,VecIncrMetC(1)%Vec)
         CALL VelocityFaceToCellLR(VecIncrF(2)%VecF,VecIncrMetC(2)%Vec)
       END IF
-      ErrLoc=Error(VecIncrMetC(1)%Vec,VecMet,VelCOld,ATol,RTol,VecIncrMetC(2)%Vec)
-!     ErrLoc=ErrorMax(VecIncrC(1)%Vec,VelC,VelCOld,ATol,RTol,VecIncrC(2)%Vec)
+      ErrLoc=Error(VecIncrMetC(1)%Vec,VecMet,VecMetOld,ATol,RTol,VecIncrMetC(2)%Vec)
+!     ErrLoc=ErrorMax(VecIncrC(1)%Vec,VelC,VecMetOld,ATol,RTol,VecIncrC(2)%Vec)
       IF (MyId==0) THEN
         WRITE(TermUnit,*) ' ErrLoc',ErrLoc,dtAct
         WRITE(*,*) ' ErrLoc',ErrLoc,dtAct
@@ -1091,7 +1100,7 @@ SUBROUTINE Ros3MetC(VecMet,VecChem,VelF,VecG,dtAct,Time,ATol,RTol)
         dtAct=MAX(0.5e0_RealKind,MIN(2.0e0_RealKind,0.8e0_RealKind/SQRT(ErrLoc)))*dtAct
         dtAct=MIN(dtAct,dtMax)
         CALL Copy(VelFOld,VelF)
-        CALL Copy(VelCOld,VecMet)
+        CALL Copy(VecMetOld,VecMet)
         iTer1=iTer1+1
       ELSE
         IF (MyId==0) THEN
@@ -1126,7 +1135,8 @@ SUBROUTINE RosParcel(VelF,VecMet,VecChem,dtAct,Time,ATol,RTol)
   INTEGER :: ix,iy,iz
 
   CALL InitRos3MetC(VecMet,VecChem)
-  CALL Copy(VecMet,VelCOld)
+  CALL Copy(VecMet,VecMetOld)
+  CALL Copy(VecChem,VecChemOld)
 
   iTer1=0
   DO
@@ -1135,7 +1145,7 @@ SUBROUTINE RosParcel(VelF,VecMet,VecChem,dtAct,Time,ATol,RTol)
 
     IF (ErrControl) THEN
       CALL Xpay(VecIncrMetC(2)%Vec,Delta,VecIncrMetC(1)%Vec)
-      ErrLoc=Error(VecIncrMetC(1)%Vec,VecMet,VelCOld,ATol,RTol,VecIncrMetC(2)%Vec)
+      ErrLoc=Error(VecIncrMetC(1)%Vec,VecMet,VecMetOld,ATol,RTol,VecIncrMetC(2)%Vec)
       IF (MyId==0) THEN
         WRITE(TermUnit,*) ' ErrLoc',ErrLoc,dtAct
         WRITE(*,*) ' ErrLoc',ErrLoc,dtAct
@@ -1143,7 +1153,7 @@ SUBROUTINE RosParcel(VelF,VecMet,VecChem,dtAct,Time,ATol,RTol)
       IF (ErrLoc>One) THEN
         dtAct=MAX(0.5e0_RealKind,MIN(2.0e0_RealKind,0.8e0_RealKind/SQRT(ErrLoc)))*dtAct
         dtAct=MIN(dtAct,dtMax)
-        CALL Copy(VelCOld,VecMet)
+        CALL Copy(VecMetOld,VecMet)
         iTer1=iTer1+1
       ELSE
         IF (MyId==0) THEN

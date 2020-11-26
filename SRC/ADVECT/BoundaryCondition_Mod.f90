@@ -429,25 +429,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
   REAL(RealKind) :: xPL,yPL,zPl
 
   IF (TypeW=='ow') THEN
-    IF (BCVec(uPosL)%West=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%West=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix0,iy,iz,1)=-uC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%West=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%West=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix0,iy,iz,1)=uC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%West=='MeanValue') THEN
+    ELSE IF (BCMetVec(uPosL)%West=='MeanValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix0,iy,iz,1)=0.5d0*(MeanProfile(uPosL,iz)+MeanProfile(uPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%West=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%West=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix0)
@@ -458,25 +458,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%West=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%West=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix0,iy,iz,1)=-vC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%West=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%West=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix0,iy,iz,1)=vC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%West=='MeanValue') THEN
+    ELSE IF (BCMetVec(vPosL)%West=='MeanValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix0,iy,iz,1)=0.5d0*(MeanProfile(vPosL,iz)+MeanProfile(vPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%West=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%West=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix0)
@@ -487,25 +487,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(wPosL)%West=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%West=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix0,iy,iz,1)=-wC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%West=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%West=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix0,iy,iz,1)=wC(ix0+1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%West=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%West=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix0,iy,iz,1)=0.5d0*(MeanProfile(wPosL,iz)+MeanProfile(wPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%West=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%West=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix0)
@@ -518,25 +518,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
   END IF
 
   IF (TypeE=='oe') THEN
-    IF (BCVec(uPosL)%East=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%East=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix1+1,iy,iz,1)=-uC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%East=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%East=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix1+1,iy,iz,1)=uC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%East=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%East=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uC(ix1+1,iy,iz,1)=0.5d0*(MeanProfile(uPosL,iz)+MeanProfile(uPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%East=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%East=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix1)
@@ -547,25 +547,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%East=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%East=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix1+1,iy,iz,1)=-vC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%East=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%East=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix1+1,iy,iz,1)=vC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%East=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%East=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           vC(ix1+1,iy,iz,1)=0.5d0*(MeanProfile(vPosL,iz)+MeanProfile(vPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%East=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%East=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix1)
@@ -576,25 +576,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(wPosL)%East=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%East=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix1+1,iy,iz,1)=-wC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%East=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%East=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix1+1,iy,iz,1)=wC(ix1,iy,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%East=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%East=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           wC(ix1+1,iy,iz,1)=0.5d0*(MeanProfile(wPosL,iz)+MeanProfile(wPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%East=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%East=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix1)
@@ -608,25 +608,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
   END IF
 
   IF (TypeS=='os') THEN
-    IF (BCVec(uPosL)%South=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%South=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy0,iz,1)=-uC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%South=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%South=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy0,iz,1)=uC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%South=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy0,iz,1)=0.5d0*(MeanProfile(uPosL,iz)+MeanProfile(uPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%South=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%South=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -637,25 +637,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%South=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%South=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy0,iz,1)=-vC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%South=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%South=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy0,iz,1)=vC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%South=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy0,iz,1)=0.5d0*(MeanProfile(vPosL,iz)+MeanProfile(vPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%South=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%South=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -666,25 +666,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF      (BCVec(wPosL)%South=='ZeroValue') THEN
+    IF      (BCMetVec(wPosL)%South=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy0,iz,1)=-wC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%South=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%South=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy0,iz,1)=wC(ix,iy0+1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%South=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy0,iz,1)=0.5d0*(MeanProfile(wPosL,iz)+MeanProfile(wPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%South=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%South=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -698,25 +698,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
   END IF
 
   IF (TypeN=='on') THEN
-    IF (BCVec(uPosL)%North=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%North=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy1+1,iz,1)=-uC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%North=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%North=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy1+1,iz,1)=uC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%North=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           uC(ix,iy1+1,iz,1)=0.5d0*(MeanProfile(uPosL,iz)+MeanProfile(uPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%North=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%North=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -727,25 +727,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%North=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%North=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy1+1,iz,1)=-vC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%North=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%North=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy1+1,iz,1)=vC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%North=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vC(ix,iy1+1,iz,1)=0.5d0*(MeanProfile(vPosL,iz)+MeanProfile(vPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%North=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%North=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -756,25 +756,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(wPosL)%North=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%North=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy1+1,iz,1)=-wC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%North=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%North=='ZeroGrad') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy1+1,iz,1)=wC(ix,iy1,iz,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%North=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           wC(ix,iy1+1,iz,1)=0.5d0*(MeanProfile(wPosL,iz)+MeanProfile(wPosR,iz))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%North=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%North=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -788,25 +788,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
 
   IF (TypeB=='ob') THEN
 
-    IF (BCVec(uPosL)%Bottom=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%Bottom=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz0,1)=-uC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Bottom=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%Bottom=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz0,1)=uC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Bottom=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%Bottom=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz0,1)=0.5d0*(MeanProfile(uPosL,iz0+1)+MeanProfile(uPosR,iz0+1))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Bottom=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%Bottom=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -817,25 +817,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%Bottom=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%Bottom=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz0,1)=-vC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Bottom=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%Bottom=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz0,1)=vC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Bottom=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%Bottom=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz0,1)=0.5d0*(MeanProfile(vPosL,iz0+1)+MeanProfile(vPosR,iz0+1))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Bottom=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%Bottom=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -846,25 +846,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(wPosL)%Bottom=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%Bottom=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz0,1)=-wC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Bottom=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%Bottom=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz0,1)=wC(ix,iy,iz0+1,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Bottom=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%Bottom=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz0,1)=0.5d0*(MeanProfile(wPosL,iz0+1)+MeanProfile(wPosR,iz0+1))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Bottom=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%Bottom=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -878,25 +878,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
   END IF
 
   IF (TypeT=='ot') THEN
-    IF (BCVec(uPosL)%Top=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%Top=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz1+1,1)=-uC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Top=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(uPosL)%Top=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz1+1,1)=uC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Top=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%Top=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           uC(ix,iy,iz1+1,1)=0.5d0*(MeanProfile(uPosL,iz1)+MeanProfile(uPosR,iz1))
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%Top=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%Top=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -907,25 +907,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(vPosL)%Top=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%Top=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz1+1,1)=-vC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Top=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(vPosL)%Top=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz1+1,1)=vC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Top=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%Top=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           vC(ix,iy,iz1+1,1)=0.5d0*(MeanProfile(vPosL,iz1)+MeanProfile(vPosR,iz1))
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%Top=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%Top=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -936,25 +936,25 @@ SUBROUTINE BoundaryVelocityCellCompute(Time)
       END DO
     END IF
 
-    IF (BCVec(wPosL)%Top=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%Top=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz1+1,1)=-wC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Top=='ZeroGrad') THEN
+    ELSE IF (BCMetVec(wPosL)%Top=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz1+1,1)=wC(ix,iy,iz1,1)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Top=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%Top=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wC(ix,iy,iz1+1,1)=0.5d0*(MeanProfile(wPosL,iz1)+MeanProfile(wPosR,iz1))
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Top=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%Top=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -978,13 +978,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeW=='ow') THEN
     ix=ix0
-    IF (BCVec(uPosL)%West=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%West=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix0,iy,iz)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%West=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%West=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix0)
@@ -1000,13 +1000,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeE=='oe') THEN
     ix=ix1
-    IF (BCVec(uPosL)%East=='ZeroValue') THEN
+    IF (BCMetVec(uPosL)%East=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix1,iy,iz)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%East=='Function') THEN
+    ELSE IF (BCMetVec(uPosL)%East=='Function') THEN
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix1)
@@ -1022,13 +1022,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeS=='os') THEN
     iy=iy0
-    IF (BCVec(vPosL)%South=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%South=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy0,iz)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%South=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%South=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1044,13 +1044,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeN=='on') THEN
     iy=iy1
-    IF (BCVec(vPosL)%North=='ZeroValue') THEN
+    IF (BCMetVec(vPosL)%North=='ZeroValue') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy1,iz)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%North=='Function') THEN
+    ELSE IF (BCMetVec(vPosL)%North=='Function') THEN
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1066,13 +1066,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeB=='ob') THEN
     iz=iz0
-    IF (BCVec(wPosL)%Bottom=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%Bottom=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz0)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Bottom=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%Bottom=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1087,13 +1087,13 @@ SUBROUTINE BoundaryVelocityFaceCompute(Time)
 
   IF (TypeT=='ot') THEN
     iz=iz1
-    IF (BCVec(wPosL)%Top=='ZeroValue') THEN
+    IF (BCMetVec(wPosL)%Top=='ZeroValue') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz1)=0.d0
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Top=='Function') THEN
+    ELSE IF (BCMetVec(wPosL)%Top=='Function') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1123,46 +1123,40 @@ SUBROUTINE BoundaryConditionT(VectorCell,Time)
   END DO
 END SUBROUTINE BoundaryConditionT
 
-SUBROUTINE BoundaryFluxCondition(VectorCell)
+SUBROUTINE BoundaryFluxCondition(VectorCellMet,VectorCellChem)
  
-  TYPE(Vector4Cell_T), TARGET :: VectorCell(:)
+  TYPE(Vector4Cell_T), TARGET :: VectorCellMet(:)
+  TYPE(Vector4Cell_T), TARGET :: VectorCellChem(:)
  
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL DomainSet(ib)
-    DO ic=LBOUND(VectorCell(ibLoc)%Vec,1)+1,UBOUND(VectorCell(ibLoc)%Vec,1)
-      c=>VectorCell(ibLoc)%Vec(ic)%c
-      BC=>BCVec(ic)
-      IF      (ic==  uPosL) THEN
-      ELSE IF (ic==  vPosL) THEN
-      ELSE IF (ic==  wPosL) THEN
-      ELSE IF (ic==  uPosR) THEN
-      ELSE IF (ic==  vPosR) THEN
-      ELSE IF (ic==  wPosR) THEN
-      ELSE 
-        CALL BoundaryFluxCompute(ic)
-      END IF
+    DO ic=LBOUND(VectorCellChem(ibLoc)%Vec,1)+1,UBOUND(VectorCellChem(ibLoc)%Vec,1)
+      c=>VectorCellChem(ibLoc)%Vec(ic)%c
+      BC=>BCChemVec(ic)
+      CALL BoundaryFluxCompute(ic)
     END DO
   END DO
 
 END SUBROUTINE BoundaryFluxCondition
 
-SUBROUTINE BoundaryCondition(VectorCell,VelF,Time)
+SUBROUTINE BoundaryCondition(VectorCellMet,VectorCellChem,VelF,Time)
  
-  TYPE(Vector4Cell_T), TARGET :: VectorCell(:)
+  TYPE(Vector4Cell_T), TARGET :: VectorCellMet(:)
+  TYPE(Vector4Cell_T), OPTIONAL, TARGET :: VectorCellChem(:)
   TYPE (VelocityFace_T), TARGET :: VelF(:)
   REAL(RealKind) :: Time
  
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL DomainSet(ib)
-    Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+    Rho=>VectorCellMet(ibLoc)%Vec(RhoPos)%c
     uF=>VelF(ibLoc)%uF
     vF=>VelF(ibLoc)%vF
     wF=>VelF(ibLoc)%wF
-    DO ic=LBOUND(VectorCell(ibLoc)%Vec,1)+1,UBOUND(VectorCell(ibLoc)%Vec,1)
-      c=>VectorCell(ibLoc)%Vec(ic)%c
-      BC=>BCVec(ic)
+    DO ic=LBOUND(VectorCellMet(ibLoc)%Vec,1)+1,UBOUND(VectorCellMet(ibLoc)%Vec,1)
+      c=>VectorCellMet(ibLoc)%Vec(ic)%c
+      BC=>BCMetVec(ic)
       IF      (ic==  uPosL) THEN
       ELSE IF (ic==  vPosL) THEN
       ELSE IF (ic==  wPosL) THEN
@@ -1215,6 +1209,13 @@ SUBROUTINE BoundaryCondition(VectorCell,VelF,Time)
         CALL BoundaryCompute(DummyStart,Time,ic)
       END IF
     END DO
+    IF (PRESENT(VectorCellChem)) THEN
+      DO ic=LBOUND(VectorCellChem(ibLoc)%Vec,1)+1,UBOUND(VectorCellChem(ibLoc)%Vec,1)
+        c=>VectorCellChem(ibLoc)%Vec(ic)%c
+        BC=>BCChemVec(ic)
+        CALL BoundaryCompute(DummyStart,Time,ic)
+      END DO
+    END IF
   END DO
 
 END SUBROUTINE BoundaryCondition

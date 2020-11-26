@@ -55,6 +55,7 @@ MODULE Chemie_Mod
                                ,MicroFirst
 
   CHARACTER*20, ALLOCATABLE :: SpeciesNameGas(:)
+  CHARACTER*20, ALLOCATABLE :: SpeciesNameMet(:)
   CHARACTER*20, ALLOCATABLE :: SpeciesNameAqua(:)
   CHARACTER*20, ALLOCATABLE, PRIVATE :: SpeciesNameKat(:)
   REAL(RealKind), ALLOCATABLE :: MolMass(:)
@@ -268,6 +269,28 @@ SUBROUTINE AllocateVec4Chemie(Vec,VecComponents)
 END SUBROUTINE AllocateVec4Chemie
 
 
+SUBROUTINE AllocateVec4Met(Vec,VecComponents)
+
+  TYPE(Vector4Cell_T), POINTER :: Vec(:)
+  INTEGER :: VecComponents
+
+  INTEGER :: i
+  INTEGER :: Rank(2) 
+
+  ALLOCATE(Vec(nbLoc))
+  VecComponents=nGesMet
+  Rank=1
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL Set(Floor(ib))
+    ALLOCATE(Vec(ibLoc)%Vec(0:VecComponents))
+    DO i=0,VecComponents
+      CALL Allocate(Vec(ibLoc)%Vec(i),Rank)
+    END DO  
+  END DO  
+
+END SUBROUTINE AllocateVec4Met
+
 SUBROUTINE Allocate_Jac(JacTrans)
 
   TYPE(JacSpMatrix4_T), POINTER :: JacTrans(:)
@@ -284,7 +307,6 @@ SUBROUTINE Allocate_Jac(JacTrans)
   ALLOCATE(JacTrans(nbLoc))
   CALL Jacstr_LUChem(StructLUChem)
   CALL Jacstr_LUMet(StructLUMet)
-  STOP
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL Set(Floor(ib))
@@ -383,6 +405,23 @@ FUNCTION PositionGas(Species)
 
 END FUNCTION PositionGas
 
+FUNCTION PositionMet(Species)
+
+  INTEGER :: PositionMet
+  CHARACTER(*) :: Species
+
+  INTEGER :: i
+
+  PositionMet=0
+  DO i=1,nMet
+    IF (TRIM(Species)==TRIM(SpeciesNameMet(i))) THEN
+      PositionMet=i
+      EXIT
+    END IF
+  END DO
+
+END FUNCTION PositionMet
+
 FUNCTION PositionAero(Species)
 
   INTEGER :: PositionAero
@@ -453,22 +492,6 @@ SUBROUTINE Jacstr_LUChem(LUChem)
     END IF
     Current=>Current%Next
   END DO
-! Restriction for Water
-  IF (Position('RHOV')>0) THEN
-    A%Restr(Position('RHOV'))=-1
-  END IF
-  IF (Position('TE')>0) THEN
-    A%Restr(Position('TE'))=-1
-  END IF
-  IF (Position('EN')>0) THEN
-    A%Restr(Position('EN'))=-1
-  END IF
-  IF (Position('PRE')>0) THEN
-    A%Restr(Position('PRE'))=-1
-  END IF
-  IF (Position('RHO')>0) THEN
-    A%Restr(Position('RHO'))=-1
-  END IF
 
 
 ! Symbolic Factorization
@@ -551,160 +574,160 @@ SUBROUTINE Jacstr_LUMet(LU)
 
 ! Insert meteorological variables
   NumMet=0
-  IF (Position('TE')>0) THEN
+  IF (PositionMet('TE')>0) THEN
     NumMet=NumMet+1
     thPosJac=NumMet
-    thPos=Position('TE')
+    thPos=PositionMet('TE')
     PosMet(NumMet)=thPos
   END IF
-  IF (Position('EN')>0) THEN
+  IF (PositionMet('EN')>0) THEN
     NumMet=NumMet+1
     EnPosJac=NumMet
-    EnPos=Position('EN')
+    EnPos=PositionMet('EN')
     PosMet(NumMet)=EnPos
   END IF
-  IF (Position('RHO')>0) THEN
+  IF (PositionMet('RHO')>0) THEN
     NumMet=NumMet+1
     rhoPosJac=NumMet
-    rhoPos=Position('RHO')
+    rhoPos=PositionMet('RHO')
     PosMet(NumMet)=rhoPos
   END IF
-  IF (Position('PRE')>0) THEN
+  IF (PositionMet('PRE')>0) THEN
     NumMet=NumMet+1
     prePosJac=NumMet
-    prePos=Position('PRE')
+    prePos=PositionMet('PRE')
     PosMet(NumMet)=prePos
   END IF
-  IF (Position('RHOV')>0) THEN
+  IF (PositionMet('RHOV')>0) THEN
     NumMet=NumMet+1
     RhoVPosJac=NumMet
-    RhoVPos=Position('RHOV')
+    RhoVPos=PositionMet('RHOV')
     PosMet(NumMet)=RhoVPos
   END IF
-  IF (Position('RHOC')>0) THEN
+  IF (PositionMet('RHOC')>0) THEN
     NumMet=NumMet+1
     RhoCPosJac=NumMet
-    RhoCPos=Position('RHOC')
+    RhoCPos=PositionMet('RHOC')
     PosMet(NumMet)=RhoCPos
   END IF
-  IF (Position('RHOR')>0) THEN
+  IF (PositionMet('RHOR')>0) THEN
     NumMet=NumMet+1
     RhoRPosJac=NumMet
-    RhoRPos=Position('RHOR')
+    RhoRPos=PositionMet('RHOR')
     PosMet(NumMet)=RhoRPos
   END IF
-  IF (Position('RHOI')>0) THEN
+  IF (PositionMet('RHOI')>0) THEN
     NumMet=NumMet+1
     RhoIPosJac=NumMet
-    RhoIPos=Position('RHOI')
+    RhoIPos=PositionMet('RHOI')
     PosMet(NumMet)=RhoIPos
   END IF
-  IF (Position('RHOS')>0) THEN
+  IF (PositionMet('RHOS')>0) THEN
     NumMet=NumMet+1
     RhoSPosJac=NumMet
-    RhoSPos=Position('RHOS')
+    RhoSPos=PositionMet('RHOS')
     PosMet(NumMet)=RhoSPos
   END IF
-  IF (Position('NV')>0) THEN
+  IF (PositionMet('NV')>0) THEN
     NumMet=NumMet+1
     nvPosJac=NumMet
-    nvPos=Position('NV')
+    nvPos=PositionMet('NV')
     PosMet(NumMet)=nvPos
   END IF
-  IF (Position('NC')>0) THEN
+  IF (PositionMet('NC')>0) THEN
     NumMet=NumMet+1
     ncPosJac=NumMet
-    ncPos=Position('NC')
+    ncPos=PositionMet('NC')
     PosMet(NumMet)=ncPos
   END IF
-  IF (Position('NR')>0) THEN
+  IF (PositionMet('NR')>0) THEN
     NumMet=NumMet+1
     nrPosJac=NumMet
-    nrPos=Position('NR')
+    nrPos=PositionMet('NR')
     PosMet(NumMet)=nrPos
   END IF
-  IF (Position('NI')>0) THEN
+  IF (PositionMet('NI')>0) THEN
     NumMet=NumMet+1
     niPosJac=NumMet
-    niPos=Position('NI')
+    niPos=PositionMet('NI')
     PosMet(NumMet)=niPos
   END IF
-  IF (Position('NS')>0) THEN
+  IF (PositionMet('NS')>0) THEN
     NumMet=NumMet+1
     nsPosJac=NumMet
-    nsPos=Position('NS')
+    nsPos=PositionMet('NS')
     PosMet(NumMet)=nsPos
   END IF
-  IF (Position('UCL')>0) THEN
+  IF (PositionMet('UCL')>0) THEN
     NumMet=NumMet+1
     uPosLJac=NumMet
-    uPosL=Position('UCL')
+    uPosL=PositionMet('UCL')
     PosMet(NumMet)=uPosL
   END IF
-  IF (Position('UCR')>0) THEN
+  IF (PositionMet('UCR')>0) THEN
     NumMet=NumMet+1
     uPosRJac=NumMet
-    uPosR=Position('UCR')
+    uPosR=PositionMet('UCR')
     PosMet(NumMet)=uPosR
   END IF
-  IF (Position('VCL')>0) THEN
+  IF (PositionMet('VCL')>0) THEN
     NumMet=NumMet+1
     vPosLJac=NumMet
-    vPosL=Position('VCL')
+    vPosL=PositionMet('VCL')
     PosMet(NumMet)=vPosL
   END IF
-  IF (Position('VCR')>0) THEN
+  IF (PositionMet('VCR')>0) THEN
     NumMet=NumMet+1
     vPosRJac=NumMet
-    vPosR=Position('VCR')
+    vPosR=PositionMet('VCR')
     PosMet(NumMet)=vPosR
   END IF
-  IF (Position('WCL')>0) THEN
+  IF (PositionMet('WCL')>0) THEN
     NumMet=NumMet+1
     wPosLJac=NumMet
-    wPosL=Position('WCL')
+    wPosL=PositionMet('WCL')
     PosMet(NumMet)=wPosL
   END IF
-  IF (Position('WCR')>0) THEN
+  IF (PositionMet('WCR')>0) THEN
     NumMet=NumMet+1
     wPosRJac=NumMet
-    wPosR=Position('WCR')
+    wPosR=PositionMet('WCR')
     PosMet(NumMet)=wPosR
   END IF
-  IF (Position('TKE')>0) THEN
+  IF (PositionMet('TKE')>0) THEN
     NumMet=NumMet+1
     tkePosJac=NumMet
-    tkePos=Position('TKE')
+    tkePos=PositionMet('TKE')
     PosMet(NumMet)=tkePos
   END IF
-  IF (Position('DIS')>0) THEN
+  IF (PositionMet('DIS')>0) THEN
     NumMet=NumMet+1
     disPosJac=NumMet
-    disPos=Position('DIS')
+    disPos=PositionMet('DIS')
     PosMet(NumMet)=disPos
   END IF
-  IF (Position('OME')>0) THEN
+  IF (PositionMet('OME')>0) THEN
     NumMet=NumMet+1
     omePosJac=NumMet
-    omePos=Position('OME')
+    omePos=PositionMet('OME')
     PosMet(NumMet)=omePos
   END IF
-  IF (Position('TKEH')>0) THEN
+  IF (PositionMet('TKEH')>0) THEN
     NumMet=NumMet+1
     tkeHPosJac=NumMet
-    tkeHPos=Position('TKEH')
+    tkeHPos=PositionMet('TKEH')
     PosMet(NumMet)=tkeHPos
   END IF
-  IF (Position('TKEV')>0) THEN
+  IF (PositionMet('TKEV')>0) THEN
     NumMet=NumMet+1
     tkeVPosJac=NumMet
-    tkeVPos=Position('TKEV')
+    tkeVPos=PositionMet('TKEV')
     PosMet(NumMet)=tkeVPos
   END IF
-  IF (Position('LEN')>0) THEN
+  IF (PositionMet('LEN')>0) THEN
     NumMet=NumMet+1
     LenPosJac=NumMet
-    LenPos=Position('LEN')
+    LenPos=PositionMet('LEN')
     PosMet(NumMet)=LenPos
   END IF
   ALLOCATE(IndexMet(NumMet,NumMet))
@@ -1023,6 +1046,14 @@ SUBROUTINE InputSystem(FileName)
   DO i=1,nKat
     READ(Unit,*) SpeciesNameKat(i)
     SpeciesName(i+nGas+nAqua)=SpeciesNameKat(i)
+  END DO
+  ALLOCATE(SpeciesNameMet(nMet))
+  DO i=1,nMet
+    READ(Unit,*) SpeciesNameMet(i)
+    SpeciesName(i+nGas+nAqua+nKat)=SpeciesNameMet(i)
+    Variables(i+nAqua+nGas+nKat)%Name=SpeciesNameMet(i)
+    Variables(i+nAqua+nGas+nKat)%Type='METEO'
+    Variables(i+nAqua+nGas+nKat)%Unit=''
   END DO
 
   DO i=1,3
@@ -2239,9 +2270,10 @@ SUBROUTINE  SolidChemieJac(cAqua,Jac,Temp,Act)
 
 END SUBROUTINE SolidChemieJac
 
-SUBROUTINE InitGas(VecT,RhoCell,FileName)
+SUBROUTINE InitGas(VecChem,VecMet,RhoCell,FileName)
 
-  TYPE(Vector4Cell_T), POINTER :: VecT(:)
+  TYPE(Vector4Cell_T), POINTER :: VecChem(:)
+  TYPE(Vector4Cell_T), POINTER :: VecMet(:)
   TYPE(ScalarCell_T), POINTER :: RhoCell(:)
   CHARACTER(*) :: FileName
 
@@ -2262,12 +2294,12 @@ SUBROUTINE InitGas(VecT,RhoCell,FileName)
     IF (Back) THEN
       EXIT
     END IF
-    Pos=Position(SpeciesName)
+    Pos=PositionGas(SpeciesName)
     IF (Pos>0) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
-        tAbs=VecT(ibLoc)%Vec(thPos)%c(ix0+1,iy0+1,iz0+1,1)
+        tAbs=VecMet(ibLoc)%Vec(thPos)%c(ix0+1,iy0+1,iz0+1,1)
 !       p=VecT(ibLoc)%Vec(prePos)%c(ix0+1,iy0+1,iz0+1,1)   OSSI
         IF (TRIM(GasUnit)=='pp') THEN
 !         ppb --> molec/cm^3
@@ -2281,7 +2313,7 @@ SUBROUTINE InitGas(VecT,RhoCell,FileName)
         END IF
 !        VecT(ibLoc)%Vec(Pos)%c=c1
 !        VecT(ibLoc)%Vec(Pos)%c(:,:,:,1)=cValue*VolC/(VolC+Eps)
-         VecT(ibLoc)%Vec(Pos)%c(:,:,:,1)=RhoCell(ibLoc)%c(:,:,:,1)*cValue*VolC/(VolC+Eps)
+         VecChem(ibLoc)%Vec(Pos)%c(:,:,:,1)=RhoCell(ibLoc)%c(:,:,:,1)*cValue*VolC/(VolC+Eps)
       END DO
     END IF
   END DO

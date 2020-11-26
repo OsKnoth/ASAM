@@ -3870,10 +3870,10 @@ SUBROUTINE OutputInit(VecC,VecT)
 !-----------------------------------------------------------
 END SUBROUTINE OutputInit
 
-SUBROUTINE OutputSet(VecC,VecT)
+SUBROUTINE OutputSet(VecMet,VecChem)
 
-  TYPE(Vector4Cell_T) :: VecC(:)
-  TYPE(Vector4Cell_T) :: VecT(:)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T) :: VecChem(:)
     
 !---  local variables
     
@@ -3888,11 +3888,11 @@ SUBROUTINE OutputSet(VecC,VecT)
     IF (DynamicSoil) THEN
       IF (thOut.AND.thPos>0) THEN
         icB=icB+1
-        VectorOut(ibLoc)%Vec(icB)%cb=>VecC(ibLoc)%Vec(thPos)%cb
+        VectorOut(ibLoc)%Vec(icB)%cb=>VecMet(ibLoc)%Vec(thPos)%cb
       END IF
       IF (RhoVOut.AND.RhoVPos>0) THEN
         icB=icB+1
-        VectorOut(ibLoc)%Vec(icB)%cb=>VecC(ibLoc)%Vec(RhoVPos)%cb
+        VectorOut(ibLoc)%Vec(icB)%cb=>VecMet(ibLoc)%Vec(RhoVPos)%cb
       END IF
     END IF
     IF (ShadOut.AND.Radiation) THEN
@@ -3929,88 +3929,88 @@ SUBROUTINE OutputSet(VecC,VecT)
     END IF
     IF (thOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(thPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(thPos)%c
     END IF
     IF (EnOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(EnPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(EnPos)%c
     END IF
     IF (tkeOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(tkePos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(tkePos)%c
     END IF
     IF (disOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(disPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(disPos)%c
     END IF
     IF (omeOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(omePos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(omePos)%c
     END IF
     IF (tkeHOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(tkeHPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(tkeHPos)%c
     END IF
     IF (tkeVOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(tkeVPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(tkeVPos)%c
     END IF
     IF (LenOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(LenPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(LenPos)%c
     END IF    
     IF (RhoVOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoVPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoVPos)%c
     END IF
     IF (RhoCOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoCPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoCPos)%c
     END IF
     IF (RhoROut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoRPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoRPos)%c
     END IF
     IF (RhoIOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoIPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoIPos)%c
     END IF
     IF (RhoSOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoSPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoSPos)%c
     END IF
     IF (nvOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(nvPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(nvPos)%c
     END IF
     IF (ncOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(ncPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(ncPos)%c
     END IF
     IF (nrOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(nrPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(nrPos)%c
     END IF
     IF (niOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(niPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(niPos)%c
     END IF
     IF (nsOut) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(nsPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(nsPos)%c
     END IF
     IF (tracer1Out) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(tracer1Pos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(tracer1Pos)%c
     END IF
     IF (tracer2Out) THEN
       ic=ic+1
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(tracer2Pos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(tracer2Pos)%c
     END IF
     IF (RhoOut) THEN
       ic=ic+1
 !     VectorOut(ibLoc)%Vec(ic)%c=>RhoCell(ibLoc)%c
-      VectorOut(ibLoc)%Vec(ic)%c=>VecC(ibLoc)%Vec(RhoPos)%c
+      VectorOut(ibLoc)%Vec(ic)%c=>VecMet(ibLoc)%Vec(RhoPos)%c
     END IF
     IF (PreOut) THEN
       ic=ic+1
@@ -4059,11 +4059,11 @@ SUBROUTINE OutputSet(VecC,VecT)
     IF (ChemieOut) THEN
       DO icT=1,NumAeroOut
         ic=ic+1
-        VectorOut(ibLoc)%Vec(ic)%c=>VecT(ibLoc)%Vec(AeroOut(icT))%c
+        VectorOut(ibLoc)%Vec(ic)%c=>VecChem(ibLoc)%Vec(AeroOut(icT))%c
       END DO
       DO icT=1,NumGasOut
         ic=ic+1
-        VectorOut(ibLoc)%Vec(ic)%c=>VecT(ibLoc)%Vec(GasOut(icT))%c
+        VectorOut(ibLoc)%Vec(ic)%c=>VecChem(ibLoc)%Vec(GasOut(icT))%c
       END DO
     END IF
     DO icT=1,LenOutSpecial
@@ -4096,7 +4096,7 @@ FUNCTION OutputControl(Time)
 
 END FUNCTION OutputControl
 
-SUBROUTINE OutputMet(ActTime,Vel,VecC,VecT)
+SUBROUTINE OutputMet(ActTime,Vel,VecMet,VecMethem)
 !
 !==================================================
 !----  Output of Velocity Values
@@ -4105,8 +4105,8 @@ SUBROUTINE OutputMet(ActTime,Vel,VecC,VecT)
 
   REAL(RealKind) :: ActTime
   TYPE(VelocityFace_T) :: Vel(:)
-  TYPE(Vector4Cell_T) :: VecC(:)
-  TYPE(Vector4Cell_T) :: VecT(:)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T) :: VecMethem(:)
 
 
 !---  local variables
@@ -4125,11 +4125,10 @@ SUBROUTINE OutputMet(ActTime,Vel,VecC,VecT)
  
 
   IF (Step==OutputStart) THEN
-    CALL OutputInit(VecC,VecT)
+    CALL OutputInit(VecMet,VecMethem)
   ENDIF 
   IF (OutputControl(ActTime)) THEN
-    !IF (MyID==0) WRITE(*,*) 'OutputTime',ActTime 
-    CALL OutputSet(VecC,VecT)
+    CALL OutputSet(VecMet,VecMethem)
     WRITE(iName,'(I8)') gmvStep
     gmvStep=gmvStep+1
     CALL gmvOpenWrite(TRIM(OutputDirName)//TRIM(OutputFilename)//TRIM(ADJUSTL(iName)))
@@ -4152,10 +4151,10 @@ SUBROUTINE OutputMet(ActTime,Vel,VecC,VecT)
         IF (OutputC(iScalar)%DiffRho=='Rho') THEN
           CALL gmvScalarWrite(VectorOut,iScalar,tempName,it,RhoCell)
         ELSE IF (OutputC(iScalar)%Type=='Aerosol' .OR. OutputC(iScalar)%Type=='Aerosol_Spec') THEN
-          CALL gmvScalarWrite(VectorOut,iScalar,tempName,it,VecC=VecC,Type=OutputC(iScalar)%DiffRho,&
+          CALL gmvScalarWrite(VectorOut,iScalar,tempName,it,VecC=VecMet,Type=OutputC(iScalar)%DiffRho,&
                               UnitKonv=OutputC(iScalar)%UnitKonvFactor)
         ELSE IF (OutputC(iScalar)%Type=='Gas') THEN
-          CALL gmvScalarWrite(VectorOut,iScalar,tempName,it,RhoCell,VecC=VecC,Type=OutputC(iScalar)%DiffRho,&
+          CALL gmvScalarWrite(VectorOut,iScalar,tempName,it,RhoCell,VecC=VecMet,Type=OutputC(iScalar)%DiffRho,&
                               UnitKonv=OutputC(iScalar)%UnitKonvFactor)
         ELSE
           CALL gmvScalarWrite(VectorOut,iScalar,tempName,it)
@@ -4260,7 +4259,6 @@ SUBROUTINE InputMet(ActTime,VecC,VecT,InputFileName)
   END IF
   CALL gmvCloseReadScalar
   CALL gmvProbtimeRead(ActTime)
-  WRITE(*,*) 'ActTime ',ActTime
   CALL MPI_FILE_CLOSE(fh,MPIErr)
   CALL MPI_ERROR_CLASS(MPIErr, ERRORCLASS, MPIErr)
   CALL MPI_ERROR_STRING(ERRORCLASS,String,LenString,MPIErr)
@@ -5238,14 +5236,10 @@ SUBROUTINE OutputPointProfile(VecC)
   INTEGER :: Pos
   REAL(RealKind) :: Profile(Domain%nz,SIZE(VectorOut)+3)
 
-WRITE(*,*) 'Im in OutputPointprof', myID
-
   IF (RhoPos>0) THEN
     CALL Assign(Rho,VecC,RhoPos)
   END IF  
   IF (uPosL>0) THEN
-
-  WRITE(*,*) 'Im in OutputPointprof after U', myID
 
     CALL Assign(ScalarC,VecC,uPosl)
     IF (RhoPos>0) THEN
@@ -5253,8 +5247,6 @@ WRITE(*,*) 'Im in OutputPointprof', myID
     ELSE  
       CALL PointProfile(ScalarC,Profile(:,SIZE(VectorOut)+1))
     END IF  
-
-    WRITE(*,*) 'Im in OutputPointprof after UU', myID
 
     ProfileName='UPoint'
     CALL WriteProfile1(Profile(:,SIZE(VectorOut)+1),Domain%zP,ProfileName)
@@ -5268,8 +5260,6 @@ WRITE(*,*) 'Im in OutputPointprof', myID
     END IF  
     ProfileName='VPoint'
     CALL WriteProfile1(Profile(:,SIZE(VectorOut)+2),Domain%zP,ProfileName)
-
-    WRITE(*,*) 'Im in OutputPointprof V', myID
   END IF  
   IF (wPosL>0) THEN
     CALL Assign(ScalarC,VecC,wPosl)
@@ -5291,7 +5281,6 @@ WRITE(*,*) 'Im in OutputPointprof', myID
     ProfileName=TRIM(OutputC(Pos)%NameScalar)//'Point'
     CALL WriteProfile1(Profile(:,Pos),Domain%zP,ProfileName)
   END DO
-  WRITE(*,*) 'Im in OutputPointprof End', myID
 
 END SUBROUTINE OutputPointProfile
 
@@ -5376,19 +5365,15 @@ SUBROUTINE VarianceProfiles(VecC,Profile)
   TYPE(ScalarCell_T) :: Rho(nbLoc)
   CHARACTER*20  :: ProfileName
   INTEGER :: Pos,iProf
-WRITE(*,*) 'Im in line 1'
   
   iProf=0 
   IF (RhoPos>0) THEN
     CALL Assign(Rho,VecC,RhoPos)
 
-    WRITE(*,*) 'Im in line 2', uPosL
     IF (uPosL>0) THEN
-    WRITE(*,*) 'Im in line 2aa', iProf
 
       CALL Assign(ScalarC1,VecC,uPosl)
 
-      WRITE(*,*) 'Im in line 2aaa', iProf 
       DO Pos=1,SIZE(OutputC)
         CALL Assign(ScalarC2,VectorOut,Pos)
         iProf=iProf+1
@@ -5397,12 +5382,10 @@ WRITE(*,*) 'Im in line 1'
         ELSE
           CALL AreaVarianceProfile(ScalarC1,Rho,ScalarC2,Profile=Profile(:,iProf))
         END IF  
-WRITE(*,*) 'Im in line 2a', iProf
 
       END DO
       iProf=iProf+1
       CALL AreaVarianceProfile(ScalarC1,Rho,ScalarC1,Rho,Profile(:,iProf))
-      WRITE(*,*) 'Im in line 2b'
       IF (vPosL>0) THEN
         CALL Assign(ScalarC2,VecC,vPosl)
         iProf=iProf+1
@@ -5415,13 +5398,11 @@ WRITE(*,*) 'Im in line 2a', iProf
       END IF  
     END IF  
 
-    WRITE(*,*) 'Im in line 3'
 
     IF (vPosL>0) THEN
       CALL Assign(ScalarC1,VecC,vPosl)
 
 
-      WRITE(*,*) 'Im in line 4' 
 
       DO Pos=1,SIZE(OutputC)
         CALL Assign(ScalarC2,VectorOut,Pos)
@@ -5467,8 +5448,6 @@ SUBROUTINE OutputVarianceProfiles(Profile)
 
   iProf=0
 
-  WRITE(*,*) 'Im in line varB', myID
-
 
   IF (RhoPos>0) THEN
     IF (uPosL>0) THEN
@@ -5477,9 +5456,6 @@ SUBROUTINE OutputVarianceProfiles(Profile)
         iProf=iProf+1
         CALL WriteProfile1(Profile(:,iProf),Domain%zP,ProfileName)
       END DO
-
-      WRITE(*,*) 'Im in line varB after U', myID
-
 
       ProfileName='UU'//'Var'
       iProf=iProf+1
@@ -5508,8 +5484,6 @@ SUBROUTINE OutputVarianceProfiles(Profile)
         ProfileName='VW'//'Var'
         iProf=iProf+1
         CALL WriteProfile1(Profile(:,iProf),Domain%zP,ProfileName)
-
-         WRITE(*,*) 'Im in line varB after W', myID
       END IF  
     END IF  
     IF (wPosL>0) THEN
@@ -5524,7 +5498,6 @@ SUBROUTINE OutputVarianceProfiles(Profile)
     END IF  
   END IF
 
-   WRITE(*,*) 'Im in line varB after everyhing', myID
 END SUBROUTINE OutputVarianceProfiles
 
 SUBROUTINE PointProfile(ScalarC,Profile,Rho)

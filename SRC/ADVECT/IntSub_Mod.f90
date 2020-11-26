@@ -22,12 +22,14 @@ MODULE IntSub_Mod
 
 CONTAINS
 
-SUBROUTINE ProjectVelFace(dt,Vel,VecC,VelC,Tol,VecG)
+SUBROUTINE ProjectVelFace(dt,Vel,IncrVecMet,VecMet,IncrVecChem,VecChem,Tol,VecG)
 
   REAL(RealKind) :: dt
   TYPE (VelocityFace_T) :: Vel(:)
-  TYPE(Vector4Cell_T) :: VecC(:)
-  TYPE(Vector4Cell_T) :: VelC(:)
+  TYPE(Vector4Cell_T) :: IncrVecMet(:)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T), OPTIONAL :: IncrVecChem(:)
+  TYPE(Vector4Cell_T), OPTIONAL :: VecChem(:)
   REAL(RealKind), OPTIONAL :: Tol
   TYPE(Vector4Cell_T), OPTIONAL :: VecG(:)
 
@@ -43,7 +45,7 @@ SUBROUTINE ProjectVelFace(dt,Vel,VecC,VelC,Tol,VecG)
 !   Projection
   b=Zero
   x=Zero
-  CALL rhs(b,Vel,VecC,VecG)
+  CALL rhs(b,Vel,IncrVecMet,VecG)
   Temp=DOT2(b,b)
   MaxIter=QMRMaxIter
   IF (PRESENT(Tol)) THEN
@@ -53,9 +55,17 @@ SUBROUTINE ProjectVelFace(dt,Vel,VecC,VelC,Tol,VecG)
   END IF
   CALL SolveSound(x,b,MaxIter,TolAct)
   IF (PRESENT(VecG)) THEN
-    CALL UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
+    IF (PRESENT(IncrVecChem)) THEN 
+      CALL UpdateVelocity(x,b,Vel,IncrVecMet,VecMet,IncrVecChem,VecChem,VecG)
+    ELSE
+      CALL UpdateVelocity(x,b,Vel,IncrVecMet,VecMet,VecG)
+    END IF  
   ELSE  
-    CALL UpdateVelocity(x,b,Vel,VecC,VelC)
+    IF (PRESENT(IncrVecChem)) THEN 
+      CALL UpdateVelocity(x,b,Vel,IncrVecMet,VecMet,IncrVecChem,VecChem)
+    ELSE
+      CALL UpdateVelocity(x,b,Vel,IncrVecMet,VecMet)
+    END IF  
   END IF
 
 END SUBROUTINE ProjectVelFace

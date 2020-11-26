@@ -162,7 +162,13 @@ MODULE Vector4Cell_Mod
     MODULE PROCEDURE GefaMatrix,GefaSpMatrix
   END INTERFACE
   INTERFACE MatVec
-    MODULE PROCEDURE MatVecSp,MatVecSp1,MatVecMat
+    MODULE PROCEDURE MatVecSp1,MatVecMat
+  END INTERFACE
+  INTERFACE MatVecMet
+    MODULE PROCEDURE MatVecMetSp
+  END INTERFACE
+  INTERFACE MatVecChem
+    MODULE PROCEDURE MatVecChemSp
   END INTERFACE
   INTERFACE PSolve
     MODULE PROCEDURE PSolveSpMatrix,PSolveMatrix,PSolveSp
@@ -596,11 +602,10 @@ FUNCTION NumberVec(x)
   END DO
 END FUNCTION NumberVec
 
-SUBROUTINE MatVecSp(Ax,A,x)
+SUBROUTINE MatVecMetSp(Ax,A,x)
 
   TYPE(Vector4Cell_T) :: Ax
   TYPE(JacSpMatrix4_T) :: A
-! TYPE(SpDiag) :: A1,A2,A3
   TYPE(Vector4Cell_T) :: x
 
   REAL(RealKind) :: alpha
@@ -636,7 +641,24 @@ SUBROUTINE MatVecSp(Ax,A,x)
     END IF
     Ax%Vec(ic)%cB=x%Vec(ic)%cB
   END DO
-END SUBROUTINE MatVecSp
+END SUBROUTINE MatVecMetSp
+
+SUBROUTINE MatVecChemSp(Ax,A,x)
+
+  TYPE(Vector4Cell_T) :: Ax
+  TYPE(JacSpMatrix4_T) :: A
+  TYPE(Vector4Cell_T) :: x
+
+  REAL(RealKind) :: alpha
+
+  DO ic=LBOUND(Ax%Vec,1),UBOUND(Ax%Vec,1)
+    CALL VectorCellBounds(Ax%Vec(ic))
+    DO it=LBOUND(Ax%Vec(ic)%c,4),UBOUND(Ax%Vec(ic)%c,4)
+      CALL SpAVec(Ax%Vec(ic)%c(:,iyc0,izc0,it),A%JacTPot,x%Vec(ic)%c(:,iyc0,izc0,it))
+    END DO
+    Ax%Vec(ic)%cB=x%Vec(ic)%cB
+  END DO
+END SUBROUTINE MatVecChemSp
 
 SUBROUTINE MatVecSp1(Ax,A)
 

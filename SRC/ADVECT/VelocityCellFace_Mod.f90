@@ -416,7 +416,7 @@ SUBROUTINE VelCellToFaceCompute
   END DO
 
   IF (TypeW=='ow') THEN
-    IF (BCVec(uPosL)%West=='ZeroGrad'.OR.BCVec(uPosL)%West=='MeanValue') THEN 
+    IF (BCMetVec(uPosL)%West=='ZeroGrad'.OR.BCMetVec(uPosL)%West=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix0,iy,iz)=uC(ix0+1,iy,iz,1) &
@@ -427,7 +427,7 @@ SUBROUTINE VelCellToFaceCompute
   END IF
 
   IF (TypeE=='oe') THEN
-    IF (BCVec(uPosL)%East=='ZeroGrad'.OR.BCVec(uPosL)%East=='MeanValue') THEN 
+    IF (BCMetVec(uPosL)%East=='ZeroGrad'.OR.BCMetVec(uPosL)%East=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix1,iy,iz)=uC(ix1,iy,iz,1) &
@@ -438,7 +438,7 @@ SUBROUTINE VelCellToFaceCompute
   END IF
 
   IF (TypeS=='os') THEN
-    IF (BCVec(vPosL)%South=='ZeroGrad'.OR.BCVec(vPosL)%South=='MeanValue') THEN 
+    IF (BCMetVec(vPosL)%South=='ZeroGrad'.OR.BCMetVec(vPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy0,iz)=vC(ix,iy0+1,iz,1) &
@@ -449,7 +449,7 @@ SUBROUTINE VelCellToFaceCompute
   END IF
 
   IF (TypeN=='on') THEN
-    IF (BCVec(vPosL)%North=='ZeroGrad'.OR.BCVec(vPosL)%North=='MeanValue') THEN 
+    IF (BCMetVec(vPosL)%North=='ZeroGrad'.OR.BCMetVec(vPosL)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy1,iz)=vC(ix,iy1,iz,1) &
@@ -460,7 +460,7 @@ SUBROUTINE VelCellToFaceCompute
   END IF
 
   IF (TypeB=='ob') THEN
-    IF (BCVec(wPosL)%Bottom=='ZeroGrad') THEN
+    IF (BCMetVec(wPosL)%Bottom=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz0)=wC(ix,iy,iz0+1,1) &
@@ -471,7 +471,7 @@ SUBROUTINE VelCellToFaceCompute
   END IF
 
   IF (TypeT=='ot') THEN
-    IF (BCVec(wPosL)%Top=='ZeroGrad') THEN
+    IF (BCMetVec(wPosL)%Top=='ZeroGrad') THEN
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz1)=wC(ix,iy,iz1,1) &
@@ -1265,7 +1265,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
   END DO
   IF (TypeW(1:1)=='o') THEN
     !IF (BCVel%West/='OutFlow') THEN
-    IF (BCVec(uPosL)%West=='ZeroGrad'.OR.BCVec(uPosL)%West=='MeanValue') THEN ! Hinneburg
+    IF (BCMetVec(uPosL)%West=='ZeroGrad'.OR.BCMetVec(uPosL)%West=='MeanValue') THEN ! Hinneburg
       ix=ix0
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
@@ -1282,7 +1282,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
     END IF
   END IF
   IF (TypeE(1:1)=='o') THEN
-    IF (BCVec(uPosL)%East=='ZeroGrad'.OR.BCVec(uPosL)%East=='MeanValue') THEN 
+    IF (BCMetVec(uPosL)%East=='ZeroGrad'.OR.BCMetVec(uPosL)%East=='MeanValue') THEN 
       ix=ix1
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
@@ -1300,7 +1300,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
   END IF
   IF (TypeS(1:1)=='o') THEN
     iy=iy0
-    IF (BCVec(vPosL)%South=='ZeroGrad'.OR.BCVec(vPosL)%South=='MeanValue') THEN 
+    IF (BCMetVec(vPosL)%South=='ZeroGrad'.OR.BCMetVec(vPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy,iz)=Zero
@@ -1316,7 +1316,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
   END IF
   IF (TypeN(1:1)=='o') THEN
     iy=iy1
-    IF (BCVec(vPosL)%North=='ZeroGrad'.OR.BCVec(vPosL)%North=='MeanValue') THEN 
+    IF (BCMetVec(vPosL)%North=='ZeroGrad'.OR.BCMetVec(vPosL)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy,iz)=Zero
@@ -1332,7 +1332,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
   END IF
   IF (TypeB(1:1)=='o') THEN
     iz=iz0
-    IF (BCVec(wPosL)%Bottom=='ZeroGrad'.OR.BCVec(wPosL)%Bottom=='MeanValue') THEN 
+    IF (BCMetVec(wPosL)%Bottom=='ZeroGrad'.OR.BCMetVec(wPosL)%Bottom=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz)=Zero
@@ -1347,7 +1347,7 @@ SUBROUTINE VelCellToFaceComputeLR2(Time)
     END IF
   END IF
   IF (TypeT(1:1)=='o') THEN
-    IF (BCVec(wPosL)%Top=='ZeroGrad'.OR.BCVec(wPosL)%Top=='MeanValue') THEN 
+    IF (BCMetVec(wPosL)%Top=='ZeroGrad'.OR.BCMetVec(wPosL)%Top=='MeanValue') THEN 
       iz=iz1
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
@@ -1724,7 +1724,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END DO
   IF (TypeW(1:1)=='o') THEN
     ix=ix0
-    IF (BCVec(uPosL)%West=='Function') THEN 
+    IF (BCMetVec(uPosL)%West=='Function') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix0)
@@ -1735,8 +1735,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FU(ix,iy,iz)/(FU(ix,iy,iz)+eps)-uFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(uPosL)%West=='ZeroGrad' &
-         .OR.BCVec(uPosL)%West=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosL)%West=='ZeroGrad' &
+         .OR.BCMetVec(uPosL)%West=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix,iy,iz)=uCL(ix+1,iy,iz,1) 
@@ -1752,7 +1752,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END IF
   IF (TypeE(1:1)=='o') THEN
     ix=ix1
-    IF (BCVec(uPosR)%East=='Function') THEN 
+    IF (BCMetVec(uPosR)%East=='Function') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           xPL=xP(ix)
@@ -1763,8 +1763,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FU(ix,iy,iz)/(FU(ix,iy,iz)+eps)-uFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(uPosR)%East=='ZeroGrad' &
-         .OR.BCVec(uPosR)%East=='MeanValue') THEN 
+    ELSE IF (BCMetVec(uPosR)%East=='ZeroGrad' &
+         .OR.BCMetVec(uPosR)%East=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           uF(ix,iy,iz)=uCR(ix,iy,iz,1) 
@@ -1780,7 +1780,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END IF
   IF (TypeS(1:1)=='o') THEN
     iy=iy0
-    IF (BCVec(vPosL)%South=='Function') THEN 
+    IF (BCMetVec(vPosL)%South=='Function') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1791,8 +1791,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FV(ix,iy,iz)/(FV(ix,iy,iz)+eps)-vFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(vPosL)%South=='ZeroGrad' &
-         .OR.BCVec(vPosL)%South=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosL)%South=='ZeroGrad' &
+         .OR.BCMetVec(vPosL)%South=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy,iz)=vCL(ix,iy+1,iz,1) 
@@ -1808,7 +1808,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END IF
   IF (TypeN(1:1)=='o') THEN
     iy=iy1
-    IF (BCVec(vPosR)%North=='Function') THEN 
+    IF (BCMetVec(vPosR)%North=='Function') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1819,8 +1819,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FV(ix,iy,iz)/(FV(ix,iy,iz)+eps)-vFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(vPosR)%North=='ZeroGrad' &
-         .OR.BCVec(vPosR)%North=='MeanValue') THEN 
+    ELSE IF (BCMetVec(vPosR)%North=='ZeroGrad' &
+         .OR.BCMetVec(vPosR)%North=='MeanValue') THEN 
       DO iz=iz0+1,iz1
         DO ix=ix0+1,ix1
           vF(ix,iy,iz)=vCR(ix,iy,iz,1) 
@@ -1836,7 +1836,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END IF
   IF (TypeB(1:1)=='o') THEN
     iz=iz0
-    IF (BCVec(wPosL)%Bottom=='Function') THEN 
+    IF (BCMetVec(wPosL)%Bottom=='Function') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1847,8 +1847,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FW(ix,iy,iz)/(FW(ix,iy,iz)+eps)-wFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(wPosL)%Bottom=='ZeroGrad' &
-         .OR.BCVec(wPosL)%Bottom=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosL)%Bottom=='ZeroGrad' &
+         .OR.BCMetVec(wPosL)%Bottom=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz)=wCL(ix,iy,iz+1,1) 
@@ -1864,7 +1864,7 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
   END IF
   IF (TypeT(1:1)=='o') THEN
     iz=iz1
-    IF (BCVec(wPosR)%Top=='Function') THEN 
+    IF (BCMetVec(wPosR)%Top=='Function') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           xPL=xP(ix-1)+0.5e0*dx(ix)
@@ -1875,8 +1875,8 @@ SUBROUTINE VelCellToFaceComputeLR(Time)
                       *FW(ix,iy,iz)/(FW(ix,iy,iz)+eps)-wFOld(ix,iy,iz)
         END DO
       END DO
-    ELSE IF (BCVec(wPosR)%Top=='ZeroGrad' &
-         .OR.BCVec(wPosR)%Top=='MeanValue') THEN 
+    ELSE IF (BCMetVec(wPosR)%Top=='ZeroGrad' &
+         .OR.BCMetVec(wPosR)%Top=='MeanValue') THEN 
       DO iy=iy0+1,iy1
         DO ix=ix0+1,ix1
           wF(ix,iy,iz)=wCR(ix,iy,iz,1) 

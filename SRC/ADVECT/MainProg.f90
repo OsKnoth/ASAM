@@ -37,6 +37,7 @@ PROGRAM MainProg
   USE TimeStep_Mod
   USE ReadWRF_Mod
   USE ReadWRFnc_Mod
+  USE Rhs_Mod
 
   IMPLICIT NONE
 
@@ -144,7 +145,6 @@ PROGRAM MainProg
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   IF (ChemieFile/='') THEN 
-    WRITE(*,*) 'InputSystem(ChemieFile)',TRIM(ChemieFile)
     CALL InputSystem(ChemieFile)
   END IF
 
@@ -152,9 +152,8 @@ PROGRAM MainProg
   CALL SetIndices
   CALL Allocate(JacTrans)
   JacTrans=Zero
-  CALL AllocateVec4Chemie(VecMet,VectorComponentsMet)
+  CALL AllocateVec4Met(VecMet,VectorComponentsMet)
   CALL AllocateVec4Chemie(VecChem,VectorComponentsChem)
-  WRITE(*,*) 'Nach CALL AllocateVec4Chemie(VecChem,VectorComponentsChem)'
 
   CALL InitPrandtlNumber(InputFileName)
 
@@ -217,7 +216,6 @@ PROGRAM MainProg
 
 
 ! -- Meteorologie --
-  WRITE(*,*) 'Meteorologie '
   CALL Allocate(VelF1)
   VelF1=Zero
   VecMet=Zero
@@ -719,7 +717,7 @@ PROGRAM MainProg
   CALL IniJacAccGrav
   IF (Chemie) THEN
     IF (IniFile/='') THEN 
-      CALL InitGas(VecChem,RhoCell,IniFile)
+      CALL InitGas(VecChem,VecMet,RhoCell,IniFile)
       CALL Allocate(VecAmb,VecChem)
       VecAmb=Zero
       CALL InitAmbientGas(VecAmb,IniFile)
@@ -749,7 +747,7 @@ PROGRAM MainProg
     CALL PrepareEn(VecMet,VelF1,Time)
   END IF  
   IF (dtP>0.0d0.AND.JacSound) THEN
-    CALL AllocateVec4Chemie(VecMetP,VectorComponentsT)
+    CALL AllocateVec4Met(VecMetP,VectorComponentsMet)
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
@@ -787,7 +785,7 @@ PROGRAM MainProg
   CALL InputModelOutput(InputFileName)
   CALL SpecialOutput(VecMet,VecG,VelF1,StartTime)
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
-  CALL Output(StartTime,VelF1,VecMet,VecMet)
+  CALL Output(StartTime,VelF1,VecMet,VecChem)
 
   dtAct=dtStart
   dt=dtStart
@@ -944,7 +942,7 @@ PROGRAM MainProg
       Time=EndTime+1.d-12
       CALL PrepareF(VecMet,VelF1,Time)
       CALL SpecialOutput(VecMet,VecG,VelF1,Time)
-      CALL Output(Time,VelF1,VecMet,VecMet)
+      CALL Output(Time,VelF1,VecMet,VecChem)
       IF (CheckMean) CALL OutputMeanProfile(VecMet,Time) !ML.
       IF (CheckColumnX) THEN
         CALL OutputColumnXProfile(VecMet,Time) !ML.
@@ -958,7 +956,7 @@ PROGRAM MainProg
     END IF
     CALL PrepareF(VecMet,VelF1,Time)
     CALL SpecialOutput(VecMet,VecG,VelF1,Time)
-    CALL Output(Time,VelF1,VecMet,VecMet)
+    CALL Output(Time,VelF1,VecMet,VecChem)
     IF (CheckMean) CALL OutputMeanProfile(VecMet,Time)!ML.
     IF (CheckColumnX) CALL OutputColumnXProfile(VecMet,Time)!ML.
     IF (CheckColumnZ) THEN

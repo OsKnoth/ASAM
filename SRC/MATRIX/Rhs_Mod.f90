@@ -586,12 +586,14 @@ SUBROUTINE UpdateRhsPressure(b,y)
 
 END SUBROUTINE UpdateRhsPressure
 
-SUBROUTINE UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
+SUBROUTINE UpdateVelocity(x,b,Vel,IncrVecMet,VecMet,IncrVecChem,VecChem,VecG)
   
   TYPE(PressureVelocity), TARGET :: x(:),b(:)
   TYPE(VelocityFace_T) :: Vel(:)
-  TYPE(Vector4Cell_T) :: VecC(:)
-  TYPE(Vector4Cell_T) :: VelC(:)
+  TYPE(Vector4Cell_T) :: IncrVecMet(:)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T), OPTIONAL :: IncrVecChem(:)
+  TYPE(Vector4Cell_T), OPTIONAL :: VecChem(:)
   TYPE(Vector4Cell_T), OPTIONAL :: VecG(:)
 
   INTEGER :: ix,iy,iz,ic,it
@@ -813,7 +815,7 @@ SUBROUTINE UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           DO ix=ix0+1,ix1                       
-            VecC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1)=VecC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
+            IncrVecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1)=IncrVecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
             -dtP*beta0*DTT(ix,iy,iz) &
             *(FU(ix,iy,iz)*DTUG(ibLoc)%uF(ix,iy,iz)*Vel(ibLoc)%uF(ix,iy,iz) &
              -FU(ix-1,iy,iz)*DTUG(ibLoc)%uF(ix-1,iy,iz)*Vel(ibLoc)%uF(ix-1,iy,iz) &
@@ -830,7 +832,7 @@ SUBROUTINE UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           DO ix=ix0+1,ix1                       
-            VecC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1)=VecC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
+            IncrVecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1)=IncrVecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
             -dtP*beta0 & 
             *(FU(ix,iy,iz)*Vel(ibLoc)%uF(ix,iy,iz) &
              -FU(ix-1,iy,iz)*Vel(ibLoc)%uF(ix-1,iy,iz) &
@@ -847,31 +849,31 @@ SUBROUTINE UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
       DO iz=iz0+1,iz1
         DO iy=iy0+1,iy1
           DO ix=ix0+1,ix1                       
-            VecC(ibLoc)%Vec(enPos)%c(ix,iy,iz,1)=VecC(ibLoc)%Vec(enPos)%c(ix,iy,iz,1) &
+            IncrVecMet(ibLoc)%Vec(enPos)%c(ix,iy,iz,1)=IncrVecMet(ibLoc)%Vec(enPos)%c(ix,iy,iz,1) &
             -dtP*beta0 &
             *(FU(ix,iy,iz)*Vel(ibLoc)%uF(ix,iy,iz) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(thPos)%c(ix+1,iy,iz,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(RhoPos)%c(ix+1,iy,iz,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(thPos)%c(ix+1,iy,iz,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix+1,iy,iz,1) &
                      ,VolC(ix,iy,iz),VolC(ix+1,iy,iz)) &
              -FU(ix-1,iy,iz)*Vel(ibLoc)%uF(ix-1,iy,iz) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix-1,iy,iz,1),VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix-1,iy,iz,1),VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix-1,iy,iz,1),VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix-1,iy,iz,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
                      ,VolC(ix-1,iy,iz),VolC(ix,iy,iz)) &
              +FV(ix,iy,iz)*Vel(ibLoc)%vF(ix,iy,iz) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(thPos)%c(ix,iy+1,iz,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(RhoPos)%c(ix,iy+1,iz,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(thPos)%c(ix,iy+1,iz,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy+1,iz,1) &
                      ,VolC(ix,iy,iz),VolC(ix,iy+1,iz)) &
              -FV(ix,iy-1,iz)*Vel(ibLoc)%vF(ix,iy-1,iz) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix,iy-1,iz,1),VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix,iy-1,iz,1),VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix,iy-1,iz,1),VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy-1,iz,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
                      ,VolC(ix,iy-1,iz),VolC(ix,iy,iz)) &
              +FW(ix,iy,iz)*Vel(ibLoc)%wF(ix,iy,iz) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz+1,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz+1,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz+1,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz+1,1) &
                      ,VolC(ix,iy,iz),VolC(ix,iy,iz+1)) &
              -FW(ix,iy,iz-1)*Vel(ibLoc)%wF(ix,iy,iz-1) &
-             *PreFace(VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz-1,1),VelC(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
-                     ,VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz-1,1),VelC(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
+             *PreFace(VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz-1,1),VecMet(ibLoc)%Vec(thPos)%c(ix,iy,iz,1) &
+                     ,VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz-1,1),VecMet(ibLoc)%Vec(RhoPos)%c(ix,iy,iz,1) &
                      ,VolC(ix,iy,iz-1),VolC(ix,iy,iz))) &
              /(VolC(ix,iy,iz)+Eps)
           END DO
@@ -880,11 +882,18 @@ SUBROUTINE UpdateVelocity(x,b,Vel,VecC,VelC,VecG)
     END IF
     DO ic=1,uPosL-1
       IF (ic/=thPos.AND.ic/=RhoPos) THEN
-        DO it=1,SIZE(VelC(ibLoc)%Vec(iC)%c,4)
-          CALL DivScalar(VecC(ibLoc)%Vec(iC)%c(:,:,:,it),VelC(ibLoc)%Vec(iC)%c(:,:,:,it),VelC(ibLoc)%Vec(RhoPos)%c)
+        DO it=1,SIZE(VecMet(ibLoc)%Vec(iC)%c,4)
+          CALL DivScalar(IncrVecMet(ibLoc)%Vec(iC)%c(:,:,:,it),VecMet(ibLoc)%Vec(iC)%c(:,:,:,it),VecMet(ibLoc)%Vec(RhoPos)%c)
         END DO  
       END IF
     END DO  
+    IF (PRESENT(IncrVecChem)) THEN
+      DO ic=1,UBOUND(VecChem(ibLoc)%Vec,1)
+        DO it=1,SIZE(VecMet(ibLoc)%Vec(iC)%c,4)
+          CALL DivScalar(IncrVecChem(ibLoc)%Vec(iC)%c(:,:,:,it),VecChem(ibLoc)%Vec(iC)%c(:,:,:,it),VecMet(ibLoc)%Vec(RhoPos)%c)
+        END DO  
+      END DO  
+    END IF
     IF (PRESENT(VecG)) THEN
       VecG(ibLoc)%Vec(1)%c(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1,1)=Xvec%p(1,:,:,:)
     END IF  

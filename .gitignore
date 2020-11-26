@@ -5,3 +5,4 @@ SRC/CHEMIE/Emission_Mod.f90_anne.f90
 SRC/CHEMIE/Emission_Mod.f90_anne2.f90
 SRC/EXAMPLE/BryanFritsch.f90
 SRC/list
+*.swp

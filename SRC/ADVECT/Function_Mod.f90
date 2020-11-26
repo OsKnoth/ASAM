@@ -551,7 +551,7 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     END IF
   END DO
 
-  CALL BoundaryFluxCondition(Rhs)
+  CALL BoundaryFluxCondition(Rhs,Rhs)
   CALL ExchangeFlux(Rhs)
 
   DO ibLoc=1,nbLoc
@@ -972,7 +972,7 @@ SUBROUTINE FcnMetG(VectorCell,Velocityface,Rhs,Time,dt)
     END IF  
     CALL AdvectionCompute(PhiLim)
   END DO
-  CALL BoundaryFluxCondition(Rhs)
+  CALL BoundaryFluxCondition(Rhs,Rhs)
   CALL ExchangeFlux(Rhs)
 
   DO ibLoc=1,nbLoc
@@ -1035,7 +1035,7 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
         RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
         f=>RhsMet(ibLoc)%Vec(ic)%c
         vFall=FallVelocity(ic)
-        BC=>BCVec(ic)
+        BC=>BCMetVec(ic)
         IF (ic==RhoPos) THEN
           c=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
           CALL AdvectionCompute(PhiLim)
@@ -1089,6 +1089,13 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
           CALL AdvectionCompute(PhiLim)
         END IF
       END DO     
+      DO ic=1,UBOUND(VectorChemCell(ibLoc)%Vec,1)
+        c=>VectorChemCell(ibLoc)%Vec(ic)%c
+        f=>RhsChem(ibLoc)%Vec(ic)%c
+        BC=>BCChemVec(ic)
+        vFall=0.0d0
+        CALL AdvectionCompute(PhiLim)
+      END DO  
     END IF
 !   IF (ThetaKind=='PreEn'.AND.EnPos>0) THEN
 !     p=>VectorMetCell(ibLoc)%Vec(thPos)%c
@@ -1208,6 +1215,27 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
           END IF
         END IF
       END DO
+      DO ic=1,UBOUND(VectorChemCell(ibLoc)%Vec,1)
+        c=>VectorChemCell(ibLoc)%Vec(ic)%c
+        f=>RhsChem(ibLoc)%Vec(ic)%c
+        IF (TkeDis) THEN 
+          DV=DV
+        ELSE IF (TkeHVLen) THEN
+          DV=DV
+          DH=DH
+        ELSE
+          DV=DV
+        END IF
+        CALL DiffusionCompute
+        IF (TkeDis) THEN 
+          DV=DV
+        ELSE IF (TkeHVLen) THEN
+          DV=DV
+          DH=DH
+        ELSE
+          DV=DV
+        END IF
+      END DO  
     END IF
     IF (RainSurf) THEN
       CALL RainSurfCompute(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),Time)
@@ -1281,8 +1309,9 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
 !   END DO
 ! END IF !Precip
 
-  CALL BoundaryFluxCondition(RhsMet)
+  CALL BoundaryFluxCondition(RhsMet,RhsChem)
   CALL ExchangeFlux(RhsMet)
+  CALL ExchangeFlux(RhsChem)
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL DomainSet(ib)
@@ -1308,6 +1337,10 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
     T=>TAbsCell(ibLoc)%Vec(1)%c
     DO ic=1,UBOUND(VectorMetCell(ibLoc)%Vec,1)
       f=>RhsMet(ibLoc)%Vec(ic)%c
+      CALL AdvectionScale
+    END DO
+    DO ic=1,UBOUND(VectorChemCell(ibLoc)%Vec,1)
+      f=>RhsChem(ibLoc)%Vec(ic)%c
       CALL AdvectionScale
     END DO
     IF (ThetaKind=='PreEn'.AND.PreAdv=='Outer') THEN
@@ -1418,8 +1451,8 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
         IF (RhoCPos==0) THEN
           RhoLC=>RhoLCell(ibLoc)
         END IF
-        cVec=>VectorMetCell(ibLoc)%Vec
-        fVec=>RhsMet(ibLoc)%Vec
+        cVec=>VectorChemCell(ibLoc)%Vec
+        fVec=>RhsChem(ibLoc)%Vec
         CALL GasChemie(cVec,fVec,TAbs)
       END IF
       IF (Aerosol) THEN
@@ -1427,8 +1460,8 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
         IF (RhoCPos==0) THEN
           RhoLC=>RhoLCell(ibLoc)
         END IF
-        cVec=>VectorMetCell(ibLoc)%Vec
-        fVec=>RhsMet(ibLoc)%Vec
+        cVec=>VectorChemCell(ibLoc)%Vec
+        fVec=>RhsChem(ibLoc)%Vec
         AVec=>Act(ibLoc)%Vec
         IF (ChemieAqua) THEN
           CALL ComputeActivity(cVec,AVec,TAbsCell(ibLoc)%Vec(1))  
@@ -1448,14 +1481,14 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
         IF (RhoCPos==0) THEN
           RhoLC=>RhoLCell(ibLoc)
         END IF
-        cVec=>VectorMetCell(ibLoc)%Vec
-        fVec=>RhsMet(ibLoc)%Vec
+        cVec=>VectorChemCell(ibLoc)%Vec
+        fVec=>RhsChem(ibLoc)%Vec
         CALL EmissionCompute(Time,VelocityFace)
         CALL EmissionPointCompute(Time)
       END IF
       IF (EmissStreet) THEN 
-        cVec=>VectorMetCell(ibLoc)%Vec
-        fVec=>RhsMet(ibLoc)%Vec
+        cVec=>VectorChemCell(ibLoc)%Vec
+        fVec=>RhsChem(ibLoc)%Vec
         CALL EmissionStreetCompute(Time) 
       END IF
       IF (Depos) THEN
@@ -1463,8 +1496,8 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
           RhoLC=>RhoLCell(ibLoc)
         END IF
         IF (Aerosol) SediVelC=>SediCell(ibLoc)
-        cVec=>VectorMetCell(ibLoc)%Vec
-        fVec=>RhsMet(ibLoc)%Vec
+        cVec=>VectorChemCell(ibLoc)%Vec
+        fVec=>RhsChem(ibLoc)%Vec
         CALL Deposition(VelocityFace)
       END IF
     END IF
