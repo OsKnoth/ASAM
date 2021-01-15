@@ -598,6 +598,7 @@ SUBROUTINE AbsTCompute(TotalEn,RhoLocEn)
   REAL(RealKind) :: TLoc1
   REAL(RealKind) :: Rm,Cpml,KappaLoc,Cp_eff
   REAL(RealKind) :: Acc,NewtonError,NewtonFunc,AbsT
+  REAL(RealKind) :: pLoc
 
   SELECT CASE(ThetaKind)
     CASE('Density')
@@ -612,6 +613,7 @@ SUBROUTINE AbsTCompute(TotalEn,RhoLocEn)
             Rm=Rd*RhoDLoc+Rv*RhoVLoc+Eps
             Cpml=Cpd*RhoDLoc+Cpv*RhoVLoc+Cpl*RhoLLoc+Cpi*RhoILoc+Eps
             KappaLoc=Rm/Cpml
+            pLoc=(Rd*Th(ix,iy,iz,1)/p0**KappaLoc)**(One/(One-KappaLoc))
             T(ix,iy,iz,1)=(Rd*Th(ix,iy,iz,1)/p0**KappaLoc)**(One/(One-KappaLoc))/Rm+Eps
           END DO
         END DO

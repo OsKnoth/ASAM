@@ -145,7 +145,9 @@ PROGRAM MainProg
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   IF (ChemieFile/='') THEN 
+    WRITE(*,*) 'Vor InputSystem(ChemieFile)'
     CALL InputSystem(ChemieFile)
+    WRITE(*,*) 'Nach InputSystem(ChemieFile)'
   END IF
 
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
@@ -348,6 +350,7 @@ PROGRAM MainProg
     CALL ExchangeCell(RhoVProfG)
     CALL Mult(RhoProfG,RhoVProfG)
     CALL VectorInit(RhoVPos,VecMet,QvStart,Time)
+    CALL Mult(RhoCell,VecMet,RhoVPos)
     IF (DynamicSoil) THEN
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
@@ -867,14 +870,6 @@ PROGRAM MainProg
   IF (CheckSurfPoint) CALL OutputPointSurface(VecMet,Time)
 
   CALL ReadRestart(VecMet,VelF1,Time,InputFileName)
-  CALL AllocateVec4Chemie(VecMetP,VectorComponentsT)
-  DO ibLoc=1,nbLoc
-    ib=LocGlob(ibLoc)
-    CALL Set(Floor(ib))
-    DEALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB)
-    ALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:SIZE(VecMet(ibLoc)%Vec(thPos)%cB,2)))
-  END DO
-  CALL Copy(VecMet,VecMetP)
 
   IF (MyID==0) WRITE(*,*) 'Starting time integration loop, ',Method
   DO iInt=1,EndIter

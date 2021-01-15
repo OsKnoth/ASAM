@@ -470,25 +470,27 @@ SUBROUTINE Jacstr_LUChem(LUChem)
 
   Current=>ReactionFirst
   DO WHILE(ASSOCIATED(Current))
-    DO i=1,Current%NumSpeciesLeftAktiv
-      DO l=1,Current%NumSpecies
-        CALL SpInsert(A,Current%Species(l)%Species &
-                     ,Current%SpeciesLeft(i),ins)
-      END DO
-    END DO
-    IF(TRIM(Current%ClassR)=='DISS'.OR. &
-       TRIM(Current%ClassR)=='SOLID'.OR. &
-       TRIM(Current%ClassR)=='HENRY'.OR. &
-       TRIM(Current%ClassR)=='MICROPHYS') THEN
-      DO i=1,Current%NumSpeciesRightAktiv
+    IF (TRIM(Current%ClassR)/='MICROPHYS') THEN
+      DO i=1,Current%NumSpeciesLeftAktiv
         DO l=1,Current%NumSpecies
           CALL SpInsert(A,Current%Species(l)%Species &
-                       ,Current%SpeciesRight(i),ins)
+                       ,Current%SpeciesLeft(i),ins)
         END DO
       END DO
-    END IF
-    IF (TRIM(Current%ClassR)=="HENRY".AND.Current%NumSpeciesLeftAktiv>0) THEN
-      A%Restr(Current%SpeciesLeft(1))=-1
+      IF(TRIM(Current%ClassR)=='DISS'.OR. &
+         TRIM(Current%ClassR)=='SOLID'.OR. &
+         TRIM(Current%ClassR)=='HENRY'.OR. &
+         TRIM(Current%ClassR)=='MICROPHYS') THEN
+        DO i=1,Current%NumSpeciesRightAktiv
+          DO l=1,Current%NumSpecies
+            CALL SpInsert(A,Current%Species(l)%Species &
+                         ,Current%SpeciesRight(i),ins)
+          END DO
+        END DO
+      END IF
+      IF (TRIM(Current%ClassR)=="HENRY".AND.Current%NumSpeciesLeftAktiv>0) THEN
+        A%Restr(Current%SpeciesLeft(1))=-1
+      END IF
     END IF
     Current=>Current%Next
   END DO
@@ -505,41 +507,43 @@ SUBROUTINE Jacstr_LUChem(LUChem)
 
   Current=>ReactionFirst
   DO WHILE(ASSOCIATED(Current))
-    istr=0
-    ALLOCATE(Struct(Current%NumSpecies &
-                   *(Current%NumSpeciesLeftAktiv+Current%NumSpeciesRightAktiv)))
-    DO i=1,Current%NumSpeciesLeftAktiv
-      DO l=1,Current%NumSpecies
-        DO k=LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)),&
-             LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)+1)-1
-          IF (LUChem%Permu(Current%SpeciesLeft(i)).eq.LUChem%ColInd(k)) THEN
-            istr=istr+1
-            Struct(istr)=k
-          END IF
-        END DO
-      END DO
-    END DO
-    IF(TRIM(Current%ClassR)=='DISS'.OR. &
-       TRIM(Current%ClassR)=='SOLID'.OR. &
-       TRIM(Current%ClassR)=='HENRY'.OR. &
-       TRIM(Current%ClassR)=='MICROPHYS') THEN
-      DO i=1,Current%NumSpeciesRightAktiv
+    IF (TRIM(Current%ClassR)/='MICROPHYS') THEN 
+      istr=0
+      ALLOCATE(Struct(Current%NumSpecies &
+                     *(Current%NumSpeciesLeftAktiv+Current%NumSpeciesRightAktiv)))
+      DO i=1,Current%NumSpeciesLeftAktiv
         DO l=1,Current%NumSpecies
           DO k=LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)),&
                LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)+1)-1
-            IF (LUChem%Permu(Current%SpeciesRight(i)).eq.LUChem%ColInd(k)) THEN
+            IF (LUChem%Permu(Current%SpeciesLeft(i)).eq.LUChem%ColInd(k)) THEN
               istr=istr+1
               Struct(istr)=k
             END IF
           END DO
         END DO
       END DO
+      IF (TRIM(Current%ClassR)=='DISS'.OR. &
+         TRIM(Current%ClassR)=='SOLID'.OR. &
+         TRIM(Current%ClassR)=='HENRY'.OR. &
+         TRIM(Current%ClassR)=='MICROPHYS') THEN
+        DO i=1,Current%NumSpeciesRightAktiv
+          DO l=1,Current%NumSpecies
+            DO k=LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)),&
+                 LUChem%RowPtr(LUChem%Permu(Current%Species(l)%Species)+1)-1
+              IF (LUChem%Permu(Current%SpeciesRight(i)).eq.LUChem%ColInd(k)) THEN
+                istr=istr+1
+                Struct(istr)=k
+              END IF
+            END DO
+          END DO
+        END DO
+      END IF
+      ALLOCATE(Current%struct(istr))
+      DO i=1,istr
+         Current%struct(i)=Struct(i)
+      END DO
+      DEALLOCATE(struct)
     END IF
-    ALLOCATE(Current%struct(istr))
-    DO i=1,istr
-       Current%struct(i)=Struct(i)
-    END DO
-    DEALLOCATE(struct)
     Current=>Current%Next
   END DO
 
@@ -554,6 +558,7 @@ SUBROUTINE Jacstr_LUMet(LU)
   INTEGER :: i,k,l,istr,Shift
   INTEGER, ALLOCATABLE :: Struct(:)
   LOGICAL :: ins
+  TYPE (Reaction_T), POINTER :: Current
   INTEGER :: PosMet(20)
   INTEGER :: iPos
 
@@ -569,6 +574,29 @@ SUBROUTINE Jacstr_LUMet(LU)
 ! Insert diagonal
   DO i=1,nGesMet
     CALL SpInsert(A,i,i,ins)   
+  END DO
+  Current=>ReactionFirst
+  DO WHILE(ASSOCIATED(Current))
+    IF (TRIM(Current%ClassR)=='MICROPHYS') THEN
+      DO i=1,Current%NumSpeciesLeftAktiv
+        DO l=1,Current%NumSpecies
+          CALL SpInsert(A,Current%Species(l)%Species &
+                       ,Current%SpeciesLeft(i),ins)
+        END DO
+      END DO
+      IF(TRIM(Current%ClassR)=='DISS'.OR. &
+         TRIM(Current%ClassR)=='SOLID'.OR. &
+         TRIM(Current%ClassR)=='HENRY'.OR. &
+         TRIM(Current%ClassR)=='MICROPHYS') THEN
+        DO i=1,Current%NumSpeciesRightAktiv
+          DO l=1,Current%NumSpecies
+            CALL SpInsert(A,Current%Species(l)%Species &
+                         ,Current%SpeciesRight(i),ins)
+          END DO
+        END DO
+      END IF
+    END IF
+    Current=>Current%Next
   END DO
   A%Restr=0
 
@@ -745,6 +773,47 @@ SUBROUTINE Jacstr_LUMet(LU)
   LU=A
   CALL Deallocate(A)
 
+  Current=>ReactionFirst
+  DO WHILE(ASSOCIATED(Current))
+    IF (TRIM(Current%ClassR)=='MICROPHYS') THEN 
+      istr=0
+      ALLOCATE(Struct(Current%NumSpecies &
+                     *(Current%NumSpeciesLeftAktiv+Current%NumSpeciesRightAktiv)))
+      DO i=1,Current%NumSpeciesLeftAktiv
+        DO l=1,Current%NumSpecies
+          DO k=LU%RowPtr(LU%Permu(Current%Species(l)%Species)),&
+               LU%RowPtr(LU%Permu(Current%Species(l)%Species)+1)-1
+            IF (LU%Permu(Current%SpeciesLeft(i)).eq.LU%ColInd(k)) THEN
+              istr=istr+1
+              Struct(istr)=k
+            END IF
+          END DO
+        END DO
+      END DO
+      IF (TRIM(Current%ClassR)=='DISS'.OR. &
+         TRIM(Current%ClassR)=='SOLID'.OR. &
+         TRIM(Current%ClassR)=='HENRY'.OR. &
+         TRIM(Current%ClassR)=='MICROPHYS') THEN
+        DO i=1,Current%NumSpeciesRightAktiv
+          DO l=1,Current%NumSpecies
+            DO k=LU%RowPtr(LU%Permu(Current%Species(l)%Species)),&
+                 LU%RowPtr(LU%Permu(Current%Species(l)%Species)+1)-1
+              IF (LU%Permu(Current%SpeciesRight(i)).eq.LU%ColInd(k)) THEN
+                istr=istr+1
+                Struct(istr)=k
+              END IF
+            END DO
+          END DO
+        END DO
+      END IF
+      ALLOCATE(Current%struct(istr))
+      DO i=1,istr
+         Current%struct(i)=Struct(i)
+      END DO
+      DEALLOCATE(struct)
+    END IF
+    Current=>Current%Next
+  END DO
 ! Belegung der Meteorologie
   DO i=1,NumMet
     DO l=1,NumMet

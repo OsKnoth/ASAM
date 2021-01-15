@@ -558,6 +558,7 @@ SUBROUTINE InputOutputSpecial(FileName)
       END DO
     ELSE
       LenOutSpecial=LenOutSpecial+1
+      WRITE(*,*) 'SpecialName ',SpecialName
       NameOutSpecial(LenOutSpecial)=SpecialName
       UnitOutSpecial(LenOutSpecial)='Unsc'
       SpecialType(LenOutSpecial)='Gas'

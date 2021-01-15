@@ -16,7 +16,11 @@ MODULE Profile_Mod
   INTEGER, PRIVATE :: RhoVPos=0
   INTEGER, PRIVATE :: PrePos=0
   INTEGER, PRIVATE :: TempPos=0
-  INTEGER, PRIVATE :: QvPos=0
+  INTEGER, PRIVATE :: TPos=0
+  INTEGER, PRIVATE :: QVPos=0
+  INTEGER, PRIVATE :: rvPos=0
+  INTEGER, PRIVATE :: rtPos=0
+  INTEGER, PRIVATE :: ThEPos=0
   INTEGER, PRIVATE :: RhPos=0
   INTEGER, PRIVATE :: uWindPos=0
   INTEGER, PRIVATE :: vWindPos=0
@@ -39,6 +43,7 @@ MODULE Profile_Mod
   REAL(RealKind) :: InvLayerHeight=-9.d9, dzProf_ManProf=1.d1, dzProf_Inv=-9.d9
   REAL(RealKind) :: dTemp_Inv=0.d0, dRH_Inv=0.d0, dQV_Inv=0.d0
   REAL(RealKind) :: dTemp_FT=0.0d0, dRH_FT=-9.d9, dQV_FT=-9.d9
+  REAL(RealKind) :: PotTempE0=-9.d9, rt0=-9.d9
 
   NAMELIST /AdjustCtrl/ NameSounding   &
                        ,Sounding       &
@@ -46,11 +51,13 @@ MODULE Profile_Mod
                        ,FileNameOut    &
                        ,Tropopause     &
                        ,ProfileType    &
+                       ,PotTempE0      & ! EquivalentPotential temperature at surface in °C or K
                        ,PotTemp0       & ! Potential temperature at surface in °C or K
                        ,Temp0          & ! Absolute air temperature at surface in °C or K
                        ,Pres0          & ! Air pressure at surface in hPa or Pa
                        ,RelHum0        & ! Relative humidity at surface in %
                        ,QV0            & ! Specific humidity at surface in kg/kg
+                       ,rt0            & ! Relative total water content at the surface
                        ,dTemp_BL       & ! Gradient of temperature (potential or absolute dependend on give input) in boundary layer in K/m
                        ,dRH_BL         & ! Gradient of relative humidity in boundary layer in %/m
                        ,dQV_BL         & ! Gradient of specific humidity in boundary layer in kg/kg/m
@@ -71,6 +78,9 @@ MODULE Profile_Mod
   REAL(RealKind), ALLOCATABLE :: RH(:)
   REAL(RealKind), ALLOCATABLE :: RhoV(:)
   REAL(RealKind), ALLOCATABLE :: QV(:)
+  REAL(RealKind), ALLOCATABLE :: rt(:)
+  REAL(RealKind), ALLOCATABLE :: rva(:)
+  REAL(RealKind), ALLOCATABLE :: ThE(:)
   INTEGER :: NumValues
 
 CONTAINS
@@ -142,7 +152,6 @@ SUBROUTINE ReadInput(FileName)
     zMProf(iz)=0.5d0*(zPProf(iz-1)+zPProf(iz))
   END DO  
   CLOSE(UNIT=InputUnit)
-
 ! Profildatei einlesen
   IF (Sounding) THEN
     OPEN(InputUnit,FILE=TRIM(NameSounding)//'.txt',ACTION='read',IOSTAT=stat)
@@ -189,6 +198,9 @@ SUBROUTINE ReadInput(FileName)
     ALLOCATE(Pre(NumSounding))
     ALLOCATE(ProfTemp(NumSounding))
     ALLOCATE(RH(NumSounding))
+    ALLOCATE(rt(NumSounding))
+    ALLOCATE(rva(NumSounding))
+    ALLOCATE(ThE(NumSounding))
     CALL CreateProfile() ! Values defined on borders of the gridcells
   END IF
 END SUBROUTINE ReadInput
@@ -200,11 +212,13 @@ FUNCTION  LLv(T)
   LLv=L0-(Cpl-Cpv)*(T-Tes0)
 END FUNCTION  LLv
 
-FUNCTION  SatVap(T)
-  REAL(RealKind) :: SatVap,T
-  SatVap=p0Star*(T/Tes0)**((Cpv-Cpl)/Rv) &
-        *EXP((L00/Rv)*(One/Tes0-One/T))
-END FUNCTION  SatVap
+FUNCTION  SatVapor(T)
+  REAL(RealKind) :: SatVapor,T
+  REAL(RealKind) :: T_C
+  ! Guide to Meteorological Instruments and Methods of Observation (CIMO Guide) (WMO, 2008)
+  T_C=T-273.15d0
+  SatVapor=6.112d2*EXP(17.62d0*T_C/(243.12d0+T_C))
+END FUNCTION  SatVapor
 
 
 SUBROUTINE Res(z,y,yprime,delta,ires,rpar,ipar)
@@ -223,6 +237,8 @@ SUBROUTINE Res(z,y,yprime,delta,ires,rpar,ipar)
       CALL ResMoistQV(z,y,yprime,delta,ires,rpar,ipar)
     CASE('MoistQVPot')
       CALL ResMoistQVPot(z,y,yprime,delta,ires,rpar,ipar)
+    CASE('MoistQTPotEquiv')
+      CALL ResMoistQTPotEquiv(z,y,yprime,delta,ires,rpar,ipar)
   END SELECT  
 
 END SUBROUTINE Res
@@ -261,7 +277,7 @@ SUBROUTINE Res1(t,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)
   Delta(3)=(289.0*exp(2.47e6/1004./Te*(RhoVL-RhoV)/(RhoD+RhoVL)))-Theta
   Delta(4)=Te-Theta*(p/p0)**(Rd/Cpd)
-  pvs=SatVap(Te) 
+  pvs=SatVapor(Te) 
   Delta(5)=RhoV-MIN(RhoVL,pvs/(Rv*Te))
   Delta(6)=RhoVL-fac*9.0e-3*(RhoD+RhoVL)
 END SUBROUTINE RES1
@@ -292,7 +308,7 @@ SUBROUTINE Res2(t,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)
   Delta(3)=((Theta0+(t-840.)**(1./3.))*exp(LLv(Te)/Cpd/Te*(RhoVL-RhoV)/(RhoD+RhoVL)))-Theta
   Delta(4)=Te-Theta*(p/p0)**(Rd/Cpd) 
-  pvs=SatVap(Te)
+  pvs=SatVapor(Te)
   Delta(5)=RhoV-RhoVL !MIN(RhoVL,pvs/(Rv*Te))
   Delta(6)=RhoVL-fac*9.0e-3*(RhoD+RhoVL)
 
@@ -322,7 +338,7 @@ SUBROUTINE Res3(t,y,yprime,delta,ires,rpar,ipar)
   Delta(1)=pPrime+(RhoD+RhoV)*Grav        ! dp/dzProf = - rho*g
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)         ! p = rho*R*T
   Delta(3)=Theta0-Te*(p0/p)**(Rd/Cpd)     ! Potential temperature
-  Delta(4)=RhoV-RelHum*SatVap(Te)/(Rv*Te) ! RhoV
+  Delta(4)=RhoV-RelHum*SatVapor(Te)/(Rv*Te) ! RhoV
 
 END SUBROUTINE Res3
 
@@ -390,9 +406,9 @@ SUBROUTINE ResMoistRelHum(z,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)          ! p = rho*R*T
   Rm=Rd*RhoD+Rv*RhoV
   Cpml=Cpd*RhoD+Cpv*RhoV
-  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
   Delta(4)=Te-((z-zu)*To+(zo-z)*Tu)/(zo-zu)
-  Delta(5)=RhoV-RelH*SatVap(Te)/(Rv*Te) ! RhoV
+  Delta(5)=RhoV-RelH*SatVapor(Te)/(Rv*Te) ! RhoV
   Delta(6)=RelH-((z-zu)*RelHo+(zo-z)*RelHu)/(zo-zu)
 
 END SUBROUTINE ResMoistRelHum
@@ -431,9 +447,9 @@ SUBROUTINE ResMoistRhoV(z,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)          ! p = rho*R*T
   Rm=Rd*RhoD+Rv*RhoV
   Cpml=Cpd*RhoD+Cpv*RhoV
-  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
   Delta(4)=Te-((z-zu)*To+(zo-z)*Tu)/(zo-zu)
-  Delta(5)=RhoV-RelH*SatVap(Te)/(Rv*Te) ! RhoV
+  Delta(5)=RhoV-RelH*SatVapor(Te)/(Rv*Te) ! RhoV
   Delta(6)=RelH-((z-zu)*RelHo+(zo-z)*RelHu)/(zo-zu)
 
 END SUBROUTINE ResMoistRhoV
@@ -482,13 +498,13 @@ SUBROUTINE JacResMoistRhoV(z,y,yprime,pd,cj,rpar,ipar)
   pd(2,5)=-Te*(Rv-Rd)*Rhov
   Rm=Rd*RhoD+Rv*RhoV
   Cpml=Cpd*RhoD+Cpv*RhoV
-! Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+! Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
 ! g(3)=y(3)-y(2)*(p0/y(1))**(Rd*(y(4)-y(5)+Rv*y(5))/Cpd*(y(4)-y(5))+Cpv*y(5))*((y(4)-y(5))+y(5)*Rd/Rv)/y(4)
   pd(3,1)=-Te*(RhoD+RhoV*Rd/Rv)/Rho*(p0/p)**((Rm/Cpml)-1.0d0)*(Rm/Cpml)*(-p0/(p*p))
-  pd(3,2)=-(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho
+  pd(3,2)=-(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho
   pd(3,3)=1.0d0
 ! Delta(4)=Te-((z-zu)*To+(zo-z)*Tu)/(zo-zu)
-! Delta(5)=RhoV-RelH*SatVap(Te)/(Rv*Te) ! RhoV
+! Delta(5)=RhoV-RelH*SatVapor(Te)/(Rv*Te) ! RhoV
 ! Delta(6)=RelH-((z-zu)*RelHo+(zo-z)*RelHu)/(zo-zu)
 
 END SUBROUTINE JacResMoistRhoV
@@ -527,7 +543,7 @@ SUBROUTINE ResMoistQV(z,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)          ! p = rho*R*T
   Rm=Rd*RhoD+Rv*RhoV
   Cpml=Cpd*RhoD+Cpv*RhoV
-  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
   Delta(4)=Te-((z-zu)*To+(zo-z)*Tu)/(zo-zu)
   Delta(5)=RhoV-Rho*QV
   Delta(6)=QV-((z-zu)*QVo+(zo-z)*QVu)/(zo-zu)
@@ -580,7 +596,7 @@ SUBROUTINE ResMoistQVPot(z,y,yprime,delta,ires,rpar,ipar)
   Delta(2)=p-Te*(Rd*RhoD+Rv*RhoV)          ! p = rho*R*T
   Rm=Rd*RhoD+Rv*RhoV
   Cpml=Cpd*RhoD+Cpv*RhoV
-  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+  Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
   Delta(4)=ThetaD-((z-zu)*ThetaDo+(zo-z)*ThetaDu)/(zo-zu)
   Delta(5)=RhoV-Rho*QV
   Delta(6)=QV-((z-zu)*QVo+(zo-z)*QVu)/(zo-zu)
@@ -660,10 +676,10 @@ SUBROUTINE JacResMoistQVPot(z,y,yprime,pd,cj,rpar,ipar)
   Dt3Dp=t3*(Dt1Dp/t1)*t2
   Dt3DRho=t3*log(t1)*Dt2DRho
   Dt3DRhoV=t3*log(t1)*Dt2DRhoV
-  t4=(RhoD+RhoV*Rd/Rv)/Rho
-  Dt4DRho=(DRhoDDRho*Rho-(RhoD+RhoV*Rd/Rv))/(Rho*Rho)
-  Dt4DRhoV=(DRhoDDRhoV+Rd/Rv)/Rho
-! Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rd/Rv)/Rho        ! Density Potential temperature
+  t4=(RhoD+RhoV*Rv/Rd)/Rho
+  Dt4DRho=(DRhoDDRho*Rho-(RhoD+RhoV*Rv/Rd))/(Rho*Rho)
+  Dt4DRhoV=(DRhoDDRhoV+Rv/Rd)/Rho
+! Delta(3)=Theta-Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho        ! Density Potential temperature
   Res3=Theta-Te*t3*t4
   DRes3Dp=-Te*Dt3Dp*t4
   DRes3DTe=-t3*t4
@@ -705,8 +721,51 @@ SUBROUTINE JacResMoistQVPot(z,y,yprime,pd,cj,rpar,ipar)
   pd(10,10)=1.0d0
 END SUBROUTINE JacResMoistQVPot
 
+SUBROUTINE ResMoistQTPotEquiv(z,y,yprime,delta,ires,rpar,ipar)
+
+  INTEGER :: ires,ipar(*)
+  REAL(RealKind) :: z,y(*),yprime(*),delta(*),rpar(*)
+
+  REAL(RealKind) :: p,rho,T,r_t,r_v,rho_qv,Theta_e,pPrime
+  REAL(RealKind) :: Rho_d,p_d,T_C,p_vs,L,r_t0,Theta_e0
+  REAL(RealKind) :: a,b
+
+  ! p      y(1)
+  ! T      y(2)
+  ! \Theta y(3)
+  ! \rho   y(4)
+  p = y(1)
+  rho = y(2)
+  T = y(3)
+  r_t = y(4)
+  r_v = y(5)
+  rho_qv = y(6)
+  Theta_e = y(7)
+  pPrime = yPrime(1)
+
+  Theta_e0=Rpar(3)
+  r_t0=Rpar(5)
+
+  rho_d = rho / (1 + r_t)
+  p_d = Rd * rho_d * T
+  T_C = T - 273.15d0
+  p_vs = 611.2d0 * EXP(17.62d0 * T_C / (243.12d0 + T_C))
+  L = L00 - (cpl - cpv) * T
+  Delta(1) = pPrime + grav * rho
+  Delta(2) = p - (Rd * rho_d + Rv * rho_qv) * T
+  Delta(3) = Theta_e - T * (p_d / p0)**(-Rd/  &
+       (cpd + cpl * r_t)) * EXP(L * r_v / ((cpd + cpl * r_t) * T))
+  Delta(4) = r_t - r_t0
+  Delta(5) = rho_qv-rho_d * r_v
+  Delta(6) = Theta_e - Theta_e0
+  a = p_vs / (Rv * T) - rho_qv
+  b = rho - rho_qv - rho_d
+  Delta(7)=a+b-SQRT(a*a+b*b)
+
+END SUBROUTINE ResMoistQTPotEquiv
+
 SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart,&
-                    uWindStart,vWindStart,wWindStart)
+                    ThEStart,rtStart,uWindStart,vWindStart,wWindStart)
 
   REAL(RealKind) :: y(:),yprime(:),rpar(:)
   INTEGER :: ipar(:)
@@ -715,6 +774,8 @@ SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart
   REAL(RealKind), OPTIONAL :: TeStart
   REAL(RealKind), OPTIONAL :: ThDStart
   REAL(RealKind), OPTIONAL :: QVStart
+  REAL(RealKind), OPTIONAL :: ThEStart
+  REAL(RealKind), OPTIONAL :: rtStart
   REAL(RealKind), OPTIONAL :: uWindStart
   REAL(RealKind), OPTIONAL :: vWindStart
   REAL(RealKind), OPTIONAL :: wWindStart
@@ -787,7 +848,7 @@ SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart
         y(4)=y(1)/(Rd*y(2))
       END IF  
       IF (PRESENT(RHStart)) THEN
-        y(5)=y(6)*SatVap(y(2))/(Rv*y(2))
+        y(5)=y(6)*SatVapor(y(2))/(Rv*y(2))
       ELSE IF (PRESENT(QVStart).AND.y(5)==0.0d0) THEN
         y(5)=y(6)
       END IF  
@@ -865,13 +926,37 @@ SUBROUTINE InputRes(y,yprime,rpar,ipar,PreStart,RhStart,TeStart,ThDStart,QVStart
 
       END IF  
       IF (PRESENT(RHStart)) THEN
-        y(5)=y(6)*SatVap(y(2))/(Rv*y(2))
+        y(5)=y(6)*SatVapor(y(2))/(Rv*y(2))
       ELSE IF (PRESENT(QVStart).AND.y(RhoVPos)==0.0d0) THEN
         y(RhoVPos)=y(QvPos)*y(RhoPos)
       END IF  
       yPrime(1)=-y(RhoPos)*Grav
       rpar(1)=0.0d0
       rpar(2)=1.0d0
+    CASE('MoistQTPotEquiv')
+      y=0.0d0
+      yPrime=0.0d0
+      neq=7
+      PrePos=1
+      RhoPos=2
+      TPos=3
+      rtPos=4
+      rvPos=5
+      RhoVPos=6
+      ThEPos=7
+      IF (PRESENT(preStart)) THEN
+        y(PrePos)=preStart
+      ELSE
+        y(PrePos)=1.0d5 
+      END IF  
+      y(TPos)=TheStart
+      y(RhoPos)=y(prePos)/(Rd*y(TPos))
+      y(rtPos)=rtStart
+      y(rvPos)=rtStart
+      y(RhoVPos)=y(RhoPos)*y(rvPos)
+      y(ThEPos)=TheStart
+      rpar(3)=TheStart
+      rpar(5)=rtStart
     CASE('MoistRhoV')
     CASE DEFAULT  
       y=0.0d0
@@ -888,6 +973,7 @@ SUBROUTINE OutputRes(nzProf,zMProf,c,FileNameOut)
   CHARACTER(*) :: FileNameOut
 
   INTEGER :: i
+  REAL(8) :: Rho,RhoD,RhoV,RhoL,Rm,Cpml,L,p,pD,T,Te,Theta,r_t,r_v,ThE
 
   OPEN(unit=OutputUnit,FILE=TRIM(FileNameOut)//'.prof')
   SELECT CASE(ProfileType)
@@ -939,7 +1025,7 @@ SUBROUTINE OutputRes(nzProf,zMProf,c,FileNameOut)
       WRITE(OutputUnit,*) nzProf,2
       WRITE(OutputUnit,*) 'Equal'
       DO i=1,nzProf
-        WRITE(OutputUnit,*) zMProf(i),c(i,RhoVPos)
+        WRITE(OutputUnit,*) zMProf(i),c(i,RhoVPos)/c(i,RhoPos)
       END DO
       WRITE(OutputUnit,*) 'PreProf'
       WRITE(OutputUnit,*) nzProf,2
@@ -947,6 +1033,73 @@ SUBROUTINE OutputRes(nzProf,zMProf,c,FileNameOut)
       DO i=1,nzProf
         WRITE(OutputUnit,*) zMProf(i),c(i,PrePos)
       END DO
+    CASE('MoistQTPotEquiv')
+      WRITE(OutputUnit,*) 'RhoProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        WRITE(OutputUnit,*) zMProf(i),c(i,RhoPos)
+      END DO
+      WRITE(OutputUnit,*) 'PreProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        WRITE(OutputUnit,*) zMProf(i),c(i,prePos)
+      END DO
+      WRITE(OutputUnit,*) 'TempProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        WRITE(OutputUnit,*) zMProf(i),c(i,TPos)
+      END DO
+      WRITE(OutputUnit,*) 'ThProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        Rho=c(i,RhoPos)
+        RhoV=c(i,RhoVPos)
+        RhoD =Rho/(1.0d0+c(i,rtPos))
+        RhoL=Rho-RhoD-RhoV
+        Rm=Rd*RhoD+Rv*RhoV
+        Cpml=Cpd*RhoD+Cpv*RhoV+Cpl*RhoL
+        p=c(i,PrePos)
+        Te=c(i,TPos)
+        Theta=Te*(p0/p)**(Rm/Cpml)*(RhoD+RhoV*Rv/Rd)/Rho
+        WRITE(OutputUnit,*) zMProf(i),Theta
+      END DO
+      WRITE(OutputUnit,*) 'QvProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        WRITE(OutputUnit,*) zMProf(i),c(i,RhoVPos)/c(i,RhoPos)
+      END DO
+      WRITE(OutputUnit,*) 'QcProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        Rho=c(i,RhoPos)
+        RhoV=c(i,RhoVPos)
+        RhoD =Rho/(1.0d0+c(i,rtPos))
+        RhoL=Rho-RhoD-RhoV
+        WRITE(OutputUnit,*) zMProf(i),RhoL/Rho
+      END DO  
+      WRITE(OutputUnit,*) 'ThEProf'
+      WRITE(OutputUnit,*) nzProf,2
+      WRITE(OutputUnit,*) 'Equal'
+      DO i=1,nzProf
+        Rho=c(i,RhoPos)
+        RhoV=c(i,RhoVPos)
+        RhoD =Rho/(1.0d0+c(i,rtPos))
+        RhoL=Rho-RhoD-RhoV
+        T=c(i,TPos)
+        pD=RhoD*T*Rd
+        r_t=c(i,rtPos)
+        r_v=c(i,rvPos)
+        L = L00 - (cpl - cpv) * T
+        ThE=T*(pD/p0)**(-Rd/  &
+            (cpd + cpl * r_t)) * EXP(L * r_v / ((cpd + cpl * r_t) * T))
+        WRITE(OutputUnit,*) zMProf(i),ThE
+      END DO  
   END SELECT    
   CLOSE(OutputUnit)
 
@@ -978,9 +1131,7 @@ SUBROUTINE CreateProfile()
   IF (InvLayerHeight.GT.0.d0) dzProf_Inv=MAX(dzProf_Inv,dzProf_ManProf)
 
   Pre(1) = Pres0
-  WRITE(*,*) 'CreateProfile ',Pre(1)
   IF (PotTemp0.GT.0.d0) THEN ! Profile calculated with given potential temperature
-    WRITE(*,*) 'CreateProfile  1'
     IF (PotTemp0.LT.1.d2) PotTemp0=PotTemp0+273.15
     PotTemp(1) = PotTemp0
     ProfTemp(1)=(Pres0/1000.d2)**(Rd/Cpd)*PotTemp(1)
@@ -999,8 +1150,7 @@ SUBROUTINE CreateProfile()
         ProfTemp(iz) = PotTemp(iz)*(Pre(iz)/1000.d2)**(Rd/Cpd)
       END DO
     END DO
-  ELSE ! Profile calculated with given absolute temperature
-    WRITE(*,*) 'CreateProfile  2'
+  ELSE IF(Temp0>0) THEN ! Profile calculated with given absolute temperature
     IF (Temp0.LT.1.d2) Temp0=Temp0+273.15
     ProfTemp(1)=Temp0
     DO iz=2,NumSounding
@@ -1013,24 +1163,27 @@ SUBROUTINE CreateProfile()
       END IF
       ProfTemp(iz)= ProfTemp(iz-1)+dTemp*dzProf_ManProf
       Pre(iz) = Pre(iz-1)*EXP((-1.d0*grav*dzProf_ManProf)/(Rd*(ProfTemp(iz-1)+ProfTemp(iz))/2.d0))
-      WRITE(*,*) 'iz ',iz,ProfTemp(iz),Pre(iz),Pre(1)
     END DO
   END IF
-
-  IF (RelHum0>0.d0 .OR. QV0>0.d0) THEN ! Moist case
-    WRITE(*,*) 'CreateProfile  3'
+  IF (rt0>0.0d0.AND.PotTempE0>0.0d0) THEN
+    DO iz=1,NumSounding
+      rt(iz)=rt0
+      ThE(iz)=PotTempE0
+    END DO
+    ProfileType='MoistQTPotEquiv'
+  ELSE IF (RelHum0>0.d0 .OR. QV0>0.d0) THEN ! Moist case
 !   CaseProfile=Moist
     RhoL = Pre(1)/(Rd*ProfTemp(1))
     IF (RelHum0.GT.0.d0) THEN
       RH(1)=RelHum0
-      VaporPres = RH(1)/1.d2*SatVap(ProfTemp(1))
+      VaporPres = RH(1)/1.d2*SatVapor(ProfTemp(1))
       RhoV = VaporPres/(Rv*ProfTemp(1))
       QV(1)=RhoV/(RhoV+RhoL)
     ELSE IF (QV0>0.d0) THEN
       QV(1)=QV0
       RhoV = RhoL*(QV(1)/(1.d0-QV(1)))
       VaporPres = RhoV*Rv*ProfTemp(1)
-      RH(1) = VaporPres/SatVap(ProfTemp(1))*1.d2
+      RH(1) = VaporPres/SatVapor(ProfTemp(1))*1.d2
     END IF
 
 
@@ -1058,7 +1211,7 @@ SUBROUTINE CreateProfile()
         QV(iz)= QV(iz-1)+dQV*dzProf_ManProf
         RhoV = RhoL*(QV(iz)/(1.d0-QV(iz)))
         VaporPres = RhoV*Rv*ProfTemp(iz)
-        RH(iz) = VaporPres/SatVap(ProfTemp(iz))*1.d2
+        RH(iz) = VaporPres/SatVapor(ProfTemp(iz))*1.d2
       END DO
     ELSE
       STOP 'ERROR: No gradient for humidity defined for free troposphere'
@@ -1074,7 +1227,7 @@ SUBROUTINE CreateProfile()
 
 END SUBROUTINE CreateProfile
 
-SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
+SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,ThE,rt,uWind,vWind,wWind)
 
   USE Kind_Mod
 
@@ -1085,6 +1238,8 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   REAL(RealKind), OPTIONAL :: ThD(:)
   REAL(RealKind), OPTIONAL :: RH(:)
   REAL(RealKind), OPTIONAL :: QV(:)
+  REAL(RealKind), OPTIONAL :: ThE(:)
+  REAL(RealKind), OPTIONAL :: rt(:)
   REAL(RealKind), OPTIONAL :: uWind(:)
   REAL(RealKind), OPTIONAL :: vWind(:)
   REAL(RealKind), OPTIONAL :: wWind(:)
@@ -1101,6 +1256,8 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   REAL(RealKind) :: PreStart    = 1013.25d2
   REAL(RealKind) :: RelHumStart = 0.00d0
   REAL(RealKind) :: QVStart=1.d-4
+  REAL(RealKind) :: ThEStart=320.0d0
+  REAL(RealKind) :: rtStart=1.d-2
   REAL(RealKind) :: uWindStart=0.00d0
   REAL(RealKind) :: vWindStart=0.00d0
   REAL(RealKind) :: wWindStart=0.00d0
@@ -1126,6 +1283,12 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   IF (PRESENT(QV)) THEN
     QVStart=QV(1)
   END IF
+  IF (PRESENT(ThE)) THEN
+    ThEStart=ThE(1)
+  END IF
+  IF (PRESENT(rt)) THEN
+    rtStart=rt(1)
+  END IF
   IF (PRESENT(uWind)) THEN
     uWindStart=uWind(1)
   END IF
@@ -1137,7 +1300,7 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
   END IF
 
 
-  rtol = 1.0d-1
+  rtol = 1.0d-5
   atol = 1.0d-6
 
   tout=1.0d0
@@ -1151,12 +1314,16 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
       QvStart=QV(1) !9.d-4 !QV(1) !2.d-4
       CALL InputRes(y,yprime,rpar,ipar,PreStart,ThDStart=ThDStart,QVStart=QvStart,&
                     uWindStart=uWindStart,vWindStart=vWindStart,wWindStart=wWindStart)
+    ELSE IF (PRESENT(rt)) THEN
+      rtStart=1.d-8*rt(1) !9.d-4 !QV(1) !2.d-4
+      CALL InputRes(y,yprime,rpar,ipar,ThEStart=ThEStart,rtStart=rtStart,&
+                    uWindStart=uWindStart,vWindStart=vWindStart,wWindStart=wWindStart)
     END IF  
     DO  
       rwork=0.0d0
       info=0.0d0
       INFO(11)=1 ! DDASSL computes consisten initial values
-      INFO(5)=1
+      INFO(5)=0
       z=Height(1)
       zOut=Height(1)+1.d-6
       CALL DDASSL (RES, NEQ, z, Y, YPRIME, zOut, INFO, RTOL, ATOL, &
@@ -1176,13 +1343,21 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
         rpar(6)=QVStart
         y(QvPos)=QVStart
 !       CALL InputRes(y,yprime,rpar,ipar,PreStart,TeStart=TeStart,QVStart=QVStart)
+      ELSE IF (PRESENT(rt)) THEN
+        IF (rpar(5)==rt(1)) THEN
+          EXIT
+        END IF  
+        rtStart=MIN(rpar(5)+9.d-7,rt(1))
+        y(rtPos)=rtStart
+        rpar(5)=rtStart
+        rpar(6)=rtStart
       END IF  
     END DO  
   ELSE  
     CALL InputRes(y,yprime,rpar,ipar,PreStart,TeStart=TeStart)
     rwork=0.0d0
     info=0
-    info(5)=1
+    info(5)=0
     info(11)=1 ! DDASSL computes consisten initial values
     z=Height(1)
     zOut=Height(1)+1.d-6
@@ -1220,6 +1395,10 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
     IF (PRESENT(QV)) THEN
       rpar(5)=QV(iHeight)
       rpar(6)=QV(iHeight+1)
+    END IF  
+    IF (PRESENT(rt)) THEN
+      rpar(5)=rt(iHeight)
+      rpar(6)=rt(iHeight+1)
     END IF  
     IF (PRESENT(uWind)) THEN
       rpar(7)=uWind(iHeight)
@@ -1271,11 +1450,15 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
       QvStart=QV(1)
       CALL InputRes(y,yprime,rpar,ipar,PreStart,ThDStart=ThDStart,QVStart=QvStart,&
                     uWindStart=uWindStart,vWindStart=vWindStart,wWindStart=wWindStart)
+    ELSE IF (PRESENT(rt)) THEN
+      rtStart=1.d-8*rt(1) !9.d-4 !QV(1) !2.d-4
+      CALL InputRes(y,yprime,rpar,ipar,ThEStart=ThEStart,rtStart=rtStart,&
+                    uWindStart=uWindStart,vWindStart=vWindStart,wWindStart=wWindStart)
     END IF  
     DO  
       rwork=0.0d0
       info=0
-      info(5)=1
+      info(5)=0
       INFO(11)=1 ! DDASSL computes consisten initial values
       z=Height(1)
       zOut=Height(1)-1.d-6
@@ -1296,13 +1479,21 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
         rpar(6)=QVStart
         y(QvPos)=QVStart
 !       CALL InputRes(y,yprime,rpar,ipar,PreStart,TeStart=TeStart,QVStart=QVStart)
+      ELSE IF (PRESENT(rt)) THEN
+        IF (rpar(5)==rt(1)) THEN
+          EXIT
+        END IF  
+        rtStart=MIN(rpar(5)+9.d-7,rt(1))
+        y(rtPos)=rtStart
+        rpar(5)=rtStart
+        rpar(6)=rtStart
       END IF  
     END DO  
   ELSE  
     CALL InputRes(y,yprime,rpar,ipar,PreStart,TeStart=TeStart)
     rwork=0.0d0
     info=0
-    info(5)=1
+    info(5)=0
     info(11)=1 ! DDASSL computes consisten initial values
     z=Height(1)
     zOut=Height(1)-1.d-6
@@ -1333,6 +1524,10 @@ SUBROUTINE ComputeProfile(c,Height,Pre,Temp,ThD,RH,QV,uWind,vWind,wWind)
       rpar(5)=QV(1)
       rpar(6)=QV(2)
     END IF
+    IF (PRESENT(rt)) THEN
+      rpar(5)=rt(iHeight)
+      rpar(6)=rt(iHeight+1)
+    END IF  
     IF (PRESENT(uWind)) THEN
       rpar(7)=uWind(1)
       rpar(8)=uWind(2)

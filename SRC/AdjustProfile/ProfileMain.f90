@@ -39,17 +39,26 @@ PROGRAM Profile
 
   WRITE(*,*) "use: ./run outputfilename"
   CALL get_command_argument(1,FileName)
+  WRITE(*,*) 'CALL ComputeParameter'
   CALL ComputeParameter
+  WRITE(*,*) 'CALL ReadInput'
   CALL ReadInput(FileName)
 
 
-  PreStart=Pre(1)
-  TeStart=ProfTemp(1)
-  RelHumStart=RH(1)
-  WRITE(*,*) 'PreStart     ',PreStart
-  WRITE(*,*) 'TeStart      ',TeStart
-  WRITE(*,*) 'RelHumStart  ',RelHumStart
-  CALL ComputeProfile(c,Height,Pre,ProfTemp,RH)
+  WRITE(*,*) 'ProfileType ',ProfileType
+  SELECT CASE(ProfileType)
+    CASE('MoistRelHum')
+      PreStart=Pre(1)
+      TeStart=ProfTemp(1)
+      RelHumStart=RH(1)
+      WRITE(*,*) 'PreStart     ',PreStart
+      WRITE(*,*) 'TeStart      ',TeStart
+      WRITE(*,*) 'RelHumStart  ',RelHumStart
+      CALL ComputeProfile(c,Height,Pre,ProfTemp,RH)
+    CASE('MoistQTPotEquiv')
+      WRITE(*,*) 'Equiv '
+      CALL ComputeProfile(c,Height,Pre,ThE=ThE,rt=rt)
+  END SELECT
 
   WRITE(*,*) 'FileNameOut  ',FileNameOut
   CALL OutputRes(nzProf,zMProf,c,FileNameOut)
