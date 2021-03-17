@@ -147,9 +147,9 @@ SUBROUTINE PerturbProfile(VecC)
             CASE('PotTemp')
               ThVirt(ix,iy,iz,1)=TLoc*(p0/pLoc)**(Rd/Cpd)*RhoLoc
             CASE('Equiv')
-              ThEquivLoc=ThEquiv(TLoc,RhoDry,RhoVLoc,RhoLLoc)
-              ThVirt(ix,iy,iz,1)=ThEquivLoc*RhoLoc
-            CASE('Energy')
+              ThEquivLoc=ThEquiv(TLoc,RhoDry,RhoVLoc,RhoLLoc)*RhoLoc
+              ThVirt(ix,iy,iz,1)=ThEquivLoc
+            CASE('Energy','EnergyBryan')
               ThVirt(ix,iy,iz,1)= &
                 (RhoDry*Cvd+RhoVLoc*Cvv+RhoLLoc*Cpl)*TLoc+RhoVLoc*L00 &
                 +Half*RhoLoc*(zP(iz-1)+zP(iz))*Grav

@@ -10,6 +10,7 @@ MODULE SparseSolver_Mod
 CONTAINS
 SUBROUTINE InitMumps
 ! Init phase  
+  WRITE(*,*) 'Init MUMPS'
   ALLOCATE(ANeuMumps(nbLoc))
   ALLOCATE(ADirMumps(nbLoc))
 

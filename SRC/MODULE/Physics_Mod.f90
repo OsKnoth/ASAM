@@ -134,7 +134,7 @@ MODULE Physics_Mod
   CHARACTER(100) :: RadiationValuesFile
   INTEGER :: RadiationValuesTime
   LOGICAL :: Damping
-  LOGICAL :: DampAverage
+  CHARACTER*80  :: DampType
   LOGICAL :: Forcing
   LOGICAL :: ForcingExtern
   LOGICAL :: ForcingExternNudging=.FALSE.
@@ -290,7 +290,7 @@ MODULE Physics_Mod
                           RadiationValuesFile, &
                           RadiationValuesTime, &
                           Damping,   &
-                          DampAverage,   &
+                          DampType,   &
                           Forcing,   &
                           ForcingExtern,   &
                           ForcingExternNudging,   &
@@ -563,7 +563,7 @@ SUBROUTINE InputModelPhysics(FileName)
   DragScheme='revLouis'
   NoSlip=.FALSE.
   Damping=.FALSE.
-  DampAverage=.FALSE.
+  DampType='Const'
   Forcing=.FALSE.
   ForcingExtern=.FALSE.
   ForcingCellPert=.FALSE.       ! turn cell perturbation method on/off

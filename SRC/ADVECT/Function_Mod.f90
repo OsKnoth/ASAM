@@ -282,6 +282,28 @@ SUBROUTINE PrepareF(VectorCell,VelocityFace,Time)
 
 END SUBROUTINE PrepareF
 
+SUBROUTINE PrepareAbsTemp(VectorCell)
+  TYPE(Vector4Cell_T), POINTER :: VectorCell(:)
+
+  DO ibLoc=1,nbLoc
+    ib=LocGlob(ibLoc)
+    CALL DomainSet(ib)
+    Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+    RhoV=>VectorCell(ibLoc)%Vec(RhoVPos)%c
+    RhoL=>VectorCell(ibLoc)%Vec(RhoCPos)%c
+    RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
+    RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
+    RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
+    RhoEn=>VectorCell(ibLoc)%Vec(EnPos)%c
+    p=>PreCell(ibLoc)%c
+    Th=>VectorCell(ibLoc)%Vec(ThPos)%c
+    T=>TAbsCell(ibLoc)%Vec(1)%c
+    IF (ThPos>0) THEN
+      CALL AbsTPreCompute
+    END IF  
+  END DO  
+END SUBROUTINE PrepareAbsTemp
+  
 SUBROUTINE PrepareFEx(VectorCell,VelocityFace,UVec,Time)
 
   TYPE(Vector4Cell_T), POINTER :: VectorCell(:)
@@ -310,18 +332,19 @@ SUBROUTINE PrepareFEx(VectorCell,VelocityFace,UVec,Time)
     RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
     RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
     RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
+    RhoEn=>VectorCell(ibLoc)%Vec(EnPos)%c
     p=>PreCell(ibLoc)%c
     Th=>VectorCell(ibLoc)%Vec(ThPos)%c
     T=>TAbsCell(ibLoc)%Vec(1)%c
-    IF (ThPos>0) THEN
-      CALL AbsTPreCompute
-    END IF  
-    CALL PreCompute
     IF (EnPos>0) THEN
       KinEn=>KinEnCell(ibLoc)%c
       CALL KinEnCompute
       E=>ECell(ibLoc)%c
       CALL ECompute
+    END IF  
+    IF (ThPos>0) THEN
+      WRITE(*,*) 'AbsTPreCompute in PrepareFEX',EnPos
+      CALL AbsTPreCompute
     END IF  
     IF (DragSurf.OR.DynamicSoil.OR.Canopy.OR.SeaEmiss.OR.FireEmiss) THEN
       CALL DragCoeff(VelocityFace,VectorCell,UVec)
@@ -334,6 +357,16 @@ SUBROUTINE PrepareFEx(VectorCell,VelocityFace,UVec,Time)
       CALL BoundaryVelocityCellCompute(Time)
     END IF
   END DO   
+  CALL ExchangeCell(TAbsCell)
+  CALL ExchangeCell(PreCell)
+  IF (EnPos>0) THEN
+    CALL ExchangeCell(KinEnCell)
+    CALL ExchangeCell(ECell)
+    DO ibLoc=1,nbLoc
+      ib=LocGlob(ibLoc)
+      VectorCell(ibLoc)%Vec(ThPos)%c=PreCell(ibLoc)%c
+    END DO  
+  END IF  
   IF (uPosL>0) THEN
     CALL ExchangeCell(uCell) 
     CALL ExchangeCell(vCell) 
@@ -347,12 +380,14 @@ SUBROUTINE PrepareFEx(VectorCell,VelocityFace,UVec,Time)
 
 END SUBROUTINE PrepareFEx
 
-SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundFac,Time,dt)
+SUBROUTINE FcnMetSlow(VecUCell,VectorMetCell,VectorChemCell,VelocityFace,RhsMet,RhsChem,ThetaF,PreFacF,SoundFac,Time,dt)
 
   TYPE(Vector4Cell_T), POINTER :: VecUCell(:)
-  TYPE(Vector4Cell_T), POINTER :: VectorCell(:)
+  TYPE(Vector4Cell_T), POINTER :: VectorMetCell(:)
+  TYPE(Vector4Cell_T), POINTER :: VectorChemCell(:)
   TYPE(VelocityFace_T), POINTER :: VelocityFace(:)
-  TYPE(Vector4Cell_T), POINTER :: Rhs(:)
+  TYPE(Vector4Cell_T), POINTER :: RhsMet(:)
+  TYPE(Vector4Cell_T), POINTER :: RhsChem(:)
   TYPE(VectorSFace_T), POINTER :: ThetaF(:)
   TYPE(VelocityFace_T), POINTER :: PreFacF(:)
   TYPE(ScalarCell_T), POINTER :: SoundFac(:)
@@ -360,25 +395,27 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
   CHARACTER*10 :: MethAdvOri
 
   VelocityFaceAct=>VelocityFace
-  IF (ThetaKind=='Energy') THEN
+  IF (ThetaKind=='EnergyBryan') THEN
+    ThetaKind='EnergyBryanSlow'
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL DomainSet(ib)
-      Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
-      RhoV=>VectorCell(ibLoc)%Vec(RhoVPos)%c
-      RhoL=>VectorCell(ibLoc)%Vec(RhoCPos)%c
-      RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
+      Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
+      RhoV=>VectorMetCell(ibLoc)%Vec(RhoVPos)%c
+      RhoL=>VectorMetCell(ibLoc)%Vec(RhoCPos)%c
+      RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
       p=>PreKin(ibLoc)%c
       KinEn=>KinEnCell(ibLoc)%c
       CALL PreCompute
     END DO  
+    ThetaKind='EnergyBryan'
     CALL ExchangeCell(PreKin) 
   END IF  
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL DomainSet(ib)
     CALL SetVelocityFace(ibLoc)
-    Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+    Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
     IF (ForcingExternTendency) THEN
       wSubs=>Subs(iBloc)%Vec(1)%c
     END IF  
@@ -387,7 +424,7 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     DO ic=uPosL,wPosR
       IF (ic>0) THEN
         c=>VecUCell(ibLoc)%Vec(ic)%c
-        f=>Rhs(ibLoc)%Vec(ic)%c
+        f=>RhsMet(ibLoc)%Vec(ic)%c
         IF (Advection) THEN
           CALL AdvectionCompute(PhiLim)
         END IF 
@@ -421,20 +458,20 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
       END IF
       DO ic=uPosL,wPosR
         c=>VecUCell(ibLoc)%Vec(ic)%c
-        f=>Rhs(ibLoc)%Vec(ic)%c
+        f=>RhsMet(ibLoc)%Vec(ic)%c
         IF (ic==uPosL.AND.CrossDiff) THEN
-          uRhsL=>Rhs(ibLoc)%Vec(uPosL)%c
-          uRhsR=>Rhs(ibLoc)%Vec(uPosR)%c
+          uRhsL=>RhsMet(ibLoc)%Vec(uPosL)%c
+          uRhsR=>RhsMet(ibLoc)%Vec(uPosR)%c
           CALL DiffusionComputeU
         ELSE IF (ic==uPosR.AND.CrossDiff) THEN
         ELSE IF (ic==vPosL.AND.CrossDiff) THEN
-          vRhsL=>Rhs(ibLoc)%Vec(vPosL)%c
-          vRhsR=>Rhs(ibLoc)%Vec(vPosR)%c
+          vRhsL=>RhsMet(ibLoc)%Vec(vPosL)%c
+          vRhsR=>RhsMet(ibLoc)%Vec(vPosR)%c
           CALL DiffusionComputeV
         ELSE IF (ic==vPosR.AND.CrossDiff) THEN
         ELSE IF (ic==wPosL.AND.CrossDiff) THEN
-          wRhsL=>Rhs(ibLoc)%Vec(wPosL)%c
-          wRhsR=>Rhs(ibLoc)%Vec(wPosR)%c
+          wRhsL=>RhsMet(ibLoc)%Vec(wPosL)%c
+          wRhsR=>RhsMet(ibLoc)%Vec(wPosR)%c
           CALL DiffusionComputeW
         ELSE IF (ic==wPosR.AND.CrossDiff) THEN
         ELSE 
@@ -461,10 +498,10 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
         DH=>DiffKoeff(ibLoc)%c
         DV=>DiffKoeff(ibLoc)%c
       END IF
-      DO ic=1,UBOUND(VectorCell(ibLoc)%Vec,1)
+      DO ic=1,UBOUND(VectorMetCell(ibLoc)%Vec,1)
         IF (ic<uPosL.OR.ic>wPosR) THEN
-          c=>VectorCell(ibLoc)%Vec(ic)%c
-          f=>Rhs(ibLoc)%Vec(ic)%c
+          c=>VectorMetCell(ibLoc)%Vec(ic)%c
+          f=>RhsMet(ibLoc)%Vec(ic)%c
           IF (TkeDis) THEN 
             DV=DV/PrandtlNumber(ic)
           ELSE IF (TkeHVLen) THEN
@@ -487,32 +524,33 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     END IF
     IF (ThetaKind=='PreEn'.OR.ThetaKind=='Exner') THEN 
       Sound=>SoundFac(ibLoc)%c
-      Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
-      RhoV=>VectorCell(ibLoc)%Vec(RhoVPos)%c
-      RhoL=>VectorCell(ibLoc)%Vec(RhoCPos)%c
-      RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
-      Th=>VectorCell(ibLoc)%Vec(thPos)%c
+      Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
+      RhoV=>VectorMetCell(ibLoc)%Vec(RhoVPos)%c
+      RhoL=>VectorMetCell(ibLoc)%Vec(RhoCPos)%c
+      RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
+      Th=>VectorMetCell(ibLoc)%Vec(thPos)%c
       CALL SoundCompute
+      WRITE(*,*) 'Sound ',Sound(1,1,1,1),SQRT(Sound(1,1,1,1))
     END IF
     IF (RainSurf) THEN
-      CALL RainSurfCompute(VectorCell(ibLoc),Velocityface(ibLoc),Rhs(ibLoc),Time)
+      CALL RainSurfCompute(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),Time)
     END IF
     IF (IceSurf) THEN
-      CALL IceSurfCompute(VectorCell(ibLoc),Velocityface(ibLoc),Rhs(ibLoc),Time)
+      CALL IceSurfCompute(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),Time)
     END IF
     IF (SnowSurf) THEN
-      CALL SnowSurfCompute(VectorCell(ibLoc),Velocityface(ibLoc),Rhs(ibLoc),Time)
+      CALL SnowSurfCompute(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),Time)
     END IF
     ! Surface drag and fluxes of momentum, heat and mass
     IF (DynamicSoil) THEN
-      CALL Soil(VectorCell(ibLoc),Rhs(ibLoc),VecUCell(ibLoc),Time=Time)
+      CALL Soil(VectorMetCell(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc),Time=Time)
     ELSE IF (Canopy) THEN
-      CALL CanopyCompute(VectorCell(ibLoc),Rhs(ibLoc),Time)
+      CALL CanopyCompute(VectorMetCell(ibLoc),RhsMet(ibLoc),Time)
     ELSE IF (DragSurf) THEN
-      CALL Drag(VectorCell(ibLoc),Velocityface(ibLoc),Rhs(ibLoc),VecUCell(ibLoc),Time=Time)
+      CALL Drag(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc),Time=Time)
     END IF
     IF (Baum) THEN 
-      CALL BaumDrag(VectorCell(ibLoc),Velocityface(ibLoc),Rhs(ibLoc),VecUCell(ibLoc)) 
+      CALL BaumDrag(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc)) 
     END IF
   END DO
   IF (ASSOCIATED(SoundFac)) THEN
@@ -524,35 +562,38 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     CALL SetVelocityFace(ibLoc)
     IF (ThetaKind=='PreEn'.OR.ThetaKind=='Exner') THEN 
       Sound=>SoundFac(ibLoc)%c
-      Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
-      f=>Rhs(ibLoc)%Vec(thPos)%c
-      c=>VectorCell(ibLoc)%Vec(thPos)%c
+      Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
+      f=>RhsMet(ibLoc)%Vec(thPos)%c
+      c=>VectorMetCell(ibLoc)%Vec(thPos)%c
       IF (PreAdv=='Inner') THEN
+        WRITE(*,*) 'PreAdv Inner ',PreAdv
         c=c-Sound
         CALL AdvectionPreCompute(PhiLim)  
         c=c+Sound
       ELSE
+        WRITE(*,*) 'PreAdv Outer ',PreAdv
         CALL AdvectionPreCompute(PhiLim)  
       END IF
     END IF  
-    IF (PGradient.AND.ThetaKind=='Energy') THEN
-      uRhsL=>Rhs(ibLoc)%Vec(uPosL)%c
-      vRhsL=>Rhs(ibLoc)%Vec(vPosL)%c
-      wRhsL=>Rhs(ibLoc)%Vec(wPosL)%c
-      uRhsR=>Rhs(ibLoc)%Vec(uPosR)%c
-      vRhsR=>Rhs(ibLoc)%Vec(vPosR)%c
-      wRhsR=>Rhs(ibLoc)%Vec(wPosR)%c
+    IF (PGradient.AND.ThetaKind=='EnergyBryan') THEN
+      uRhsL=>RhsMet(ibLoc)%Vec(uPosL)%c
+      vRhsL=>RhsMet(ibLoc)%Vec(vPosL)%c
+      wRhsL=>RhsMet(ibLoc)%Vec(wPosL)%c
+      uRhsR=>RhsMet(ibLoc)%Vec(uPosR)%c
+      vRhsR=>RhsMet(ibLoc)%Vec(vPosR)%c
+      wRhsR=>RhsMet(ibLoc)%Vec(wPosR)%c
       DUU=>DUUG(ibLoc)%uF
       DUV=>DUUG(ibLoc)%vF
       DUW=>DUUG(ibLoc)%wF
       p=>PreKin(ibLoc)%c
-      Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+      Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
       CALL PGradComputeC
     END IF
   END DO
 
-  CALL BoundaryFluxCondition(Rhs,Rhs)
-  CALL ExchangeFlux(Rhs)
+  CALL BoundaryFluxCondition(RhsMet,RhsChem)
+  CALL ExchangeFlux(RhsMet)
+  CALL ExchangeFlux(RhsChem)
 
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
@@ -564,28 +605,28 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     uCR=>VecUCell(ibLoc)%Vec(uPosR)%c
     vCR=>VecUCell(ibLoc)%Vec(vPosR)%c
     wCR=>VecUCell(ibLoc)%Vec(wPosR)%c
-    uRhsL=>Rhs(ibLoc)%Vec(uPosL)%c
-    vRhsL=>Rhs(ibLoc)%Vec(vPosL)%c
-    wRhsL=>Rhs(ibLoc)%Vec(wPosL)%c
-    uRhsR=>Rhs(ibLoc)%Vec(uPosR)%c
-    vRhsR=>Rhs(ibLoc)%Vec(vPosR)%c
-    wRhsR=>Rhs(ibLoc)%Vec(wPosR)%c
-    Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
-    Th=>VectorCell(ibLoc)%Vec(thPos)%c
-    RhoV=>VectorCell(ibLoc)%Vec(RhoVPos)%c
-    RhoL=>VectorCell(ibLoc)%Vec(RhoCPos)%c
-    RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
-    RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
-    RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
+    uRhsL=>RhsMet(ibLoc)%Vec(uPosL)%c
+    vRhsL=>RhsMet(ibLoc)%Vec(vPosL)%c
+    wRhsL=>RhsMet(ibLoc)%Vec(wPosL)%c
+    uRhsR=>RhsMet(ibLoc)%Vec(uPosR)%c
+    vRhsR=>RhsMet(ibLoc)%Vec(vPosR)%c
+    wRhsR=>RhsMet(ibLoc)%Vec(wPosR)%c
+    Rho=>VectorMetCell(ibLoc)%Vec(RhoPos)%c
+    Th=>VectorMetCell(ibLoc)%Vec(thPos)%c
+    RhoV=>VectorMetCell(ibLoc)%Vec(RhoVPos)%c
+    RhoL=>VectorMetCell(ibLoc)%Vec(RhoCPos)%c
+    RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
+    RhoI=>VectorMetCell(ibLoc)%Vec(RhoIPos)%c
+    RhoS=>VectorMetCell(ibLoc)%Vec(RhoSPos)%c
     T=>TAbsCell(ibLoc)%Vec(1)%c
     p=>PreCell(ibLoc)%c
-    DO ic=1,UBOUND(Rhs(ibLoc)%Vec,1)
-      f=>Rhs(ibLoc)%Vec(ic)%c
+    DO ic=1,UBOUND(RhsMet(ibLoc)%Vec,1)
+      f=>RhsMet(ibLoc)%Vec(ic)%c
       CALL AdvectionScale
     END DO
     IF (Coriolis) THEN
       IF (CoriolisFree) THEN
-        Th=>VectorCell(ibLoc)%Vec(thPos)%c
+        Th=>VectorMetCell(ibLoc)%Vec(thPos)%c
         ThProf=>ThProfG(ibLoc)%c
         IF (Sphere) THEN
           CALL CoriolisFreeComputeLR
@@ -613,32 +654,32 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
       RhoVForcing=>ForceRhoVCell(ibLoc)%c
       CALL ForceVelCompute(Time)
       IF (ForcingExtern.AND.ForcingExternTendency) THEN
-        CALL ForceScalarCompute(Rhs(ibLoc)%Vec,Time,TendAdv(ibLoc)%Vec)
+        CALL ForceScalarCompute(RhsMet(ibLoc)%Vec,Time,TendAdv(ibLoc)%Vec)
       ELSE  
-        CALL ForceScalarCompute(Rhs(ibLoc)%Vec,Time)
+        CALL ForceScalarCompute(RhsMet(ibLoc)%Vec,Time)
       END IF  
     END IF
     IF (ForcingCellPert.AND.(Time==StartTime.OR.(Time>=ForcingCellPertTime.AND.&
     &MOD(INT(Time*1000+0.0001d0),ForcingCellPertTime*1000)==0))) THEN
-      CALL CellPert(Rhs(ibLoc)%Vec,Time)
+      CALL CellPert(RhsMet(ibLoc)%Vec,Time)
     END IF
     IF (Subsidence) THEN
-      CALL SubsidenceScalar(VectorCell(ibLoc)%Vec,Rhs(ibLoc)%Vec)
+      CALL SubsidenceScalar(VectorMetCell(ibLoc)%Vec,RhsMet(ibLoc)%Vec)
     END IF
     IF (Damping) THEN
-      CALL ForceDamp(VectorCell(ibLoc),Rhs(ibLoc),Time,VecUCell(ibLoc))
+      CALL ForceDamp(VectorMetCell(ibLoc),RhsMet(ibLoc),Time,VecUCell(ibLoc))
     END IF
     IF (Canopy) THEN
-      CALL CanopyDrag(VectorCell(ibLoc),Rhs(ibLoc),VecUCell(ibLoc))
+      CALL CanopyDrag(VectorMetCell(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc))
     END IF
     IF (Wind) THEN
-      CALL WindDrag(VectorCell(ibLoc),Rhs(ibLoc),VecUCell(ibLoc))
+      CALL WindDrag(VectorMetCell(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc))
     END IF
-    CALL Turbulence(VectorCell(ibLoc),Rhs(ibLoc),VecUCell(ibLoc))
+    CALL Turbulence(VectorMetCell(ibLoc),RhsMet(ibLoc),VecUCell(ibLoc))
     IF (Chemie) THEN
       TAbs=>TAbsCell(ibLoc)%Vec(1)
-      cVec=>VectorCell(ibLoc)%Vec
-      fVec=>Rhs(ibLoc)%Vec
+      cVec=>VectorMetCell(ibLoc)%Vec
+      fVec=>RhsMet(ibLoc)%Vec
       IF (Emiss) THEN
         CALL EmissionCompute(Time,VelocityFace)
         CALL EmissionPointCompute(Time)
@@ -649,18 +690,18 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
     END IF
     IF (Cloud.AND..NOT.CloudFast) THEN
       IF (MicroScheme=='Bulk') THEN
-        CALL BulkMicro(VectorCell(ibLoc)%Vec(1:),Rhs(ibLoc)%Vec(1:))
+        CALL BulkMicro(VectorMetCell(ibLoc)%Vec(1:),RhsMet(ibLoc)%Vec(1:))
       ELSE IF (MicroScheme=='Bulk2') THEN
-        CALL BulkMicro2(VectorCell(ibLoc)%Vec(1:),Rhs(ibLoc)%Vec(1:),VelocityFace(:),dt,Time)
+        CALL BulkMicro2(VectorMetCell(ibLoc)%Vec(1:),RhsMet(ibLoc)%Vec(1:),VelocityFace(:),dt,Time)
       ELSE IF (MicroScheme=='ISDAC') THEN
-        CALL BulkMicroISDAC(VectorCell(ibLoc)%Vec(1:),Rhs(ibLoc)%Vec(1:),VelocityFace(:),dt,Time)
+        CALL BulkMicroISDAC(VectorMetCell(ibLoc)%Vec(1:),RhsMet(ibLoc)%Vec(1:),VelocityFace(:),dt,Time)
       ELSE IF (MicroScheme=='LSC') THEN
-        CALL LSCMicro(VectorCell(ibLoc)%Vec(1:),Rhs(ibLoc)%Vec(1:))
+        CALL LSCMicro(VectorMetCell(ibLoc)%Vec(1:),RhsMet(ibLoc)%Vec(1:))
       END IF    
     END IF    
 
     DO ic=1,UBOUND(ThetaF(ibLoc)%VecF,1)
-      c=>VectorCell(ibLoc)%Vec(ic)%c
+      c=>VectorMetCell(ibLoc)%Vec(ic)%c
       cFU=>ThetaF(ibLoc)%VecF(ic)%uF
       cFV=>ThetaF(ibLoc)%VecF(ic)%vF
       cFW=>ThetaF(ibLoc)%VecF(ic)%wF
@@ -672,43 +713,44 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
       END IF  
       IF (ic==enPos.AND.ThetaKind=='PreEn') THEN
 !       Separation of E (slow) and p (fast)
-        c=>VectorCell(ibLoc)%Vec(EnPos)%c
-        p=>VectorCell(ibLoc)%Vec(thPos)%c
-!       c=c+p
+        WRITE(*,*) 'Face Energy En'
+        c=>VectorMetCell(ibLoc)%Vec(EnPos)%c
+        p=>VectorMetCell(ibLoc)%Vec(thPos)%c
+        c=c+p
         CALL AdvectionFaceCompute(PhiLim)
-!       c=c-p
+        c=c-p
       ELSE IF (ic==thPos.AND.(ThetaKind=='PreEn'.OR.ThetaKind=='Exner')) THEN 
         c=>SoundFac(ibLoc)%c
         CALL AdvectionFaceCompute(PhiLim)
-      ELSE IF (ic==thPos.AND.ThetaKind=='Energy') THEN 
-        c=>VectorCell(ibLoc)%Vec(thPos)%c
+      ELSE IF (ic==thPos.AND.(ThetaKind=='Energy'.OR.ThetaKind=='EnergyBryan')) THEN 
+        c=>VectorMetCell(ibLoc)%Vec(thPos)%c
         p=>PreCell(ibLoc)%c
         c=c+p
         CALL AdvectionFaceCompute(PhiLim)
         c=c-p
       ELSE IF(ic==RhoRPos) THEN
-        RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
-        Nrain=>VectorCell(ibLoc)%Vec(nrPos)%c
+        RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
+        Nrain=>VectorMetCell(ibLoc)%Vec(nrPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='RhoR')
       ELSE IF (ic==nrPos) THEN
-        RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
-        Nrain=>VectorCell(ibLoc)%Vec(nrPos)%c
+        RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
+        Nrain=>VectorMetCell(ibLoc)%Vec(nrPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='NR')
       ELSE IF (ic==RhoIPos) THEN
-        RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
-        Nice=>VectorCell(ibLoc)%Vec(niPos)%c
+        RhoI=>VectorMetCell(ibLoc)%Vec(RhoIPos)%c
+        Nice=>VectorMetCell(ibLoc)%Vec(niPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='RhoI')
       ELSE IF (ic==niPos) THEN
-        RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
-        Nice=>VectorCell(ibLoc)%Vec(niPos)%c
+        RhoI=>VectorMetCell(ibLoc)%Vec(RhoIPos)%c
+        Nice=>VectorMetCell(ibLoc)%Vec(niPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='NI')
       ELSE IF (ic==RhoSPos) THEN
-        RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
-        Nsnow=>VectorCell(ibLoc)%Vec(nsPos)%c
+        RhoS=>VectorMetCell(ibLoc)%Vec(RhoSPos)%c
+        Nsnow=>VectorMetCell(ibLoc)%Vec(nsPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='RhoS')
       ELSE IF (ic==nsPos) THEN
-        RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
-        Nsnow=>VectorCell(ibLoc)%Vec(nsPos)%c
+        RhoS=>VectorMetCell(ibLoc)%Vec(RhoSPos)%c
+        Nsnow=>VectorMetCell(ibLoc)%Vec(nsPos)%c
         CALL AdvectionFaceCompute(PhiLim,Species='NS')
       ELSE
         CALL AdvectionFaceCompute(PhiLim)
@@ -718,17 +760,17 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorCell,VelocityFace,Rhs,ThetaF,PreFacF,SoundF
 !     CALL DomainSet(ib)
 !     CALL SetVelocityFace(ibLoc)
 !     Rho=>RhoCell(ibLoc)%c
-!     RhoV=>VectorCell(ibLoc)%Vec(RhoVPos)%c
-!     RhoL=>VectorCell(ibLoc)%Vec(RhoCPos)%c
-!     RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
+!     RhoV=>VectorMetCell(ibLoc)%Vec(RhoVPos)%c
+!     RhoL=>VectorMetCell(ibLoc)%Vec(RhoCPos)%c
+!     RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
 !     p=>PreCell(ibLoc)%c
 !     IF (ASSOCIATED(TAbsCell)) THEN
 !       T=>TAbsCell(ibLoc)%Vec(1)%c
 !     END IF  
-!     RhoRhs=>Rhs(ibLoc)%Vec(RhoPos)%c  
-!     ThRhs=>Rhs(ibLoc)%Vec(ThPos)%c
-!     DO ic=1,UBOUND(VectorCell(ibLoc)%Vec,1)
-!       c=>VectorCell(ibLoc)%Vec(ic)%c
+!     RhoRhsMet=>RhsMet(ibLoc)%Vec(RhoPos)%c  
+!     ThRhsMet=>RhsMet(ibLoc)%Vec(ThPos)%c
+!     DO ic=1,UBOUND(VectorMetCell(ibLoc)%Vec,1)
+!       c=>VectorMetCell(ibLoc)%Vec(ic)%c
 !       IF (ic==RhoPos.OR.ic==ThPos) THEN
 !         CALL AdvectionQFallCompute(PhiLim1,FallF)
 !       END IF
@@ -764,7 +806,7 @@ SUBROUTINE FcnMetFastU(VectorCell,VelF,PreFacF,RhsF,Time)
       RhoR=>VectorCell(ibLoc)%Vec(RhoRPos)%c
       RhoI=>VectorCell(ibLoc)%Vec(RhoIPos)%c
       RhoS=>VectorCell(ibLoc)%Vec(RhoSPos)%c
-      CALL AbsTPreCompute
+      CALL PreCompute
       DummyVec(ibLoc)%Vec(1)%c=>PreCell(ibloc)%c
       DummyVec(ibLoc)%Vec(2)%c=>VectorCell(ibloc)%Vec(RhoPos)%c
     END IF
@@ -910,12 +952,12 @@ SUBROUTINE FcnMetFastScalar(VectorCell,Velocityface,ThetaF,SoundFac,Rhs,Time)
 !       END IF
       END IF ! Advection
     END DO
-    IF (ThetaKind=='PreEn'.AND.EnPos>0) THEN
-      p=>VectorCell(ibLoc)%Vec(ThPos)%c
-      Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
-      f=>Rhs(ibLoc)%Vec(EnPos)%c
-      CALL DivEnCompute
-    END IF  
+!   IF (ThetaKind=='PreEn'.AND.EnPos>0) THEN
+!     p=>VectorCell(ibLoc)%Vec(ThPos)%c
+!     Rho=>VectorCell(ibLoc)%Vec(RhoPos)%c
+!     f=>Rhs(ibLoc)%Vec(EnPos)%c
+!     CALL DivEnCompute
+!   END IF  
   END DO
 
   DO ibLoc=1,nbLoc

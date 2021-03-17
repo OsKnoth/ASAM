@@ -39,6 +39,7 @@ MODULE Names_Mod
   REAL(RealKind), POINTER :: T(:,:,:,:)
   REAL(RealKind), POINTER :: KinEn(:,:,:,:)
   REAL(RealKind), POINTER :: E(:,:,:,:)
+  REAL(RealKind), POINTER :: RhoEn(:,:,:,:)
   REAL(RealKind), POINTER :: EnergyStart(:,:,:,:)
   REAL(RealKind), POINTER :: PressureStart(:,:,:,:)
   REAL(RealKind), POINTER :: SoS(:,:,:,:)

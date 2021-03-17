@@ -247,7 +247,7 @@ PROGRAM MainProg
     IF (ThetaKind=='PreEn'.OR.ThetaKind=='Exner'.OR.Parcel) THEN
       CALL Allocate(SoundCell)
     END IF  
-    IF (ThetaKind=='Energy') THEN
+    IF (ThetaKind=='EnergyBryan') THEN
       CALL Allocate(PreKin)
     END IF  
   ELSE IF (Anelastic) THEN
@@ -293,10 +293,10 @@ PROGRAM MainProg
     CALL VectorInit(wPosR,VecMet,wStart,Time)
     CALL Mult(RhoCell,VecMet,wPosR)
   END IF
-  IF ( thPos>0) THEN
-    CALL VectorInit(thPos,VecMet,ThStart,Time)
+  IF ( ThPos>0) THEN
+    CALL VectorInit(ThPos,VecMet,ThStart,Time)
+    CALL Mult(RhoCell,VecMet,ThPos)
 !   CALL BoundaryInit('Skin',TStart,Time)
-    CALL Mult(RhoCell,VecMet,thPos)
     CALL Allocate(thProfG)
     CALL ScalarInit(thProfG,thProfFun,Time)
     CALL Mult(RhoProfG,thProfG)
@@ -314,23 +314,23 @@ PROGRAM MainProg
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
-        DEALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB)
-        ALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
+        DEALLOCATE(VecMet(ibLoc)%Vec(ThPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(ThPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
         DEALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB)
         ALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
       END DO
-      CALL VectorInitSoilFunction(thPos,VecMet,ThStartSoil,Time)
+      CALL VectorInitSoilFunction(ThPos,VecMet,ThStartSoil,Time)
     ELSE IF (Canopy) THEN
       CALL InitCanopy
       DO ibLoc=1,nbLoc
         ib=LocGlob(ibLoc)
         CALL Set(Floor(ib))
-        DEALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB)
-        ALLOCATE(VecMet(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
+        DEALLOCATE(VecMet(ibLoc)%Vec(ThPos)%cB)
+        ALLOCATE(VecMet(ibLoc)%Vec(ThPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers)) 
         DEALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB)
         ALLOCATE(VecMet(ibLoc)%Vec(RhoVPos)%cB(1:NumBoundCell,1:Domain%nrsoillayers+1))
       END DO
-      CALL VectorInitCanopyFunction(thPos,VecMet,ThStartSoil,Time)
+      CALL VectorInitCanopyFunction(ThPos,VecMet,ThStartSoil,Time)
     END IF
   END IF
   IF (ThPos==0.AND.Chemie) THEN
@@ -451,6 +451,7 @@ PROGRAM MainProg
     CALL VectorInit(Tracer2Pos,VecMet,Tracer2Start,Time)
   END IF
   CALL PerturbProfile(VecMet)
+  WRITE(*,*) 'Nach Init',VecMet(1)%Vec(ThPos)%C(1,1,1,1)
   CALL ExchangeCell(VecMet)
   IF (uPosL*uPosR>0) THEN
     CALL VelocityCellToFaceLR(VecMet,VelF1,VelF1,Time)
@@ -508,9 +509,9 @@ PROGRAM MainProg
         CALL VectorInit(wPosEnv,VecEnv1,wStart,Time1)
         PosE2Pos(wPosEnv)=wPosL
       END IF
-      IF (thPosEnv>0) THEN
-        CALL VectorInit(thPosEnv,VecEnv1,ThStart,Time1)
-        PosE2Pos(thPosEnv)=thPos
+      IF (ThPosEnv>0) THEN
+        CALL VectorInit(ThPosEnv,VecEnv1,ThStart,Time1)
+        PosE2Pos(ThPosEnv)=ThPos
       END IF
       IF (tkePosEnv>0) THEN
         CALL VectorInit(tkePosEnv,VecEnv1,tkeStart,Time1)
@@ -533,8 +534,8 @@ PROGRAM MainProg
       IF ( wPosEnv>0) THEN
         CALL VectorInit(wPosEnv,VecEnv2,wStart,Time2)
       END IF
-      IF (thPosEnv>0) THEN
-        CALL VectorInit(thPosEnv,VecEnv2,ThStart,Time2)
+      IF (ThPosEnv>0) THEN
+        CALL VectorInit(ThPosEnv,VecEnv2,ThStart,Time2)
       END IF
       IF (tkePosEnv>0) THEN
         CALL VectorInit(tkePosEnv,VecEnv2,tkeStart,Time2)
@@ -754,8 +755,8 @@ PROGRAM MainProg
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
-      DEALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB)
-      ALLOCATE(VecMetP(ibLoc)%Vec(thPos)%cB(1:NumBoundCell,1:1))
+      DEALLOCATE(VecMetP(ibLoc)%Vec(ThPos)%cB)
+      ALLOCATE(VecMetP(ibLoc)%Vec(ThPos)%cB(1:NumBoundCell,1:1))
     END DO
     CALL Copy(VecMet,VecMetP)
     GravComp=0.0d0
@@ -785,6 +786,9 @@ PROGRAM MainProg
 
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
+  CALL PrepareAbsTemp(VecMet)
+  WRITE(*,*) 'TAbs',TAbsCell(1)%Vec(1)%c(1,1,1,1)
+  WRITE(*,*) 'p   ',PreCell(1)%c(1,1,1,1)
   CALL InputModelOutput(InputFileName)
   CALL SpecialOutput(VecMet,VecG,VelF1,StartTime)
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
@@ -914,12 +918,12 @@ PROGRAM MainProg
         WRITE(*,*) 'TotalRho',Temp
       END IF  
     ELSE IF (Method(3:4)=='RK'.OR.Method(3:4)=='EB'.OR.Method(3:5)=='MIS') THEN
-      CALL InitExpIntRk(VecMet)
+      CALL InitExpIntRk(VecMet,VecChem)
       CALL TimeStepCFL(VelF1,dtAct,ns)
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'dtAct',dtAct,Time
       END IF
-!     CALL ExpIntRk(VelF1,VecMet,dtAct,Time,ATol,RTol)
+      CALL ExpIntRk(VelF1,VecMet,VecChem,dtAct,Time,ATol,RTol)
     ELSE IF (Method(3:6)=='Peer') THEN
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'Peer dtAct',dtAct,Time
@@ -1163,8 +1167,8 @@ SUBROUTINE UpdateBoundary(Time)
     IF ( wPosEnv>0) THEN
       CALL VectorInit(wPosEnv,VecEnv1,wStart,Time1)
     END IF
-    IF (thPosEnv>0) THEN
-      CALL VectorInit(thPosEnv,VecEnv1,ThStart,Time1)
+    IF (ThPosEnv>0) THEN
+      CALL VectorInit(ThPosEnv,VecEnv1,ThStart,Time1)
     END IF
     IF (tkePosEnv>0) THEN
       CALL VectorInit(tkePosEnv,VecEnv1,tkeStart,Time1)
@@ -1184,8 +1188,8 @@ SUBROUTINE UpdateBoundary(Time)
     IF ( wPosEnv>0) THEN
       CALL VectorInit(wPosEnv,VecEnv2,wStart,Time2)
     END IF
-    IF (thPosEnv>0) THEN
-      CALL VectorInit(thPosEnv,VecEnv2,ThStart,Time2)
+    IF (ThPosEnv>0) THEN
+      CALL VectorInit(ThPosEnv,VecEnv2,ThStart,Time2)
     END IF
     IF (tkePosEnv>0) THEN
       CALL VectorInit(tkePosEnv,VecEnv2,tkeStart,Time2)

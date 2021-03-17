@@ -553,22 +553,66 @@ SUBROUTINE AbsTPreCompute
   INTEGER :: ix,iy,iz
   REAL(RealKind) :: Rm,Cpml,KappaLoc
   REAL(RealKind) :: RhoLoc,RhoVLoc,RhoLLoc,RhoILoc,RhoDLoc
-  DO iz=iz0+1,iz1
-    DO iy=iy0+1,iy1
-      DO ix=ix0+1,ix1
-        RhoLoc=Rho(ix,iy,iz,1)
-        RhoVLoc=RhoV(ix,iy,iz,1)
-        RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
-        RhoILoc=RhoI(ix,iy,iz,1)
-        RhoDLoc=RhoLoc-RhoVLoc-RhoLLoc-RhoILoc+Eps
-        Rm=Rd*RhoDLoc+Rv*RhoVLoc
-        Cpml=Cpd*RhoDLoc+Cpv*RhoVLoc+Cpl*RhoLLoc+Cpi*RhoILoc
-        KappaLoc=Rm/Cpml
-        T(ix,iy,iz,1)=(Rd*Th(ix,iy,iz,1)/p0**KappaLoc)**(One/(One-KappaLoc))/Rm
-        p(ix,iy,iz,1)=Rm*T(ix,iy,iz,1)
+  REAL(RealKind) :: TLoc
+
+
+  SELECT CASE(ThetaKind)
+    CASE('Density')
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
+            RhoLoc=Rho(ix,iy,iz,1)
+            RhoVLoc=RhoV(ix,iy,iz,1)
+            RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
+            RhoILoc=RhoI(ix,iy,iz,1)
+            RhoDLoc=RhoLoc-RhoVLoc-RhoLLoc-RhoILoc+Eps
+            Rm=Rd*RhoDLoc+Rv*RhoVLoc
+            Cpml=Cpd*RhoDLoc+Cpv*RhoVLoc+Cpl*RhoLLoc+Cpi*RhoILoc
+            KappaLoc=Rm/Cpml
+            T(ix,iy,iz,1)=(Rd*Th(ix,iy,iz,1)/p0**KappaLoc)**(One/(One-KappaLoc))/Rm
+            p(ix,iy,iz,1)=Rm*T(ix,iy,iz,1)
+          END DO
+        END DO
       END DO
-    END DO
-  END DO
+    CASE('Energy','EnergyBryan')
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
+            RhoLoc=Rho(ix,iy,iz,1)
+            RhoVLoc=RhoV(ix,iy,iz,1)
+            RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
+            RhoDLoc=RhoLoc-RhoVLoc-RhoLLoc+Eps
+            TLoc=(Th(ix,iy,iz,1) &
+                   -RhoLoc*KinEn(ix,iy,iz,1) &
+                   -RhoLoc*Half*(zP(iz-1)+zP(iz))*Grav &
+                   -RhoVLoc*L00) &
+                  /(RhoDLoc*Cvd+RhoVLoc*Cvv+RhoLLoc*Cpl+Eps)
+            T(ix,iy,iz,1)=TLoc+Eps
+            Rm=Rd*RhoDLoc+Rv*RhoVLoc
+            p(ix,iy,iz,1)=Rm*T(ix,iy,iz,1)
+          END DO
+        END DO
+      END DO      
+    CASE('PreEn')
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
+            RhoLoc=Rho(ix,iy,iz,1)
+            RhoVLoc=RhoV(ix,iy,iz,1)
+            RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
+            RhoDLoc=RhoLoc-RhoVLoc-RhoLLoc+Eps
+            Rm=Rd*RhoDLoc+Rv*RhoVLoc
+            TLoc=(RhoEn(ix,iy,iz,1) &
+                   -RhoLoc*KinEn(ix,iy,iz,1) &
+                   -RhoLoc*Half*(zP(iz-1)+zP(iz))*Grav &
+                   -RhoVLoc*L00) &
+                  /(RhoDLoc*Cvd+RhoVLoc*Cvv+RhoLLoc*Cpl+Eps)
+            T(ix,iy,iz,1)=TLoc+Eps
+            p(ix,iy,iz,1)=Th(ix,iy,iz,1)
+          END DO
+        END DO
+      END DO      
+  END SELECT 
 END SUBROUTINE AbsTPreCompute
 
 SUBROUTINE CpmlCompute
@@ -637,9 +681,9 @@ SUBROUTINE AbsTCompute(TotalEn,RhoLocEn)
         END DO
       END DO
     CASE('Energy')
-      DO iz=iz0,iz1+1
-        DO iy=iy0,iy1+1
-          DO ix=ix0,ix1+1
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
             RhoLoc=Rho(ix,iy,iz,1)
             RhoVLoc=RhoV(ix,iy,iz,1)
             RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
@@ -766,10 +810,10 @@ SUBROUTINE PreCompute
           END DO
         END DO
       END DO
-    CASE('EnergyFast') ! En (thPos) 
-      DO iz=iz0,iz1+1
-        DO iy=iy0,iy1+1
-          DO ix=ix0,ix1+1
+    CASE('EnergyBryan') ! En (thPos) 
+      DO iz=iz0+1,iz1
+        DO iy=iy0+1,iy1
+          DO ix=ix0+1,ix1
             RhoLoc=Rho(ix,iy,iz,1)
             RhoVLoc=RhoV(ix,iy,iz,1)
             RhoLLoc=RhoL(ix,iy,iz,1)+RhoR(ix,iy,iz,1)
@@ -783,7 +827,8 @@ SUBROUTINE PreCompute
           END DO
         END DO
       END DO
-    CASE('EnergySlow')
+    CASE('EnergyBryanSlow')
+      !Kinetic Energy times Rm/Cvm for the slow part
       DO iz=iz0,iz1+1
         DO iy=iy0,iy1+1
           DO ix=ix0,ix1+1

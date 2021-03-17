@@ -50,110 +50,173 @@ SUBROUTINE ForceDamp(VectorCell,Rhs,Time,UVec)
   INTEGER :: ic,ic0
 
   Rho=>VectorCell%Vec(RhoPos)%c
-  IF (.NOT.DampAverage) THEN
-    DampKoeff=>DampKoeffCell(ibLoc)%c
-    IF (PRESENT(UVec)) THEN
-      DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
-        ce1=>VecEnv1(ibLoc)%Vec(ic)%c
-        ce2=>VecEnv2(ibLoc)%Vec(ic)%c
-        IF (PosE2Pos(ic)==uPosL) THEN
+  SELECT CASE(DampType)
+    CASE ('Interpol')
+      DampKoeff=>DampKoeffCell(ibLoc)%c
+      IF (PRESENT(UVec)) THEN
+        DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
+          ce1=>VecEnv1(ibLoc)%Vec(ic)%c
+          ce2=>VecEnv2(ibLoc)%Vec(ic)%c
+          IF (PosE2Pos(ic)==uPosL) THEN
+            f=>Rhs%Vec(uPosL)%c
+            c=>UVec%Vec(uPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(uPosR)%c
+            c=>UVec%Vec(uPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE IF (PosE2Pos(ic)==vPosL) THEN
+            f=>Rhs%Vec(vPosL)%c
+            c=>UVec%Vec(vPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(vPosR)%c
+            c=>UVec%Vec(vPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE IF (PosE2Pos(ic)==wPosL) THEN
+            f=>Rhs%Vec(wPosL)%c
+            c=>UVec%Vec(wPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(wPosR)%c
+            c=>UVec%Vec(wPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE
+            f=>Rhs%Vec(PosE2Pos(ic))%c
+            c=>VectorCell%Vec(PosE2Pos(ic))%c
+            CALL DampingInterpolCompute(Time)
+          END IF
+        END DO
+      ELSE
+        DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
+          ce1=>VecEnv1(ibLoc)%Vec(ic)%c
+          ce2=>VecEnv2(ibLoc)%Vec(ic)%c
+          IF (PosE2Pos(ic)==uPosL) THEN
+            f=>Rhs%Vec(uPosL)%c
+            c=>VectorCell%Vec(uPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(uPosR)%c
+            c=>VectorCell%Vec(uPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE IF (PosE2Pos(ic)==vPosL) THEN
+            f=>Rhs%Vec(vPosL)%c
+            c=>VectorCell%Vec(vPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(vPosR)%c
+            c=>VectorCell%Vec(vPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE IF (PosE2Pos(ic)==wPosL) THEN
+            f=>Rhs%Vec(wPosL)%c
+            c=>VectorCell%Vec(wPosL)%c
+            CALL DampingInterpolCompute(Time)
+            f=>Rhs%Vec(wPosR)%c
+            c=>VectorCell%Vec(wPosR)%c
+            CALL DampingInterpolCompute(Time)
+          ELSE
+            f=>Rhs%Vec(PosE2Pos(ic))%c
+            c=>VectorCell%Vec(PosE2Pos(ic))%c
+            CALL DampingInterpolCompute(Time)
+          END IF
+        END DO
+      END IF
+    CASE ('Const')
+      DampKoeff=>DampKoeffCell(ibLoc)%c
+      IF (PRESENT(UVec)) THEN
+        DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
+          ce1=>VecEnv1(ibLoc)%Vec(ic)%c
+          IF (PosE2Pos(ic)==uPosL) THEN
+            f=>Rhs%Vec(uPosL)%c
+            c=>UVec%Vec(uPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(uPosR)%c
+            c=>UVec%Vec(uPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE IF (PosE2Pos(ic)==vPosL) THEN
+            f=>Rhs%Vec(vPosL)%c
+            c=>UVec%Vec(vPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(vPosR)%c
+            c=>UVec%Vec(vPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE IF (PosE2Pos(ic)==wPosL) THEN
+            f=>Rhs%Vec(wPosL)%c
+            c=>UVec%Vec(wPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(wPosR)%c
+            c=>UVec%Vec(wPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE
+            f=>Rhs%Vec(PosE2Pos(ic))%c
+            c=>VectorCell%Vec(PosE2Pos(ic))%c
+            CALL DampingConstCompute(Time)
+          END IF
+        END DO
+      ELSE
+        DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
+          ce1=>VecEnv1(ibLoc)%Vec(ic)%c
+          IF (PosE2Pos(ic)==uPosL) THEN
+            f=>Rhs%Vec(uPosL)%c
+            c=>VectorCell%Vec(uPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(uPosR)%c
+            c=>VectorCell%Vec(uPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE IF (PosE2Pos(ic)==vPosL) THEN
+            f=>Rhs%Vec(vPosL)%c
+            c=>VectorCell%Vec(vPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(vPosR)%c
+            c=>VectorCell%Vec(vPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE IF (PosE2Pos(ic)==wPosL) THEN
+            f=>Rhs%Vec(wPosL)%c
+            c=>VectorCell%Vec(wPosL)%c
+            CALL DampingConstCompute(Time)
+            f=>Rhs%Vec(wPosR)%c
+            c=>VectorCell%Vec(wPosR)%c
+            CALL DampingConstCompute(Time)
+          ELSE
+            f=>Rhs%Vec(PosE2Pos(ic))%c
+            c=>VectorCell%Vec(PosE2Pos(ic))%c
+            CALL DampingConstCompute(Time)
+          END IF
+        END DO
+      END IF
+    CASE ('Average')
+      DampKoeff=>DampKoeffCell(ibLoc)%c
+      ic=1
+      RhoAve=>RhoProfileMean(ibLoc)%Vec(1)%c
+      DO ic0=1,VectorComponentsME
+        IF (PosE2Pos(ic0)==uPosL) THEN
           f=>Rhs%Vec(uPosL)%c
-          c=>UVec%Vec(uPosL)%c
-          CALL DampingCompute(Time)
+          cAve=>ProfileMean(ibLoc)%Vec(ic)%c
+          CALL DampingAverageCompute
+          ic=ic+1
           f=>Rhs%Vec(uPosR)%c
-          c=>UVec%Vec(uPosR)%c
-          CALL DampingCompute(Time)
-        ELSE IF (PosE2Pos(ic)==vPosL) THEN
+          cAve=>ProfileMean(ibLoc)%Vec(ic)%c
+          CALL DampingAverageCompute
+          ic=ic+1
+        ELSE IF (PosE2Pos(ic0)==vPosL) THEN
           f=>Rhs%Vec(vPosL)%c
-          c=>UVec%Vec(vPosL)%c
-          CALL DampingCompute(Time)
+          cAve=>ProfileMean(ibLoc)%Vec(ic)%c
+          cProf=>NudgingProfile(ibLoc)%Vec(ic0)%c
+          DampProf=>DampProfile(ibLoc)%Vec(ic0)%c
+          CALL DampingAverageCompute
+          ic=ic+1
           f=>Rhs%Vec(vPosR)%c
-          c=>UVec%Vec(vPosR)%c
-          CALL DampingCompute(Time)
-        ELSE IF (PosE2Pos(ic)==wPosL) THEN
-          f=>Rhs%Vec(wPosL)%c
-          c=>UVec%Vec(wPosL)%c
-          CALL DampingCompute(Time)
-          f=>Rhs%Vec(wPosR)%c
-          c=>UVec%Vec(wPosR)%c
-          CALL DampingCompute(Time)
-        ELSE
-          f=>Rhs%Vec(PosE2Pos(ic))%c
-          c=>VectorCell%Vec(PosE2Pos(ic))%c
-          CALL DampingCompute(Time)
-        END IF
+          cAve=>ProfileMean(ibLoc)%Vec(ic)%c
+          CALL DampingAverageCompute
+          ic=ic+1
+        ELSE  
+          f=>Rhs%Vec(PosE2Pos(ic0))%c
+          cAve=>ProfileMean(ibLoc)%Vec(ic)%c
+          cProf=>NudgingProfile(ibLoc)%Vec(ic0)%c
+          DampProf=>DampProfile(ibLoc)%Vec(ic0)%c
+          CALL DampingAverageCompute
+          ic=ic+1
+        END IF  
       END DO
-    ELSE
-      DO ic=1,SIZE(VecEnv1(ibLoc)%Vec)
-        ce1=>VecEnv1(ibLoc)%Vec(ic)%c
-        ce2=>VecEnv2(ibLoc)%Vec(ic)%c
-        IF (PosE2Pos(ic)==uPosL) THEN
-          f=>Rhs%Vec(uPosL)%c
-          c=>VectorCell%Vec(uPosL)%c
-          CALL DampingCompute(Time)
-          f=>Rhs%Vec(uPosR)%c
-          c=>VectorCell%Vec(uPosR)%c
-          CALL DampingCompute(Time)
-        ELSE IF (PosE2Pos(ic)==vPosL) THEN
-          f=>Rhs%Vec(vPosL)%c
-          c=>VectorCell%Vec(vPosL)%c
-          CALL DampingCompute(Time)
-          f=>Rhs%Vec(vPosR)%c
-          c=>VectorCell%Vec(vPosR)%c
-          CALL DampingCompute(Time)
-        ELSE IF (PosE2Pos(ic)==wPosL) THEN
-          f=>Rhs%Vec(wPosL)%c
-          c=>VectorCell%Vec(wPosL)%c
-          CALL DampingCompute(Time)
-          f=>Rhs%Vec(wPosR)%c
-          c=>VectorCell%Vec(wPosR)%c
-          CALL DampingCompute(Time)
-        ELSE
-          f=>Rhs%Vec(PosE2Pos(ic))%c
-          c=>VectorCell%Vec(PosE2Pos(ic))%c
-          CALL DampingCompute(Time)
-        END IF
-      END DO
-    END IF
-  ELSE  ! DampAverage = .T.
-    ic=1
-    RhoAve=>RhoProfileMean(ibLoc)%Vec(1)%c
-    DO ic0=1,VectorComponentsME
-      IF (PosE2Pos(ic0)==uPosL) THEN
-        f=>Rhs%Vec(uPosL)%c
-        cAve=>ProfileMean(ibLoc)%Vec(ic)%c
-        cProf=>NudgingProfile(ibLoc)%Vec(ic0)%c
-        DampProf=>DampProfile(ibLoc)%Vec(ic0)%c
-        CALL DampingAverageCompute
-        ic=ic+1
-        f=>Rhs%Vec(uPosR)%c
-        cAve=>ProfileMean(ibLoc)%Vec(ic)%c
-        CALL DampingAverageCompute
-        ic=ic+1
-      ELSE IF (PosE2Pos(ic0)==vPosL) THEN
-        f=>Rhs%Vec(vPosL)%c
-        cAve=>ProfileMean(ibLoc)%Vec(ic)%c
-        cProf=>NudgingProfile(ibLoc)%Vec(ic0)%c
-        DampProf=>DampProfile(ibLoc)%Vec(ic0)%c
-        CALL DampingAverageCompute
-        ic=ic+1
-        f=>Rhs%Vec(vPosR)%c
-        cAve=>ProfileMean(ibLoc)%Vec(ic)%c
-        CALL DampingAverageCompute
-        ic=ic+1
-      ELSE  
-        f=>Rhs%Vec(PosE2Pos(ic0))%c
-        cAve=>ProfileMean(ibLoc)%Vec(ic)%c
-        cProf=>NudgingProfile(ibLoc)%Vec(ic0)%c
-        DampProf=>DampProfile(ibLoc)%Vec(ic0)%c
-        CALL DampingAverageCompute
-        ic=ic+1
-      END IF  
-    END DO
-  END IF
+  END SELECT
 END SUBROUTINE ForceDamp
 
-SUBROUTINE DampingCompute(Time)
+SUBROUTINE DampingInterpolCompute(Time)
 
   REAL(RealKind) :: Time
   INTEGER :: ix,iy,iz
@@ -172,7 +235,24 @@ SUBROUTINE DampingCompute(Time)
     END DO
   END DO
 
-END SUBROUTINE DampingCompute
+END SUBROUTINE DampingInterpolCompute
+
+SUBROUTINE DampingConstCompute(Time)
+
+  REAL(RealKind) :: Time
+  INTEGER :: ix,iy,iz
+  REAL(RealKind) :: TempEnv
+
+  DO iz=iz0+1,iz1
+    DO iy=iy0+1,iy1
+      DO ix=ix0+1,ix1
+        f(ix,iy,iz,1)=f(ix,iy,iz,1)- &
+               DampKoeff(ix,iy,iz,1)*(c(ix,iy,iz,1)-ce1(ix,iy,iz,1))
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINE DampingConstCompute
 
 SUBROUTINE DampingAverageCompute
 
@@ -195,30 +275,31 @@ SUBROUTINE JacForceDamp(Jac)
 
   INTEGER :: ic,icE
 
-  IF (.NOT.DampAverage) THEN
-    AS=>Jac%Mat
-    DiagP=>Jac%Struct%DiagPtr(:)
-    Permu=>Jac%Struct%Permu(:)
-    DampKoeff=>DampKoeffCell(ibLoc)%c
-    DO icE=1,SIZE(VecEnv1(ibLoc)%Vec)
-      ic=PosE2Pos(icE)
-      Diag=DiagP(Permu(ic))
-      CALL JacDampingCompute 
-      IF (ic==uPosL) THEN
-        ic=uPosR
+  SELECT CASE(DampType)
+    CASE ('Interpol','Const')
+      AS=>Jac%Mat
+      DiagP=>Jac%Struct%DiagPtr(:)
+      Permu=>Jac%Struct%Permu(:)
+      DampKoeff=>DampKoeffCell(ibLoc)%c
+      DO icE=1,SIZE(VecEnv1(ibLoc)%Vec)
+        ic=PosE2Pos(icE)
         Diag=DiagP(Permu(ic))
         CALL JacDampingCompute 
-      ELSE IF (ic==vPosL) THEN
-        ic=vPosR
-        Diag=DiagP(Permu(ic))
-        CALL JacDampingCompute 
-      ELSE IF (ic==wPosL) THEN
-        ic=wPosR
-        Diag=DiagP(Permu(ic))
-        CALL JacDampingCompute 
-      END IF
-    END DO
-  END IF  
+        IF (ic==uPosL) THEN
+          ic=uPosR
+          Diag=DiagP(Permu(ic))
+          CALL JacDampingCompute 
+        ELSE IF (ic==vPosL) THEN
+          ic=vPosR
+          Diag=DiagP(Permu(ic))
+          CALL JacDampingCompute 
+        ELSE IF (ic==wPosL) THEN
+          ic=wPosR
+          Diag=DiagP(Permu(ic))
+          CALL JacDampingCompute 
+        END IF
+      END DO
+  END SELECT  
 END SUBROUTINE JacForceDamp
 
 SUBROUTINE JacDampingCompute

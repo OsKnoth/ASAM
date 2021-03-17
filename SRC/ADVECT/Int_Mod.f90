@@ -21,7 +21,8 @@ MODULE Int_Mod
 
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecMet(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecChem(:)
-  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecS(:)
+  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecMetS(:)
+  TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecChemS(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsVecF(:)
   TYPE (VecVelocityFace_T), POINTER, PRIVATE, SAVE :: VecIncrF(:)
   TYPE (VecVector4Cell_T), POINTER, PRIVATE, SAVE :: VecIncrMetC(:)
@@ -36,7 +37,8 @@ MODULE Int_Mod
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelGOld(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelC1(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: VelC2(:)
-  TYPE (VecVector4Cell_T), POINTER, PRIVATE, SAVE :: VecVelC(:)
+  TYPE (VecVector4Cell_T), POINTER, PRIVATE, SAVE :: VecVecMet(:)
+  TYPE (VecVector4Cell_T), POINTER, PRIVATE, SAVE :: VecVecChem(:)
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: VelFOld(:)
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: VelF1(:)
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: VelF2(:)
@@ -44,8 +46,8 @@ MODULE Int_Mod
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: RhsVelFS(:)
   TYPE (Vector4Cell_T), POINTER, PRIVATE, SAVE :: RhsCS(:)
   TYPE (VecVelocityFace_T), POINTER, PRIVATE, SAVE :: VecVelF(:)
-  TYPE (VecVectorSFace_T), POINTER, PRIVATE, SAVE :: VecMethetaF(:)
-  TYPE (VectorSFace_T), POINTER, PRIVATE, SAVE :: ThetaF(:)
+  TYPE (VecVectorSFace_T), POINTER, PRIVATE, SAVE :: VecMetScalF(:)
+  TYPE (VectorSFace_T), POINTER, PRIVATE, SAVE :: MetScalF(:)
   TYPE (VecVelocityFace_T), POINTER, PRIVATE, SAVE :: VecPreFacF(:)
   TYPE (VelocityFace_T), POINTER, PRIVATE, SAVE :: PreFacF(:)
   TYPE (VecScalarCell_T), POINTER, PRIVATE, SAVE :: VecSoundFac(:)
@@ -238,7 +240,7 @@ SUBROUTINE InitRos3MetC(VecMet,VecChem)
     ALLOCATE(VecIncrChemC(nStage))
     DO i=1,nStage
       CALL Allocate(VecIncrMetC(i)%Vec,VecMet)
-      CALL Allocate(VecIncrChemC(i)%Vec,VecMet)
+      CALL Allocate(VecIncrChemC(i)%Vec,VecChem)
     END DO
     ALLOCATE(VecIncrF(nStage))
     DO i=1,nStage
@@ -455,9 +457,10 @@ SUBROUTINE StageRosParcel(VecMet,VecChem,VelF,dt,Time)
 
 END SUBROUTINE StageRosParcel
 
-SUBROUTINE InitExpIntRK(VecMet)
+SUBROUTINE InitExpIntRK(VecMet,VecChem)
 
   TYPE (Vector4Cell_T), POINTER :: VecMet(:)
+  TYPE (Vector4Cell_T), POINTER :: VecChem(:)
   INTEGER :: i,j
 
   IF (InitR==0) THEN
@@ -739,11 +742,14 @@ SUBROUTINE InitExpIntRK(VecMet)
         END DO  
       END DO  
     END IF  
-    CALL Allocate(RhsVecS,VecMet,0,VectorComponentsM)
-    CALL Allocate(RhsVecF,VecMet,1,VectorComponentsM-6)
-    ALLOCATE(VecVelC(nStage+1))
+    CALL Allocate(RhsVecMetS,VecMet,0,VectorComponentsMet)
+    CALL Allocate(RhsVecChemS,VecChem,0,VectorComponentsChem)
+    CALL Allocate(RhsVecF,VecMet,1,VectorComponentsMet-6)
+    ALLOCATE(VecVecMet(nStage+1))
+    ALLOCATE(VecVecChem(nStage+1))
     DO i=1,nStage+1
-      CALL Allocate(VecVelC(i)%Vec,VecMet,0,VectorComponentsM-6)
+      CALL Allocate(VecVecMet(i)%Vec,VecMet,0,VectorComponentsMet-6)
+      CALL Allocate(VecVecChem(i)%Vec,VecMet,0,VectorComponentsChem)
     END DO
     CALL Allocate(RhsVecFF)
     ALLOCATE(VecRhsVecFS(nStage))
@@ -752,18 +758,18 @@ SUBROUTINE InitExpIntRK(VecMet)
     END DO
     ALLOCATE(VecRhsVecCS(nStage))
     DO i=1,nStage
-      CALL Allocate(VecRhsVecCS(i)%Vec,VecMet,1,VectorComponentsM-6)
+      CALL Allocate(VecRhsVecCS(i)%Vec,VecMet,1,VectorComponentsMet-6)
     END DO
     ALLOCATE(VecVelF(nStage+1))
     DO i=1,nStage+1
       CALL Allocate(VecVelF(i)%VecF)
     END DO
 
-    ALLOCATE(VecMethetaF(nStage))
+    ALLOCATE(VecMetScalF(nStage))
     DO i=1,nStage
-      CALL Allocate(VecMethetaF(i)%VecF,VecMet,1,VectorComponentsM-6)
+      CALL Allocate(VecMetScalF(i)%VecF,VecMet,1,VectorComponentsM-6)
     END DO
-    CALL Allocate(ThetaF,VecMet,1,VectorComponentsM-6)
+    CALL Allocate(MetScalF,VecMet,1,VectorComponentsM-6)
 
     ALLOCATE(VecPreFacF(nStage))
     DO i=1,nStage
@@ -789,10 +795,11 @@ SUBROUTINE InitExpIntRK(VecMet)
 
 END SUBROUTINE InitExpIntRK
 
-SUBROUTINE ExpIntRk(VelF,VelC,dtAct,Time,ATol,RTol)
+SUBROUTINE ExpIntRk(VelF,VecMet,VecChem,dtAct,Time,ATol,RTol)
   
   TYPE (VelocityFace_T), POINTER :: VelF(:)
-  TYPE (Vector4Cell_T), POINTER :: VelC(:)
+  TYPE (Vector4Cell_T), POINTER :: VecMet(:)
+  TYPE (Vector4Cell_T), POINTER :: VecChem(:)
   REAL(RealKind) :: dtAct,Time,ATol(:),RTol(:)
   
   INTEGER :: i,is,nsLoc,jStage
@@ -802,32 +809,34 @@ SUBROUTINE ExpIntRk(VelF,VelC,dtAct,Time,ATol,RTol)
   dTau=dtAct/ns
   DO iStage=1,nStage+1
     CALL Copy(VelF,VecVelF(iStage)%VecF)
-    CALL Copy(VelC,VecVelC(iStage)%Vec)
+    CALL Copy(VecMet,VecVecMet(iStage)%Vec)
   END DO
   DO iStage=1,nStage
     TimeAct=Time+cRunge(iStage)*dtAct
 !   Computation of the initial value 
     DO jStage=1,iStage
       CALL Ax1mx2py(dRunge(iStage+1,jStage),VecVelF(jStage)%VecF,VelF,VecVelF(iStage+1)%VecF)
-      CALL Ax1mx2py(dRunge(iStage+1,jStage),VecVelC(jStage)%Vec,VelC,VecVelC(iStage+1)%Vec) 
+      CALL Ax1mx2py(dRunge(iStage+1,jStage),VecVecMet(jStage)%Vec,VecMet,VecVecMet(iStage+1)%Vec) 
     END DO
     CALL BoundaryVelocity(VecVelF(iStage)%VecF,Time+cRunge(iStage)*dtAct)
     CALL VelocityFaceToCellLR(VecVelF(iStage)%VecF,VecU)
     CALL BoundaryVelocity(VecU,Time+cRunge(iStage)*dtAct)
     CALL ExchangeCell(VecU)
-    CALL BoundaryCondition(VecVelC(iStage)%Vec,VelF=VecVelF(iStage)%VecF,Time=Time+cRunge(iStage)*dtAct)
+    CALL BoundaryCondition(VecVecMet(iStage)%Vec,VelF=VecVelF(iStage)%VecF,Time=Time+cRunge(iStage)*dtAct)
 !----------------------------------------
 !   Part of PrepareF
-    CALL PrepareFEx(VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time+cRunge(iStage)*dtAct)
+    CALL PrepareFEx(VecVecMet(iStage)%Vec,VecVelF(iStage)%VecF,VecU,Time+cRunge(iStage)*dtAct)
 !   Part of PrepareF
 !----------------------------------------
-    RhsVecS=Zero
-    CALL FcnMetSlow(VecU,VecVelC(iStage)%Vec,VecVelF(iStage)%VecF,RhsVecS &
-                   ,VecMethetaF(iStage)%VecF,VecPreFacF(iStage)%VecF,VecSoundFac(iStage)%Vec &
+    RhsVecMetS=Zero
+    RhsVecChemS=Zero
+    CALL FcnMetSlow(VecU,VecVecMet(iStage)%Vec,VecVecChem(iStage)%Vec,VecVelF(iStage)%VecF,RhsVecMetS &
+                   ,RhsVecChemS,VecMetScalF(iStage)%VecF,VecPreFacF(iStage)%VecF,VecSoundFac(iStage)%Vec &
                    ,Time+cRunge(iStage)*dtAct,dt)
-    CALL ExchangeCell(RhsVecS)
-    CALL VelocityCellToFaceLR(RhsVecS,VecRhsVecFS(iStage)%VecF,VelF,Time+cRunge(iStage)*dtAct)
-    CALL Copy(RhsVecS,VecRhsVecCS(iStage)%Vec)
+    CALL ExchangeCell(RhsVecMetS)
+    CALL ExchangeCell(RhsVecChemS)
+    CALL VelocityCellToFaceLR(RhsVecMetS,VecRhsVecFS(iStage)%VecF,VelF,Time+cRunge(iStage)*dtAct)
+    CALL Copy(RhsVecMetS,VecRhsVecCS(iStage)%Vec)
     nsLoc=CEILING(ns*dtRunge(iStage+1))
     dtLoc=dtAct*dtRunge(iStage+1)
     dTau=dtLoc/nsLoc
@@ -835,31 +844,31 @@ SUBROUTINE ExpIntRk(VelF,VelC,dtAct,Time,ATol,RTol)
     IF (nsLoc>0) THEN
       SELECT CASE(IntFast)
         CASE ('FB')
-          CALL ForBack1(dTau,nsLoc,VecVelF(iStage+1)%VecF,VecVelC(iStage+1)%Vec,VecVelF,VecVelC,VecMethetaF,VecPreFacF &
+          CALL ForBack1(dTau,nsLoc,VecVelF(iStage+1)%VecF,VecVecMet(iStage+1)%Vec,VecVelF,VecVecMet,VecMetScalF,VecPreFacF &
                        ,VecSoundFac,VecRhsVecFS,VecRhsVecCS,TimeFast,dtAct)
         CASE ('Verlet')
-          CALL StoermerVerlet(dTau,nsLoc,VecVelF(iStage+1)%VecF,VecVelC(iStage+1)%Vec,VecVelF,VecVelC,VecMethetaF,VecPreFacF &
+          CALL StoermerVerlet(dTau,nsLoc,VecVelF(iStage+1)%VecF,VecVecMet(iStage+1)%Vec,VecVelF,VecVecMet,VecMetScalF,VecPreFacF &
                        ,VecSoundFac,VecRhsVecFS,VecRhsVecCS,TimeFast,dtAct)
       END SELECT    
-      CALL ExchangeCell(VecVelC(iStage+1)%Vec) !OSSI
+      CALL ExchangeCell(VecVecMet(iStage+1)%Vec) !OSSI
     ELSE
-!     CALL ConstInt(VecVelF(iStage+1)%VecF,VecVelC(iStage+1)%Vec,VecRhsVecFS,VecRhsVecS,dtAct)
+!     CALL ConstInt(VecVelF(iStage+1)%VecF,VecVecMet(iStage+1)%Vec,VecRhsVecFS,VecRhsVecMetS,dtAct)
     END IF
   END DO
-  CALL Copy(VecVelC(nStage+1)%Vec,VelC)
+  CALL Copy(VecVecMet(nStage+1)%Vec,VecMet)
   CALL Copy(VecVelF(nStage+1)%VecF,VelF)
   
   Time=Time+dtAct
 
 END SUBROUTINE ExpIntRk
 
-SUBROUTINE ConstInt(VelF,VelC,VecRhsVecFS,VecRhsVecS,dT)
+SUBROUTINE ConstInt(VelF,VelC,VecRhsVecFS,VecRhsVecMetS,dT)
 
   REAL(RealKind) :: dT
   TYPE (VelocityFace_T), POINTER :: VelF(:)
   TYPE (Vector4Cell_T), POINTER :: VelC(:)
   TYPE (VecVelocityFace_T), POINTER :: VecRhsVecFS(:)
-  TYPE (VecVector4Cell_T), POINTER :: VecRhsVecS(:)
+  TYPE (VecVector4Cell_T), POINTER :: VecRhsVecMetS(:)
 
   INTEGER :: iPhi,is,jStage
   REAL(RealKind) :: Tau,Fac
@@ -868,15 +877,15 @@ SUBROUTINE ConstInt(VelF,VelC,VecRhsVecFS,VecRhsVecS,dT)
   DO jStage=1,iStage
     Fac=aRunge(iStage+1,jStage)%Koeff(0)*dT
     CALL Axpy(Fac,VecRhsVecFS(jStage)%VecF,VelF)
-    CALL Axpy(Fac,VecRhsVecS(jStage)%Vec,VelC)
+    CALL Axpy(Fac,VecRhsVecMetS(jStage)%Vec,VelC)
   END DO
   CALL ExchangeCell(VelC)
 
 END SUBROUTINE ConstInt
 
 SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
-                    VecVelFS,VecVelCS, &
-                    VecMethetaF,         &
+                    VecVelFS,VecVecMetS, &
+                    VecMetScalF,         &
                     VecPreFacF,         &
                     VecSoundFac,         &
                     VecRhsVecFS,        &
@@ -887,8 +896,8 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
   TYPE (VelocityFace_T), POINTER :: VelF(:) ! Stufen für Geschwindikeit
   TYPE (Vector4Cell_T), POINTER :: VelC(:)  ! Stufen für Skalare
   TYPE (VecVelocityFace_T), POINTER :: VecVelFS(:)
-  TYPE (VecVector4Cell_T), POINTER :: VecVelCS(:)
-  TYPE (VecVectorSFace_T), POINTER :: VecMethetaF(:)
+  TYPE (VecVector4Cell_T), POINTER :: VecVecMetS(:)
+  TYPE (VecVectorSFace_T), POINTER :: VecMetScalF(:)
   TYPE (VecVelocityFace_T), POINTER :: VecPreFacF(:)
   TYPE (VecScalarCell_T), POINTER :: VecSoundFac(:)
   TYPE (VecVelocityFace_T), POINTER :: VecRhsVecFS(:)
@@ -902,9 +911,9 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
     CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecRhsVecFS(jStage)%VecF,RhsVelFS)
     CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVelFS(jStage)%VecF,VecVelFS(1)%VecF,RhsVelFS)
   END DO
-  ThetaF=Zero
+  MetScalF=Zero
   DO jStage=1,iStage
-    CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecMethetaF(jStage)%VecF,ThetaF)
+    CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecMetScalF(jStage)%VecF,MetScalF)
   END DO
   PreFacF=Zero
   DO jStage=1,iStage
@@ -919,7 +928,7 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
   RhsCS=Zero
   DO jStage=1,iStage
     CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecRhsVecCS(jStage)%Vec,RhsCS)
-    CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVelCS(jStage)%Vec,VecVelCS(1)%Vec,RhsCS)
+    CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVecMetS(jStage)%Vec,VecVecMetS(1)%Vec,RhsCS)
   END DO
   IF (ns>0) THEN
     DO is=1,ns
@@ -933,9 +942,9 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
       RhsVecF=Zero
       CALL Axpby((1.0d0+GammaDiv),VelF,-GammaDiv,VelFOld)
       CALL BoundaryVelocity(VelFOld,Time+dTau)
-      CALL FcnMetFastScalar(VelC,VelFOld,ThetaF,SoundFac,RhsVecF,Time)
+      CALL FcnMetFastScalar(VelC,VelFOld,MetScalF,SoundFac,RhsVecF,Time)
 !     CALL BoundaryVelocity(VelF,Time+dTau)
-!     CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
+!     CALL FcnMetFastScalar(VelC,VelF,MetScalF,SoundFac,RhsVecF,Time)
       CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
       Time=Time+dTau
     END DO
@@ -947,14 +956,14 @@ SUBROUTINE ForBack1(dTau,ns,VelF,VelC, &
     CALL Axpy(dTau,RhsVelFS,VelF)
     RhsVecF=Zero
     CALL BoundaryVelocity(VelF,Time)
-    CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
+    CALL FcnMetFastScalar(VelC,VelF,MetScalF,SoundFac,RhsVecF,Time)
     CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
   END IF
 END SUBROUTINE ForBack1
 
 SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
-                          VecVelFS,VecVelCS, &
-                          VecMethetaF,         &
+                          VecVelFS,VecVecMetS, &
+                          VecMetScalF,         &
                           VecPreFacF,         &
                           VecSoundFac,         &
                           VecRhsVecFS,        &
@@ -965,8 +974,8 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
   TYPE (VelocityFace_T), POINTER :: VelF(:) ! Stufen für Geschwindikeit
   TYPE (Vector4Cell_T), POINTER :: VelC(:)  ! Stufen für Skalare
   TYPE (VecVelocityFace_T), POINTER :: VecVelFS(:)
-  TYPE (VecVector4Cell_T), POINTER :: VecVelCS(:)
-  TYPE (VecVectorSFace_T), POINTER :: VecMethetaF(:)
+  TYPE (VecVector4Cell_T), POINTER :: VecVecMetS(:)
+  TYPE (VecVectorSFace_T), POINTER :: VecMetScalF(:)
   TYPE (VecVelocityFace_T), POINTER :: VecPreFacF(:)
   TYPE (VecScalarCell_T), POINTER :: VecSoundFac(:)
   TYPE (VecVelocityFace_T), POINTER :: VecRhsVecFS(:)
@@ -981,9 +990,9 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecRhsVecFS(jStage)%VecF,RhsVelFS)
     CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVelFS(jStage)%VecF,VecVelFS(1)%VecF,RhsVelFS)
   END DO
-  ThetaF=Zero
+  MetScalF=Zero
   DO jStage=1,iStage
-    CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecMethetaF(jStage)%VecF,ThetaF)
+    CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecMetScalF(jStage)%VecF,MetScalF)
   END DO
   PreFacF=Zero
   DO jStage=1,iStage
@@ -998,7 +1007,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
   RhsCS=Zero
   DO jStage=1,iStage
     CALL Axpy(aRunge(iStage+1,jStage)%Koeff(0),VecRhsVecCS(jStage)%Vec,RhsCS)
-    CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVelCS(jStage)%Vec,VecVelCS(1)%Vec,RhsCS)
+    CALL Ax1mx2py(gRunge(iStage+1,jStage)/dT,VecVecMetS(jStage)%Vec,VecVecMetS(1)%Vec,RhsCS)
   END DO
   IF (ns>0) THEN
     RhsVecFF=Zero
@@ -1009,7 +1018,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     DO is=1,ns-1
       RhsVecF=Zero
       CALL BoundaryVelocity(VelF,Time+Half*dTau)
-      CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
+      CALL FcnMetFastScalar(VelC,VelF,MetScalF,SoundFac,RhsVecF,Time)
       CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
       RhsVecFF=Zero
       CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
@@ -1020,7 +1029,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     END DO
     RhsVecF=Zero
     CALL BoundaryVelocity(VelF,Time-Half*dTau)
-    CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
+    CALL FcnMetFastScalar(VelC,VelF,MetScalF,SoundFac,RhsVecF,Time)
     CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
     RhsVecFF=Zero
     CALL BoundaryCondition(VelC,VelF=VelF,Time=Time)
@@ -1035,7 +1044,7 @@ SUBROUTINE StoermerVerlet(dTau,ns,VelF,VelC, &
     CALL Axpy(dTau,RhsVelFS,VelF)
     RhsVecF=Zero
     CALL BoundaryVelocity(VelF,Time+dTau)
-    CALL FcnMetFastScalar(VelC,VelF,ThetaF,SoundFac,RhsVecF,Time)
+    CALL FcnMetFastScalar(VelC,VelF,MetScalF,SoundFac,RhsVecF,Time)
     CALL Ax1px2py(dTau,RhsVecF,RhsCS,VelC)
   END IF
 END SUBROUTINE StoermerVerlet
