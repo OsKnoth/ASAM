@@ -1016,19 +1016,9 @@ SUBROUTINE DragCoeffSea(i)
       END IF
 
 !     New roughness lenght for momentum (after Charnock 1955,Nikuradse 1933)
-!      zRauh2=1.1d-2*ustar**Two/Grav+0.088*(KinViscAir*ustar/grav)**0.5+0.11*KinViscAir/ustar
       zRauh2=1.1d-2*ustar**Two/Grav
       zRauh2= MAX(zRauh2,1d-5)
 
-!      Rr=ustar*zRauh2/KinViscAir ! Roughness Reynolds Number
-
-!!     New roughness lenght for heat
-!!     Brutsaert 1982
-!      IF (Rr.LT.0.13) THEN ! smooth surface
-!        zRauhT=0.624*KinViscAir/(ustar+Eps)
-!      ELSE ! rough surface
-!        zRauhT=0.169*EXP(-1.53*ustar**(1/4))
-!      END IF
       zRauhT=zRauh1
       zRauhT=MIN(zRauhT,0.1d0)
 
@@ -1045,18 +1035,10 @@ SUBROUTINE DragCoeffSea(i)
     ustar  = SQRT(FM*(Karm*VT/(LOG(zPL/zRauh1)+Eps))**Two)
     U10  = LOG(10d0/zRauh1)*ustar/(SQRT(FM)*Karm)
 
-!    Rr=ustar*zRauh1/KinViscAir
-
-!   Roughness length for moisture
-!    zRauhf=5.5d-5*Rr**(-0.6d0)   ! Fairall et al. 2003
-!    zRauhf=MIN(zRauhf,1.1d-4)
-!    zRauhf=zRauh1
-!    zRauhf=zRauhT
 
 !   Drag coefficient for momentum, heat and moisture
     DragM  = (ustar/(VT+Eps))**Two
     DragH  = (Karm/(LOG(zPL/zRauh1)+Eps))**Two*FH/(R*(LOG(zRauh1/zRauhT)*FH/(LOG(zPL/zRauh1)*SQRT(FM))+One))          
-!    Dragq  = (Karm/(LOG(zPL/zRauh1)+Eps))**Two*FH/(R*(LOG(zRauh1/zRauhf)*FH/(LOG(zPL/zRauh1)*SQRT(FM))+One))          
 
     BoundCell(i)%U10    = U10
     BoundCell(i)%DragM  = DragM
@@ -1167,6 +1149,8 @@ SUBROUTINE DragCompute(Time)
     RhoILoc     = RhoI(ix,iy,iz,1)+RhoS(ix,iy,iz,1)
     RhoDryLoc   = RhoLoc-RhoVLoc-RhoLLoc-RhoILoc
     pLoc        = PressureTheta(RhoDryLoc,RhoVLoc,RhoLLoc,RhoILoc,Th(ix,iy,iz,1))+Eps
+
+    WRITE(*,*) 'DragM',DragM,'DragQ',DragQ,'DragH',DragH,BoundCell(i)%zRauh,uCL(ix,iy,iz,1),uCR(ix,iy,iz,1)
 
     uLoc=Half*(uCL(ix,iy,iz,1)+uCR(ix,iy,iz,1))/(RhoLoc+Eps)
     vLoc=Half*(vCL(ix,iy,iz,1)+vCR(ix,iy,iz,1))/(RhoLoc+Eps)

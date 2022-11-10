@@ -95,6 +95,7 @@ SUBROUTINE WriteUnstructuredGrid(FileName)
       END DO  
     END DO  
   END DO  
+ 
   OPEN(UNIT=OutputUnit,FILE=TRIM(FileName)//'.unstr',STATUS='UNKNOWN')
   WRITE(OutputUnit,*) TRIM(FileName)
   WRITE(OutputUnit,*) 'NumberNodes  ',NumberNodes
@@ -609,51 +610,53 @@ SUBROUTINE WriteEdgeCut(FaceP,OutputUnit,ix,iy,iz)
   TYPE(Face_T), POINTER :: Face
   INTEGER :: iList,ListNode(4)
   Face=>FaceP%Face
-  IF (ASSOCIATED(Face).AND.Face%NumberEdge>0) THEN
-    iList=0
-    IF (Face%Edge1%NumberNode>0) THEN
-      iList=iList+1
-      ListNode(iList)=Face%Edge1%NumberNode 
-    END IF  
-    IF (Face%Edge2%NumberNode>0) THEN
-      iList=iList+1
-      ListNode(iList)=Face%Edge2%NumberNode 
-    END IF  
-    IF (Face%Edge3%NumberNode>0) THEN
-      iList=iList+1
-      ListNode(iList)=Face%Edge3%NumberNode 
-    END IF  
-    IF (Face%Edge4%NumberNode>0) THEN
-      iList=iList+1
-      ListNode(iList)=Face%Edge4%NumberNode 
-    END IF  
-    IF (iList==2) THEN
-      WRITE(OutputUnit,*) 'ec  ',Face%NumberEdge,ListNode(1:2),ix,iy,iz,'cc'
-    ELSE
-      WRITE(OutputUnit,*) 'ec0 ',Face%NumberEdge,ListNode(1:2)
-      WRITE(*,*) 'ListNode',iList,ListNode(1:iList)
-      WRITE(*,*) 'Face%Number',Face%Number,'Face%NumberEdge',Face%NumberEdge
-      WRITE(*,*) 'Face%Edge1%NumberNode',Face%Edge1%NumberNode,Face%Edge1%Vert1%in_out,Face%Edge1%Vert2%in_out
-      WRITE(*,*) Face%Edge1%Vert1%Point,Face%Edge1%Vert1%ix,Face%Edge1%Vert1%iy,Face%Edge1%Vert1%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge1%Vert1%VertX),ASSOCIATED(Face%Edge1%Vert1%VertY),ASSOCIATED(Face%Edge1%Vert1%VertZ)
-      WRITE(*,*) Face%Edge1%Vert2%Point, Face%Edge1%Vert2%ix,Face%Edge1%Vert2%iy,Face%Edge1%Vert2%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge1%Vert2%VertX),ASSOCIATED(Face%Edge1%Vert2%VertY),ASSOCIATED(Face%Edge1%Vert2%VertZ)
-      WRITE(*,*) 'Face%Edge2%NumberNode',Face%Edge2%NumberNode,Face%Edge2%Vert1%in_out,Face%Edge2%Vert2%in_out
-      WRITE(*,*) Face%Edge2%Vert1%Point,Face%Edge2%Vert1%ix,Face%Edge2%Vert1%iy,Face%Edge2%Vert1%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge2%Vert1%VertX),ASSOCIATED(Face%Edge2%Vert1%VertY),ASSOCIATED(Face%Edge2%Vert1%VertZ)
-      WRITE(*,*) Face%Edge2%Vert2%Point,Face%Edge2%Vert2%ix,Face%Edge2%Vert2%iy,Face%Edge2%Vert2%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge1%Vert2%VertX),ASSOCIATED(Face%Edge2%Vert1%VertY),ASSOCIATED(Face%Edge2%Vert1%VertZ)
-      WRITE(*,*) 'Face%Edge3%NumberNode',Face%Edge3%NumberNode,Face%Edge3%Vert1%in_out,Face%Edge3%Vert2%in_out
-      WRITE(*,*) Face%Edge3%Vert1%Point,Face%Edge3%Vert1%ix,Face%Edge3%Vert1%iy,Face%Edge3%Vert1%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge3%Vert1%VertX),ASSOCIATED(Face%Edge3%Vert1%VertY),ASSOCIATED(Face%Edge3%Vert1%VertZ)
-      WRITE(*,*) Face%Edge3%Vert2%Point,Face%Edge3%Vert2%ix,Face%Edge3%Vert2%iy,Face%Edge3%Vert2%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge3%Vert2%VertX),ASSOCIATED(Face%Edge3%Vert2%VertY),ASSOCIATED(Face%Edge3%Vert2%VertZ)
-      WRITE(*,*) 'Face%Edge4%NumberNode',Face%Edge4%NumberNode,Face%Edge4%Vert1%in_out,Face%Edge4%Vert2%in_out
-      WRITE(*,*) Face%Edge4%Vert1%Point,Face%Edge4%Vert1%ix,Face%Edge4%Vert1%iy,Face%Edge4%Vert1%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge4%Vert1%VertX),ASSOCIATED(Face%Edge4%Vert1%VertY),ASSOCIATED(Face%Edge4%Vert1%VertZ)
-      WRITE(*,*) Face%Edge4%Vert2%Point,Face%Edge4%Vert2%ix,Face%Edge4%Vert2%iy,Face%Edge4%Vert2%iz
-      WRITE(*,*) ASSOCIATED(Face%Edge4%Vert2%VertX),ASSOCIATED(Face%Edge4%Vert2%VertY),ASSOCIATED(Face%Edge4%Vert2%VertZ)
-      STOP
+  IF (ASSOCIATED(Face)) THEN
+    IF (Face%NumberEdge>0) THEN
+      iList=0
+      IF (Face%Edge1%NumberNode>0) THEN
+        iList=iList+1
+        ListNode(iList)=Face%Edge1%NumberNode 
+      END IF  
+      IF (Face%Edge2%NumberNode>0) THEN
+        iList=iList+1
+        ListNode(iList)=Face%Edge2%NumberNode 
+      END IF  
+      IF (Face%Edge3%NumberNode>0) THEN
+        iList=iList+1
+        ListNode(iList)=Face%Edge3%NumberNode 
+      END IF  
+      IF (Face%Edge4%NumberNode>0) THEN
+        iList=iList+1
+        ListNode(iList)=Face%Edge4%NumberNode 
+      END IF  
+      IF (iList==2) THEN
+        WRITE(OutputUnit,*) 'ec  ',Face%NumberEdge,ListNode(1:2),ix,iy,iz,'cc'
+      ELSE
+        WRITE(OutputUnit,*) 'ec0 ',Face%NumberEdge,ListNode(1:2)
+        WRITE(*,*) 'ListNode',iList,ListNode(1:iList)
+        WRITE(*,*) 'Face%Number',Face%Number,'Face%NumberEdge',Face%NumberEdge
+        WRITE(*,*) 'Face%Edge1%NumberNode',Face%Edge1%NumberNode,Face%Edge1%Vert1%in_out,Face%Edge1%Vert2%in_out
+        WRITE(*,*) Face%Edge1%Vert1%Point,Face%Edge1%Vert1%ix,Face%Edge1%Vert1%iy,Face%Edge1%Vert1%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge1%Vert1%VertX),ASSOCIATED(Face%Edge1%Vert1%VertY),ASSOCIATED(Face%Edge1%Vert1%VertZ)
+        WRITE(*,*) Face%Edge1%Vert2%Point, Face%Edge1%Vert2%ix,Face%Edge1%Vert2%iy,Face%Edge1%Vert2%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge1%Vert2%VertX),ASSOCIATED(Face%Edge1%Vert2%VertY),ASSOCIATED(Face%Edge1%Vert2%VertZ)
+        WRITE(*,*) 'Face%Edge2%NumberNode',Face%Edge2%NumberNode,Face%Edge2%Vert1%in_out,Face%Edge2%Vert2%in_out
+        WRITE(*,*) Face%Edge2%Vert1%Point,Face%Edge2%Vert1%ix,Face%Edge2%Vert1%iy,Face%Edge2%Vert1%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge2%Vert1%VertX),ASSOCIATED(Face%Edge2%Vert1%VertY),ASSOCIATED(Face%Edge2%Vert1%VertZ)
+        WRITE(*,*) Face%Edge2%Vert2%Point,Face%Edge2%Vert2%ix,Face%Edge2%Vert2%iy,Face%Edge2%Vert2%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge1%Vert2%VertX),ASSOCIATED(Face%Edge2%Vert1%VertY),ASSOCIATED(Face%Edge2%Vert1%VertZ)
+        WRITE(*,*) 'Face%Edge3%NumberNode',Face%Edge3%NumberNode,Face%Edge3%Vert1%in_out,Face%Edge3%Vert2%in_out
+        WRITE(*,*) Face%Edge3%Vert1%Point,Face%Edge3%Vert1%ix,Face%Edge3%Vert1%iy,Face%Edge3%Vert1%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge3%Vert1%VertX),ASSOCIATED(Face%Edge3%Vert1%VertY),ASSOCIATED(Face%Edge3%Vert1%VertZ)
+        WRITE(*,*) Face%Edge3%Vert2%Point,Face%Edge3%Vert2%ix,Face%Edge3%Vert2%iy,Face%Edge3%Vert2%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge3%Vert2%VertX),ASSOCIATED(Face%Edge3%Vert2%VertY),ASSOCIATED(Face%Edge3%Vert2%VertZ)
+        WRITE(*,*) 'Face%Edge4%NumberNode',Face%Edge4%NumberNode,Face%Edge4%Vert1%in_out,Face%Edge4%Vert2%in_out
+        WRITE(*,*) Face%Edge4%Vert1%Point,Face%Edge4%Vert1%ix,Face%Edge4%Vert1%iy,Face%Edge4%Vert1%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge4%Vert1%VertX),ASSOCIATED(Face%Edge4%Vert1%VertY),ASSOCIATED(Face%Edge4%Vert1%VertZ)
+        WRITE(*,*) Face%Edge4%Vert2%Point,Face%Edge4%Vert2%ix,Face%Edge4%Vert2%iy,Face%Edge4%Vert2%iz
+        WRITE(*,*) ASSOCIATED(Face%Edge4%Vert2%VertX),ASSOCIATED(Face%Edge4%Vert2%VertY),ASSOCIATED(Face%Edge4%Vert2%VertZ)
+        STOP
+      END IF  
     END IF  
   END IF
 END SUBROUTINE WriteEdgeCut

@@ -11,6 +11,7 @@ SUBROUTINE SolveSound(x,b,MaxIter,Tol)
   INTEGER :: MaxIter
   REAL(RealKind) :: Tol
   
+  WRITE(*,*) 'MethSound',MethSound 
   SELECT CASE(MethSound)
     CASE('GMRES')
       CALL GMRES(x,b,MaxIter,Tol)
@@ -91,6 +92,7 @@ SUBROUTINE GMRES(x,b,MaxIter,Tol)
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'GMRES Rho',i,rho,rho0,Tol,Tol*rho0
       END IF
+        WRITE(*,*) 'GMRES Rho',i,rho,rho0,Tol,Tol*rho0
       IF (rho<=Tol*Rho0) THEN
         nR=i
         EXIT S2
@@ -171,6 +173,7 @@ SUBROUTINE FGMRES(x,b,MaxIter,Tol)
       IF (MyId==0.AND.PrintNameLists) THEN
         WRITE(*,*) 'FGMRES Rho',i,rho,rho0,Tol,Tol*rho0
       END IF
+      WRITE(*,*) 'FGMRES Rho',i,rho,rho0,Tol,Tol*rho0
       IF (rho<=Tol*rho0) THEN
 !     IF (rho<=Tol) THEN
         nR=i

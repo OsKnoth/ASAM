@@ -54,7 +54,15 @@ PROGRAM Profile
       WRITE(*,*) 'PreStart     ',PreStart
       WRITE(*,*) 'TeStart      ',TeStart
       WRITE(*,*) 'RelHumStart  ',RelHumStart
-      CALL ComputeProfile(c,Height,Pre,ProfTemp,RH)
+      CALL ComputeProfile(c,Height,Pre,ProfTemp,RH=RH)
+    CASE('MoistRelHum2')
+      PreStart=Pre(1)
+      TeStart=ProfTemp(1)
+      RelHumStart=RH(1)
+      WRITE(*,*) 'PreStart     ',PreStart
+      WRITE(*,*) 'TeStart      ',TeStart
+      WRITE(*,*) 'RelHumStart  ',RelHumStart
+      CALL ComputeProfile(c,Height,Pre,ProfTemp,RH=RH)
     CASE('MoistQTPotEquiv')
       WRITE(*,*) 'Equiv '
       CALL ComputeProfile(c,Height,Pre,ThE=ThE,rt=rt)

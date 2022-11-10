@@ -11,8 +11,9 @@ MODULE Restart_Mod
 
 CONTAINS
 
-SUBROUTINE WriteRestart(Vec,Vel,Time,FileName)
-  TYPE(Vector4Cell_T) :: Vec(:)
+SUBROUTINE WriteRestart(VecMet,VecChem,Vel,Time,FileName)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T) :: VecChem(:)
   TYPE(VelocityFace_T) :: Vel(:)
   REAL(RealKind) :: Time
   CHARACTER(*) :: FileName
@@ -31,8 +32,11 @@ SUBROUTINE WriteRestart(Vec,Vel,Time,FileName)
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
-      DO ic=1,UBOUND(Vec(ibLoc)%Vec,1)
-        WRITE(OutputUnit) Vec(ibLoc)%Vec(ic)%c
+      DO ic=1,UBOUND(VecMet(ibLoc)%Vec,1)
+        WRITE(OutputUnit) VecMet(ibLoc)%Vec(ic)%c
+      END DO  
+      DO ic=1,UBOUND(VecChem(ibLoc)%Vec,1)
+        WRITE(OutputUnit) VecChem(ibLoc)%Vec(ic)%c
       END DO  
       WRITE(OutputUnit) Vel(ibLoc)%uF,Vel(ibLoc)%vF,Vel(ibLoc)%wF
     END DO  
@@ -42,8 +46,9 @@ SUBROUTINE WriteRestart(Vec,Vel,Time,FileName)
 
 END SUBROUTINE WriteRestart
 
-SUBROUTINE ReadRestart(Vec,Vel,Time,FileName)
-  TYPE(Vector4Cell_T) :: Vec(:)
+SUBROUTINE ReadRestart(VecMet,VecChem,Vel,Time,FileName)
+  TYPE(Vector4Cell_T) :: VecMet(:)
+  TYPE(Vector4Cell_T) :: VecChem(:)
   TYPE(VelocityFace_T) :: Vel(:)
   REAL(RealKind) :: Time
   CHARACTER(*) :: FileName
@@ -60,7 +65,6 @@ SUBROUTINE ReadRestart(Vec,Vel,Time,FileName)
     WRITE(iName,'(I8)') MyId
     OPEN(UNIT=InputUnit,FILE='RESTART/'//TRIM(FileNameLoc)//ADJUSTL(iName),STATUS='OLD',FORM='UNFORMATTED')
     READ(InputUnit) Time
-    WRITE(*,*) 'Time',Time
     READ(InputUnit) GMVStep
     CALL SetGMVStep(GMVStep)
     READ(InputUnit) OutputTime
@@ -68,11 +72,12 @@ SUBROUTINE ReadRestart(Vec,Vel,Time,FileName)
     DO ibLoc=1,nbLoc
       ib=LocGlob(ibLoc)
       CALL Set(Floor(ib))
-      DO ic=1,UBOUND(Vec(ibLoc)%Vec,1)
-        READ(InputUnit) Vec(ibLoc)%Vec(ic)%c
-        WRITE(*,*) 'ic',ic
+      DO ic=1,UBOUND(VecMet(ibLoc)%Vec,1)
+        READ(InputUnit) VecMet(ibLoc)%Vec(ic)%c
       END DO  
-      WRITE(*,*) 'Read Vel'
+      DO ic=1,UBOUND(VecChem(ibLoc)%Vec,1)
+        READ(InputUnit) VecChem(ibLoc)%Vec(ic)%c
+      END DO  
       READ(InputUnit) Vel(ibLoc)%uF,Vel(ibLoc)%vF,Vel(ibLoc)%wF
     END DO  
     CLOSE(InputUnit)

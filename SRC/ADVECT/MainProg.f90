@@ -145,9 +145,7 @@ PROGRAM MainProg
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   IF (ChemieFile/='') THEN 
-    WRITE(*,*) 'Vor InputSystem(ChemieFile)'
     CALL InputSystem(ChemieFile)
-    WRITE(*,*) 'Nach InputSystem(ChemieFile)'
   END IF
 
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
@@ -217,6 +215,7 @@ PROGRAM MainProg
   END IF
 
 
+  WRITE(*,*) '-- Meteorologie --'
 ! -- Meteorologie --
   CALL Allocate(VelF1)
   VelF1=Zero
@@ -450,8 +449,8 @@ PROGRAM MainProg
   IF (Tracer2Pos>0) THEN
     CALL VectorInit(Tracer2Pos,VecMet,Tracer2Start,Time)
   END IF
+  WRITE(*,*) '-- Meteorologie -- 4'
   CALL PerturbProfile(VecMet)
-  WRITE(*,*) 'Nach Init',VecMet(1)%Vec(ThPos)%C(1,1,1,1)
   CALL ExchangeCell(VecMet)
   IF (uPosL*uPosR>0) THEN
     CALL VelocityCellToFaceLR(VecMet,VelF1,VelF1,Time)
@@ -500,18 +499,22 @@ PROGRAM MainProg
       IF ( uPosEnv>0) THEN
         CALL VectorInit(uPosEnv,VecEnv1,UStartE,Time1)
         PosE2Pos(uPosEnv)=uPosL
+        CALL Mult(RhoCell,VecEnv1,uPosEnv)
       END IF
       IF ( vPosEnv>0) THEN
         CALL VectorInit(vPosEnv,VecEnv1,vStartE,Time1)
         PosE2Pos(vPosEnv)=vPosL
+        CALL Mult(RhoCell,VecEnv1,vPosEnv)
       END IF
       IF ( wPosEnv>0) THEN
         CALL VectorInit(wPosEnv,VecEnv1,wStart,Time1)
         PosE2Pos(wPosEnv)=wPosL
+        CALL Mult(RhoCell,VecEnv1,wPosEnv)
       END IF
       IF (ThPosEnv>0) THEN
         CALL VectorInit(ThPosEnv,VecEnv1,ThStart,Time1)
         PosE2Pos(ThPosEnv)=ThPos
+        CALL Mult(RhoCell,VecEnv1,ThPosEnv)
       END IF
       IF (tkePosEnv>0) THEN
         CALL VectorInit(tkePosEnv,VecEnv1,tkeStart,Time1)
@@ -563,6 +566,7 @@ PROGRAM MainProg
         END IF  
       END DO  
   END SELECT    
+  WRITE(*,*) '-- Meteorologie -- 5'
   CALL ExchangeCell(VecEnv1)
   CALL ExchangeCell(VecEnv2)
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
@@ -708,6 +712,7 @@ PROGRAM MainProg
     CALL ExchangeCell(VecMet)
   END IF  
 ! Initialize BoundCells
+  WRITE(*,*) '-- Meteorologie -- 6'
   DO ibLoc=1,nbLoc
     ib=LocGlob(ibLoc)
     CALL Set(Floor(ib)) 
@@ -716,8 +721,11 @@ PROGRAM MainProg
     END DO
   END DO
 
+  WRITE(*,*) '-- Meteorologie -- 7'
+  WRITE(*,*) '-- Meteorologie -- 70',DOT(Vecmet,Vecmet)
   ! -- Project VelF1
   CALL PrepareF(VecMet,VelF1,Time)
+  WRITE(*,*) '-- Meteorologie -- 71'
   CALL IniJacAccGrav
   IF (Chemie) THEN
     IF (IniFile/='') THEN 
@@ -729,6 +737,7 @@ PROGRAM MainProg
     END IF
   END IF
 
+  WRITE(*,*) '-- Meteorologie -- 8'
   IF (Aerosol) THEN
     CALL InitGrid
     CALL InitAerosol(VecChem,IniFile)
@@ -787,8 +796,6 @@ PROGRAM MainProg
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
 
   CALL PrepareAbsTemp(VecMet)
-  WRITE(*,*) 'TAbs',TAbsCell(1)%Vec(1)%c(1,1,1,1)
-  WRITE(*,*) 'p   ',PreCell(1)%c(1,1,1,1)
   CALL InputModelOutput(InputFileName)
   CALL SpecialOutput(VecMet,VecG,VelF1,StartTime)
   CALL MPI_Barrier(MPI_Comm_World,MPIerr)
@@ -873,7 +880,7 @@ PROGRAM MainProg
   IF (CheckSurfMean) CALL OutputMeanSurface(VecMet,Time)
   IF (CheckSurfPoint) CALL OutputPointSurface(VecMet,Time)
 
-  CALL ReadRestart(VecMet,VelF1,Time,InputFileName)
+  CALL ReadRestart(VecMet,VecChem,VelF1,Time,InputFileName)
 
   IF (MyID==0) WRITE(*,*) 'Starting time integration loop, ',Method
   DO iInt=1,EndIter
@@ -913,10 +920,6 @@ PROGRAM MainProg
         WRITE(*,*) 'dtAct',dtAct
       END IF
       CALL Ros3MetC(VecMet,VecChem,VelF1,VecG,dtAct,Time,ATol,RTol)
-      Temp=TotalScalar(VecMet,'RHO')
-      IF (MyId==0) THEN
-        WRITE(*,*) 'TotalRho',Temp
-      END IF  
     ELSE IF (Method(3:4)=='RK'.OR.Method(3:4)=='EB'.OR.Method(3:5)=='MIS') THEN
       CALL InitExpIntRk(VecMet,VecChem)
       CALL TimeStepCFL(VelF1,dtAct,ns)
@@ -970,7 +973,7 @@ PROGRAM MainProg
       CALL VelocityFaceToCellLR(VelF1,VecMet)
       CALL MeanProfileCompute(VecMet)
     END IF
-    CALL WriteRestart(VecMet,VelF1,Time,InputFileName)
+    CALL WriteRestart(VecMet,VecChem,VelF1,Time,InputFileName)
 !   Check for NaN
     IF (ISNAN(DOT(VecMet,VecMet))) THEN
       CALL MPI_Finalize(MPIErr)

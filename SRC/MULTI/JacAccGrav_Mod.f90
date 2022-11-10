@@ -2396,7 +2396,6 @@ SUBROUTINE LaplMumpsFullCompute(A,AMu)
   TYPE(SpRowCol) :: Div
   TYPE(SpRowCol) :: Grad
 
-  WRITE(*,*) 'Inside LaplMumpsFullCompute'
   Div=DivCompute(FU(ix0:ix1,:,:),FV(:,iy0:iy1,:),FW(:,:,iz0:iz1) &
                 ,DTU,DTV,DTW,DTT &
                 ,VolC(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1))
@@ -2404,7 +2403,6 @@ SUBROUTINE LaplMumpsFullCompute(A,AMu)
                        dy,MetrYX,MetrYZ, &
                        dz,MetrZX,MetrZY, &
                        DUT,DUU,DUV,DUW)
-  WRITE(*,*) 'ASSOCIATED(AMu%Val)',ASSOCIATED(AMu%Val)
   CALL SpMm(AMu,Div,Grad)
   CALL Deallocate(Div)
   CALL Deallocate(Grad)

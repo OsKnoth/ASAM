@@ -789,6 +789,7 @@ SUBROUTINE ReadGrid(FileName)
       WRITE(*,*) '#MultiLayerSoil'
       WRITE(*,*) 'nr_lsoil',nr_lsoil
     !----------------------------------------
+       READ(InputUnit,*)  ! comment or. empty line 
        READ(InputUnit,*) nr_sb    ! number blocks with soil_def
        DO ib=1,nr_sb
          READ(InputUnit,*)  ! comment or. empty line 

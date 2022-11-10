@@ -506,7 +506,6 @@ SUBROUTINE SpMm_SpRowCol(C,A,B)
   INTEGER :: NzrIndC(B%n)
   REAL(RealKind) :: Val(B%n)
 
-  WRITE(*,*) 'Inside SpMm_SpRowCol',ASSOCIATED(C%RowPtr)
   IF (.NOT.ASSOCIATED(C%RowPtr)) THEN
     C%m=A%m
     C%n=B%n

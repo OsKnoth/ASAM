@@ -110,7 +110,7 @@ SUBROUTINE PrepareF(VectorCell,VelocityFace,Time)
   real(realkind) :: rat_dir=0.5d0, lw_rad=262.75433349609375d0
   integer :: nrad
 
-  RadOutTime=OutputTimeStep
+  RadOutTime=MAX(OutputTimeStep,1.0d0)
   VelocityFaceAct=>VelocityFace
   IF (RadiationValues) THEN
     CALL GetRadiationValues(Time)
@@ -343,10 +343,10 @@ SUBROUTINE PrepareFEx(VectorCell,VelocityFace,UVec,Time)
       CALL ECompute
     END IF  
     IF (ThPos>0) THEN
-      WRITE(*,*) 'AbsTPreCompute in PrepareFEX',EnPos
       CALL AbsTPreCompute
     END IF  
     IF (DragSurf.OR.DynamicSoil.OR.Canopy.OR.SeaEmiss.OR.FireEmiss) THEN
+      WRITE(*,*) 'CALL DragCoeff'
       CALL DragCoeff(VelocityFace,VectorCell,UVec)
     END IF
     IF (uPosL>0) THEN
@@ -530,7 +530,6 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorMetCell,VectorChemCell,VelocityFace,RhsMet,
       RhoR=>VectorMetCell(ibLoc)%Vec(RhoRPos)%c
       Th=>VectorMetCell(ibLoc)%Vec(thPos)%c
       CALL SoundCompute
-      WRITE(*,*) 'Sound ',Sound(1,1,1,1),SQRT(Sound(1,1,1,1))
     END IF
     IF (RainSurf) THEN
       CALL RainSurfCompute(VectorMetCell(ibLoc),Velocityface(ibLoc),RhsMet(ibLoc),Time)
@@ -566,12 +565,10 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorMetCell,VectorChemCell,VelocityFace,RhsMet,
       f=>RhsMet(ibLoc)%Vec(thPos)%c
       c=>VectorMetCell(ibLoc)%Vec(thPos)%c
       IF (PreAdv=='Inner') THEN
-        WRITE(*,*) 'PreAdv Inner ',PreAdv
         c=c-Sound
         CALL AdvectionPreCompute(PhiLim)  
         c=c+Sound
       ELSE
-        WRITE(*,*) 'PreAdv Outer ',PreAdv
         CALL AdvectionPreCompute(PhiLim)  
       END IF
     END IF  
@@ -713,7 +710,6 @@ SUBROUTINE FcnMetSlow(VecUCell,VectorMetCell,VectorChemCell,VelocityFace,RhsMet,
       END IF  
       IF (ic==enPos.AND.ThetaKind=='PreEn') THEN
 !       Separation of E (slow) and p (fast)
-        WRITE(*,*) 'Face Energy En'
         c=>VectorMetCell(ibLoc)%Vec(EnPos)%c
         p=>VectorMetCell(ibLoc)%Vec(thPos)%c
         c=c+p
@@ -1293,6 +1289,7 @@ SUBROUTINE FcnMet(VectorMetCell,VectorChemCell,Velocityface,RhsMet,RhsChem,Time,
     END IF
     ! Surface drag and fluxes of momentum, heat and mass
     IF (DynamicSoil) THEN
+      WRITE(*,*) 'CALL Soil'
       CALL Soil(VectorMetCell(ibLoc),RhsMet(ibLoc),Time=Time)
     ELSE IF (Canopy) THEN
       CALL CanopyCompute(VectorMetCell(ibLoc),RhsMet(ibLoc),Time)

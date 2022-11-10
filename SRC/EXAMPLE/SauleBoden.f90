@@ -22,6 +22,7 @@ MODULE SauleBoden_Mod
   REAL(RealKind) :: TkeHMax=1.0d-2
   REAL(RealKind) :: TkeVMax=1.0d-2
   REAL(RealKind) :: LenMax=1.0d0
+  REAL(RealKind) :: TkeMax=1.0d-2,DisMax=1.0d-4
   LOGICAL :: ProfIn=.FALSE.
   LOGICAL :: WangProfil=.FALSE.
   CHARACTER*40 :: SauleCase=''
@@ -31,6 +32,8 @@ MODULE SauleBoden_Mod
                     ,ThSoil   &
                     ,uMax &
                     ,vMax &
+                    ,TkeMax &
+                    ,DisMax &
                     ,QvSoil   &
                     ,x0Qc &
                     ,y0Qc &
@@ -99,20 +102,20 @@ FUNCTION UStart(x,y,z,zHeight,Time)
   LOGICAL, SAVE :: Load=.TRUE.
  
   SELECT CASE(SauleCase)
-  CASE('Valley')
-    UStart=uMax
-  CASE DEFAULT
-  IF (ProfIn) THEN
-    IF (Load) THEN
-      CALL ReadProfile(cInt,uType,'uProf')
-      Load=.FALSE.
-    END IF
-    UStart=ProfileEqual(cInt,z)
-  ELSE IF (WangProfil) THEN
-    UStart=MIN(uMax,uMax*LOG((z/0.01d0))/LOG((1000.0d0/0.01d0)))
-  ELSE
-    UStart=UMax
-  END IF
+    CASE('Valley')
+      UStart=uMax
+    CASE DEFAULT
+      IF (ProfIn) THEN
+        IF (Load) THEN
+          CALL ReadProfile(cInt,uType,'uProf')
+          Load=.FALSE.
+        END IF
+        UStart=ProfileEqual(cInt,z)
+        ELSE IF (WangProfil) THEN
+          UStart=MIN(uMax,uMax*LOG((z/0.01d0))/LOG((1000.0d0/0.01d0)))
+      ELSE
+        UStart=UMax
+      END IF
   END SELECT
 END FUNCTION UStart
 
@@ -125,17 +128,22 @@ FUNCTION VStart(x,y,z,zHeight,Time)
   REAL(RealKind), POINTER, SAVE :: cInt(:,:)
   CHARACTER*10, SAVE :: vType
   LOGICAL, SAVE :: Load=.TRUE.
-  IF (ProfIn) THEN
-    IF (Load) THEN
-      CALL ReadProfile(cInt,vType,'vProf')
-      Load=.FALSE.
-    END IF
-    VStart=ProfileEqual(cInt,z)
-  ELSE IF (WangProfil) THEN
-    VStart=MIN(vMax,vMax*LOG((z/0.01d0))/LOG((1000.0d0/0.01d0)))
-  ELSE
-    VStart=vMax
-  END IF
+  SELECT CASE(SauleCase)
+    CASE('Valley')
+      VStart=VMax
+    CASE DEFAULT
+      IF (ProfIn) THEN
+        IF (Load) THEN
+          CALL ReadProfile(cInt,vType,'vProf')
+          Load=.FALSE.
+        END IF
+        VStart=ProfileEqual(cInt,z)
+      ELSE IF (WangProfil) THEN
+        VStart=MIN(vMax,vMax*LOG((z/0.01d0))/LOG((1000.0d0/0.01d0)))
+      ELSE
+        VStart=vMax
+      END IF
+  END SELECT
 END FUNCTION VStart
 
 FUNCTION ThProfFun(x,y,z,zHeight,Time)
@@ -429,8 +437,7 @@ FUNCTION TkeStart(x,y,z,zHeight,Time)
   IMPLICIT NONE
   REAL(RealKind) :: TkeStart
   REAL(RealKind) :: x,y,z,zHeight,Time
-  ! TkeStart=Zero
-  TkeStart=0.01d0
+  TkeStart=TkeMax
 END FUNCTION TkeStart
 
 FUNCTION DisStart(x,y,z,zHeight,Time)
@@ -438,7 +445,7 @@ FUNCTION DisStart(x,y,z,zHeight,Time)
   IMPLICIT NONE
   REAL(RealKind) :: DisStart
   REAL(RealKind) :: x,y,z,zHeight,Time
-  DisStart=Zero
+  DisStart=DisMax
 END FUNCTION DisStart
 
 FUNCTION OmeStart(x,y,z,zHeight,Time)

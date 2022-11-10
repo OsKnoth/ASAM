@@ -39,6 +39,8 @@ MODULE OutputWeightBlk_Mod
 
   USE IOControl_Mod
 
+  USE netcdf
+
   IMPLICIT NONE
 
 !================================================================================
@@ -112,8 +114,10 @@ SUBROUTINE WriteMidPointFaces(ix0,ix1,iy0,iy1,iz0,iz1,Faces,Name)
   DO iz=iz0,iz1
     DO iy=iy0,iy1
       DO ix=ix0,ix1
-        IF (ASSOCIATED(Faces(ix,iy,iz)%Face).AND.Faces(ix,iy,iz)%Face%mp>0) THEN
-          NrMP=NrMP+1
+        IF (ASSOCIATED(Faces(ix,iy,iz)%Face)) THEN
+          IF (Faces(ix,iy,iz)%Face%mp>0) THEN
+            NrMP=NrMP+1
+          END IF
         END IF
       END DO
     END DO
@@ -122,9 +126,11 @@ SUBROUTINE WriteMidPointFaces(ix0,ix1,iy0,iy1,iz0,iz1,Faces,Name)
   DO iz=iz0,iz1
     DO iy=iy0,iy1
       DO ix=ix0,ix1
-        IF (ASSOCIATED(Faces(ix,iy,iz)%Face).AND.Faces(ix,iy,iz)%Face%mp>0) THEN
-          WRITE(10,*) ix,iy,iz
-          WRITE(10,*) Faces(ix,iy,iz)%Face%MidPoint
+        IF (ASSOCIATED(Faces(ix,iy,iz)%Face)) THEN
+          IF (Faces(ix,iy,iz)%Face%mp>0) THEN
+            WRITE(10,*) ix,iy,iz
+            WRITE(10,*) Faces(ix,iy,iz)%Face%MidPoint
+          END IF
         END IF
       END DO
     END DO
@@ -264,9 +270,10 @@ SUBROUTINE WriteCutCells(ix0,ix1,iy0,iy1,iz0,iz1,Cells,Name)
   DO iz=iz0,iz1
     DO iy=iy0,iy1
       DO ix=ix0,ix1
-        IF (ASSOCIATED(Cells(ix,iy,iz)%Cell).AND.Cells(ix,iy,iz)%Cell%mp>0) THEN
-!       IF (ASSOCIATED(Cells(ix,iy,iz)%Cell).AND.Cells(ix,iy,iz)%Cell%vc>0) THEN
-          NrMP=NrMP+1
+        IF (ASSOCIATED(Cells(ix,iy,iz)%Cell)) THEN
+          IF (Cells(ix,iy,iz)%Cell%mp>0) THEN
+            NrMP=NrMP+1
+          END IF
         END IF
       END DO
     END DO
@@ -277,28 +284,28 @@ SUBROUTINE WriteCutCells(ix0,ix1,iy0,iy1,iz0,iz1,Cells,Name)
   DO iz=iz0,iz1
     DO iy=iy0,iy1
       DO ix=ix0,ix1
-        IF (ASSOCIATED(Cells(ix,iy,iz)%Cell).AND.Cells(ix,iy,iz)%Cell%mp>0) THEN
-          WRITE(10,*) ix,iy,iz
-          WRITE(10,*) Cells(ix,iy,iz)%Cell%MidPoint
-          WRITE(10,'(6d15.7)') zRauh,Albedo,Emissivity,Cells(ix,iy,iz)%Cell%CutF_MidP
-          IF (nr_soildef>0 .AND. nr_landdef==0) THEN ! Bound-Struct: 4
-            DO nl=1,nr_soildef
-              IF (ix>(s_ixa(nl)*2.e0**RefineX).AND.ix<=(s_ixe(nl)*2.e0**RefineX) .AND. &
-                 iy>(s_iya(nl)*2.e0**RefineY).AND.iy<=(s_iye(nl)*2.e0**RefineY)) THEN
-                WRITE(10,*) soil_type(nl,1:nr_lsoil)
-              END IF
-            END DO
-          ELSE IF (nr_soildef==0 .AND. nr_landdef>0) THEN  ! Bound-Struct: 5
-            WRITE(10,'(I3)') Cells(ix,iy,iz)%Cell%LandClass
-          ELSE IF (nr_soildef>0 .AND. nr_landdef>0) THEN  ! Bound-Struct: 6
-            DO nl=1,nr_soildef
-              ! WRITE(*,*) 'nl,nrsoildef',nl,nr_lsoil
-              ! WRITE(*,*) 'LandClass',ix,iy,iz,Cells(ix,iy,iz)%Cell%LandClass
-              IF (ix>(s_ixa(nl)*2.e0**RefineX).AND.ix<=(s_ixe(nl)*2.e0**RefineX) .AND. &
-                  iy>(s_iya(nl)*2.e0**RefineY).AND.iy<=(s_iye(nl)*2.e0**RefineY)) THEN
-                WRITE(10,*) Cells(ix,iy,iz)%Cell%LandClass,soil_type(nl,1:nr_lsoil)
-              END IF
-            END DO
+        IF (ASSOCIATED(Cells(ix,iy,iz)%Cell)) THEN
+          IF (Cells(ix,iy,iz)%Cell%mp>0) THEN
+            WRITE(10,*) ix,iy,iz
+            WRITE(10,*) Cells(ix,iy,iz)%Cell%MidPoint
+            WRITE(10,'(6d15.7)') zRauh,Albedo,Emissivity,Cells(ix,iy,iz)%Cell%CutF_MidP
+            IF (nr_soildef>0 .AND. nr_landdef==0) THEN ! Bound-Struct: 4
+              DO nl=1,nr_soildef
+                IF (ix>(s_ixa(nl)*2.e0**RefineX).AND.ix<=(s_ixe(nl)*2.e0**RefineX) .AND. &
+                   iy>(s_iya(nl)*2.e0**RefineY).AND.iy<=(s_iye(nl)*2.e0**RefineY)) THEN
+                  WRITE(10,*) soil_type(nl,1:nr_lsoil)
+                END IF
+              END DO
+            ELSE IF (nr_soildef==0 .AND. nr_landdef>0) THEN  ! Bound-Struct: 5
+              WRITE(10,'(I3)') Cells(ix,iy,iz)%Cell%LandClass
+            ELSE IF (nr_soildef>0 .AND. nr_landdef>0) THEN  ! Bound-Struct: 6
+              DO nl=1,nr_soildef
+                IF (ix>(s_ixa(nl)*2.e0**RefineX).AND.ix<=(s_ixe(nl)*2.e0**RefineX) .AND. &
+                    iy>(s_iya(nl)*2.e0**RefineY).AND.iy<=(s_iye(nl)*2.e0**RefineY)) THEN
+                  WRITE(10,*) Cells(ix,iy,iz)%Cell%LandClass,soil_type(nl,1:nr_lsoil)
+                END IF
+              END DO
+            END IF
           END IF
         END IF
       END DO
@@ -498,6 +505,318 @@ INTEGER :: i,j,k,ib
 END SUBROUTINE OutMPCellBorder
 
 
+SUBROUTINE WriteWeightNetCDF(FileName)
+  CHARACTER(*), INTENT(IN)  :: FileName
+
+  INTEGER :: ib
+  INTEGER :: ix,iy,iz
+  INTEGER :: ncid
+  INTEGER :: nblocks_id
+  INTEGER :: dim_id
+  INTEGER :: x2glob, y2glob, z2glob
+  INTEGER :: x2glob_id, y2glob_id, z2glob_id
+  INTEGER :: x2b, y2b, z2b
+  INTEGER :: x2b_id, y2b_id, z2b_id
+  INTEGER :: xb, yb, zb
+  INTEGER :: xb_id, yb_id, zb_id
+  INTEGER :: fvolb
+  INTEGER :: fvolb_id
+  INTEGER :: faxb,fayb,fazb
+  INTEGER :: faxb_id,fayb_id,fazb_id
+  INTEGER :: varid(60)
+  INTEGER :: Info
+  INTEGER :: start, count
+
+  INTEGER, ALLOCATABLE :: BlockLen(:,:)
+  INTEGER, ALLOCATABLE :: I1Temp(:)
+
+  Info = nf90_create(TRIM(FileName)//'.nc',NF90_CLOBBER, ncid)
+  x2glob = domain%ix1 - domain%ix0 + 1
+  y2glob = domain%iy1 - domain%iy0 + 1
+  z2glob = domain%iz1 - domain%iz0 + 1
+  Info = nf90_def_dim(ncid, "x2glob", x2glob, x2glob_id)
+  Info = nf90_def_dim(ncid, "y2glob", y2glob, y2glob_id)
+  Info = nf90_def_dim(ncid, "z2glob", z2glob, z2glob_id)
+  Info = nf90_def_dim(ncid, "nblocks", nb, nblocks_id)
+  Info = nf90_def_dim(ncid, "dim", 3, dim_id)
+  x2b = 0
+  y2b = 0
+  z2b = 0
+  xb = 0
+  yb = 0
+  zb = 0
+  fvolb = 0
+  faxb = 0
+  fayb = 0
+  fazb = 0
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    x2b = x2b + ix1 - ix0 + 1
+    y2b = y2b + iy1 - iy0 + 1
+    z2b = z2b + iz1 - iz0 + 1
+    xb = xb + ix1 - ix0
+    yb = yb + iy1 - iy0
+    zb = zb + iz1 - iz0
+    fvolb = fvolb + (ix1 - ix0)*(iy1 - iy0)*(iz1 - iz0)
+    faxb = faxb + (ix1 - ix0 + 1)*(iy1 - iy0)*(iz1 - iz0)
+    fayb = fayb + (ix1 - ix0)*(iy1 - iy0 + 1)*(iz1 - iz0)
+    fazb = fazb + (ix1 - ix0)*(iy1 - iy0)*(iz1 - iz0 + 1)
+  END DO  
+  Info = nf90_def_dim(ncid, "x2b", x2b, x2b_id)
+  Info = nf90_def_dim(ncid, "y2b", y2b, y2b_id)
+  Info = nf90_def_dim(ncid, "z2b", z2b, z2b_id)
+  Info = nf90_def_dim(ncid, "xb", xb, xb_id)
+  Info = nf90_def_dim(ncid, "yb", yb, yb_id)
+  Info = nf90_def_dim(ncid, "zb", zb, zb_id)
+  Info = nf90_def_dim(ncid, "fvolb", fvolb, fvolb_id)
+  Info = nf90_def_dim(ncid, "faxb", faxb, faxb_id)
+  Info = nf90_def_dim(ncid, "fayb", fayb, fayb_id)
+  Info = nf90_def_dim(ncid, "fazb", fazb, fazb_id)
+
+
+  Info = nf90_def_var(ncid, "BlockFaceLen", NF90_INT, (/ nblocks_id, dim_id/), varid(1))
+  Info = nf90_def_var(ncid, "BlockCellLen", NF90_INT, (/ nblocks_id, dim_id/), varid(2))
+  Info = nf90_def_var(ncid, "resx_level", NF90_INT, nblocks_id, varid(3))
+  Info = nf90_def_var(ncid, "resy_level", NF90_INT, nblocks_id, varid(4))
+  Info = nf90_def_var(ncid, "resz_level", NF90_INT, nblocks_id, varid(5))
+  Info = nf90_def_var(ncid, "x2glob", NF90_DOUBLE, x2glob_id, varid(6))
+  Info = nf90_def_var(ncid, "y2glob", NF90_DOUBLE, y2glob_id, varid(7))
+  Info = nf90_def_var(ncid, "z2glob", NF90_DOUBLE, z2glob_id, varid(8))
+  Info = nf90_def_var(ncid, "ix_first", NF90_INT, nblocks_id, varid(9))
+  Info = nf90_def_var(ncid, "jy_first", NF90_INT, nblocks_id, varid(10))
+  Info = nf90_def_var(ncid, "kz_first", NF90_INT, nblocks_id, varid(11))
+  Info = nf90_def_var(ncid, "ix_last", NF90_INT, nblocks_id, varid(12))
+  Info = nf90_def_var(ncid, "jy_last", NF90_INT, nblocks_id, varid(13))
+  Info = nf90_def_var(ncid, "kz_last", NF90_INT, nblocks_id, varid(14))
+  Info = nf90_def_var(ncid, "x2b", NF90_DOUBLE, x2b_id, varid(15))
+  Info = nf90_def_var(ncid, "y2b", NF90_DOUBLE, y2b_id, varid(16))
+  Info = nf90_def_var(ncid, "z2b", NF90_DOUBLE, z2b_id, varid(17))
+  Info = nf90_def_var(ncid, "xb", NF90_DOUBLE, xb_id, varid(18))
+  Info = nf90_def_var(ncid, "yb", NF90_DOUBLE, yb_id, varid(19))
+  Info = nf90_def_var(ncid, "zb", NF90_DOUBLE, zb_id, varid(20))
+  Info = nf90_def_var(ncid, "fvolb", NF90_DOUBLE, fvolb_id, varid(21))
+  Info = nf90_def_var(ncid, "faxb", NF90_DOUBLE, faxb_id, varid(22))
+  Info = nf90_def_var(ncid, "fayb", NF90_DOUBLE, fayb_id, varid(23))
+  Info = nf90_def_var(ncid, "fazb", NF90_DOUBLE, fazb_id, varid(24))
+
+  Info = nf90_enddef(ncid)
+
+  ALLOCATE(BlockLen(nb,3))
+
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    BlockLen(ib,1) = ix1 - ix0 + 1 
+    BlockLen(ib,2) = iy1 - iy0 + 1 
+    BlockLen(ib,3) = iz1 - iz0 + 1 
+  END DO  
+  Info = nf90_put_var(ncid, varid(1), BlockLen)
+
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    BlockLen(ib,1) = ix1 - ix0 
+    BlockLen(ib,2) = iy1 - iy0 
+    BlockLen(ib,3) = iz1 - iz0 
+  END DO  
+  Info = nf90_put_var(ncid, varid(2), BlockLen)
+
+  DEALLOCATE(BlockLen)
+
+  ALLOCATE(I1Temp(nb))
+
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = abs(RefineX) 
+  END DO  
+  Info = nf90_put_var(ncid, varid(3), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = abs(RefineY) 
+  END DO  
+  Info = nf90_put_var(ncid, varid(4), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = abs(RefineZ) 
+  END DO  
+  Info = nf90_put_var(ncid, varid(5), I1Temp)
+
+  DEALLOCATE(I1Temp)
+
+  Info = nf90_put_var(ncid, varid(6), domain%xP)
+  Info = nf90_put_var(ncid, varid(7), domain%yP)
+  Info = nf90_put_var(ncid, varid(8), domain%zP)
+
+  ALLOCATE(I1Temp(nb))
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igx0
+  END DO  
+  Info = nf90_put_var(ncid, varid(9), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igy0
+  END DO  
+  Info = nf90_put_var(ncid, varid(10), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igz0
+  END DO  
+  Info = nf90_put_var(ncid, varid(11), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igx1
+  END DO  
+  Info = nf90_put_var(ncid, varid(12), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igy1
+  END DO  
+  Info = nf90_put_var(ncid, varid(13), I1Temp)
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    I1Temp(ib) = igz1
+  END DO  
+  Info = nf90_put_var(ncid, varid(14), I1Temp)
+
+  DEALLOCATE(I1Temp)
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = ix1 - ix0 +1
+    Info = nf90_put_var(ncid, varid(15), xP, start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = iy1 - iy0 +1
+    Info = nf90_put_var(ncid, varid(16), yP, start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = iz1 - iz0 +1
+    Info = nf90_put_var(ncid, varid(17), zP, start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = ix1 - ix0
+    Info = nf90_put_var(ncid, varid(18), 0.5d0 * (xP(ix0:ix1-1) + xP(ix0+1:ix1)), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = iy1 - iy0
+    Info = nf90_put_var(ncid, varid(19), 0.5d0 * (yP(iy0:iy1-1) + yP(iy0+1:iy1)), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    count = iz1 - iz0
+    Info = nf90_put_var(ncid, varid(20), 0.5d0 * (zP(iz0:iz1-1) + zP(iz0+1:iz1)), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    VolC=-1.d40
+    NrRW_Cells = 0
+    CALL CountWeightCells(ix0,ix1,iy0,iy1,iz0,iz1,Vertices,Cells &
+                         ,VolC(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1))
+    count = (iz1 - iz0)*(iy1 - iy0)*(ix1 - ix0)
+    DO iz = iz0+1, iz1
+      DO iy = iy0+1, iy1
+        DO ix = ix0+1, ix1
+          IF (VolC(ix,iy,iz) >= 0.0d0) THEN
+            VolC(ix,iy,iz) = VolC(ix,iy,iz) / ((zP(iz) - zP(iz-1))*(yP(iy) - yP(iy-1))*(xP(ix) - xP(ix-1)))
+          ELSE
+            VolC(ix,iy,iz) = 1.0d0
+          END IF  
+        END DO  
+      END DO  
+    END DO  
+    Info = nf90_put_var(ncid, varid(21), VolC(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    FU = -1.d40
+    NrRW_FacesYZ=0
+    CALL CountWeightFacesYZ(ix0,ix1,iy0,iy1,iz0,iz1,Vertices,Faces_YZ &
+                           ,FU(ix0:ix1,iy0+1:iy1,iz0+1:iz1))
+    count = (iz1 - iz0)*(iy1 - iy0)*(ix1 - ix0 + 1)
+    DO iz = iz0+1, iz1
+      DO iy = iy0+1, iy1
+        DO ix = ix0, ix1
+          IF (FU(ix,iy,iz) >= 0.0d0) THEN
+            FU(ix,iy,iz) = FU(ix,iy,iz) / ((zP(iz) - zP(iz-1))*(yP(iy) - yP(iy-1)))
+          ELSE
+            FU(ix,iy,iz) = 1.0d0
+          END IF  
+        END DO  
+      END DO  
+    END DO  
+    Info = nf90_put_var(ncid, varid(22), FU(ix0:ix1,iy0+1:iy1,iz0+1:iz1), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    FV=-1.d40
+    NrRW_FacesZX=0
+    CALL CountWeightFacesZX(ix0,ix1,iy0,iy1,iz0,iz1,Vertices,Faces_ZX &
+                           ,FV(ix0+1:ix1,iy0:iy1,iz0+1:iz1))
+    count = (iz1 - iz0)*(iy1 - iy0 + 1)*(ix1 - ix0)
+    DO iz = iz0+1, iz1
+      DO iy = iy0, iy1
+        DO ix = ix0+1, ix1
+          IF (FV(ix,iy,iz) >= 0.0d0) THEN
+            FV(ix,iy,iz) = FV(ix,iy,iz) / ((zP(iz) - zP(iz-1))*(xP(ix) - xP(ix-1)))
+          ELSE
+            FV(ix,iy,iz) = 1.0d0
+          END IF  
+        END DO  
+      END DO  
+    END DO  
+    Info = nf90_put_var(ncid, varid(23), FV(ix0+1:ix1,iy0:iy1,iz0+1:iz1), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+
+  start=1
+  DO ib=1,nb
+    CALL Set(Floor(ib))
+    FW=-1.d40
+    NrRW_FacesXY=0
+    CALL CountWeightFacesXY(ix0,ix1,iy0,iy1,iz0,iz1,Vertices,Faces_XY &
+                           ,FW(ix0+1:ix1,iy0+1:iy1,iz0:iz1))
+    count = (iz1 - iz0 + 1)*(iy1 - iy0)*(ix1 - ix0)
+    DO iz = iz0, iz1
+      DO iy = iy0+1, iy1
+        DO ix = ix0+1, ix1
+          IF (FW(ix,iy,iz) >= 0.0d0) THEN
+            FW(ix,iy,iz) = FW(ix,iy,iz) / ((xP(ix) - xP(ix-1))*(yP(iy) - yP(iy-1)))
+          ELSE
+            FW(ix,iy,iz) = 1.0d0
+          END IF  
+        END DO  
+      END DO  
+    END DO  
+    Info = nf90_put_var(ncid, varid(24), FW(ix0+1:ix1,iy0+1:iy1,iz0:iz1), start=(/start/), count=(/count/))
+    start = start + count
+  END DO  
+  Info = nf90_close(ncid)
+END SUBROUTINE WriteWeightNetCDF
+
 SUBROUTINE WriteWeightBlk(FileName)
   CHARACTER*50 :: FileName
 
@@ -658,7 +977,6 @@ SUBROUTINE WriteWeightBlk(FileName)
                            ,Faces_XY,'   NrMP_FacesXY')
     WRITE(10,*) NrRW_Cells, '    NrW_Cells'
     CALL WriteWeight(ix0,ix1+1,iy0,iy1+1,iz0,iz1+1,VolC)
-    WRITE(*,*) 'WriteCutCells',ib,ix0+1,ix1,iz0+1,iz1
     CALL WriteCutCells(ix0+1,ix1,iy0+1,iy1,iz0+1,iz1 &
                       ,Cells,'     NrMP_Cells')
     CALL SetWeightCells(ix0,ix1,iy0,iy1,iz0,iz1,Vertices,Cells &

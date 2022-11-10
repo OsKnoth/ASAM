@@ -18,7 +18,7 @@ OPT =
 OP =
 CL=
 
-INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
+INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/include
 KINCL       = -I$(DEFPATH)/LIB_$(MACH)
 KGRIDINCL   = -I$(DEFPATH)/LIBGRID_$(MACH)
 LIB         = $(DEFPATH)/LIB_$(MACH)
@@ -36,5 +36,5 @@ NETCDF     += -L/usr/local/lib -lz       -L/usr/local/lib -lsz
 CURFIT      = -L GRID/LIB -l_cur
 SURFIT      = -L GRID/LIB -l_surf
 GK          = -L GRID/LIB -l_gk
-MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/lib -ldmumps  -lmumps_common  -lpord
-SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.0.1/libscalapack.a 
+MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/lib -ldmumps  -lmumps_common  -lpord
+SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.1.0/libscalapack.a 

@@ -243,6 +243,7 @@ SUBROUTINE SoilCompute(Time)
             wLoc*wLoc
     VT    = SQRT(MAX(V-VN*VN,Zero))          
 
+    WRITE(*,*) 'DragM ',DragM
 !   Wind
     uRhsL(ix,iy,iz,1)=uRhsL(ix,iy,iz,1)- &
                    RhoAir*FL*DragM*VT*(uLocL-n1*VN)

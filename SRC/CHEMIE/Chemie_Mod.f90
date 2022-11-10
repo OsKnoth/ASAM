@@ -326,6 +326,7 @@ SUBROUTINE Allocate_Jac(JacTrans)
     ALLOCATE(JacTrans(ibLoc)%JacFallRhoL)
     CALL SpNullify(JacTrans(ibLoc)%JacFallRhoL)
     CALL Allocate(JacTrans(ibLoc)%JacFallRhoL,2)
+
     ALLOCATE(JacTrans(ibLoc)%JacSChemLU)
     JacSChemLU=>JacTrans(ibLoc)%JacSChemLU
     JacSChemLU%Struct=>StructLUChem

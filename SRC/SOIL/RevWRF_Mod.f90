@@ -216,7 +216,6 @@ MODULE RevWRF_Mod
       REAL(RealKind) :: x_n1
       REAL(RealKind) :: fx,dfdx
       x_n1=x_n-fx/dfdx
-      !WRITE(*,*) 'x_n1',x_n1,'x_n',x_n,fx,dfdx
     END SUBROUTINE
 
     SUBROUTINE FirstGuess(RiB,Chi,z,z0,z0h)

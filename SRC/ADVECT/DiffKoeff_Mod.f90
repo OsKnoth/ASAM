@@ -333,6 +333,9 @@ SUBROUTINE DFromTkeDisCompute
         IF (dis(ix,iy,iz,1) > 1.d-8) THEN
           D(ix,iy,iz,1) = MIN(MAX(Cmy0*tkeC*tkeC/(disC+Eps),rhoC*DiffMin),rhoC*DiffMax) &
                           *VolC(ix,iy,iz)/(VolC(ix,iy,iz)+Eps)
+          IF (iz<=3) THEN
+            WRITE(*,*) 'D(ix,iy,iz,1)',D(ix,iy,iz,1),tkeC,disC
+          END IF  
         ELSE
           D(ix,iy,iz,1) = RhoC*DiffMin
         END IF 

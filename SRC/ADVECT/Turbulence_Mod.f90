@@ -113,7 +113,8 @@ SUBROUTINE Turbulence(Vector,Rhs,UVec)
 
   TYPE(Vector4Cell_T) :: Vector,Rhs
   TYPE (Vector4Cell_T), OPTIONAL :: UVec
-
+  
+  WRITE(*,*) 'In Turbulence',TkeDis
   IF (TkeDis) THEN
     uCL=>Vector%Vec(uPosL)%c
     vCL=>Vector%Vec(vPosL)%c
@@ -409,6 +410,9 @@ SUBROUTINE TkeDisCompute
                          FW(ix:ix,iy:iy,iz-1:iz),        &
                          S,O)
 
+        IF (iz<=3) THEN
+          WRITE(*,*) 'TkeDis',S,O
+        END IF  
         tkeC = tke(ix,iy,iz,1)
         disC = dis(ix,iy,iz,1)
         tkeRhs(ix,iy,iz,1) = tkeRhs(ix,iy,iz,1)  &           !!!FILAUS
@@ -513,8 +517,8 @@ SUBROUTINE JacTkeDisCompute
 
         tkeC = MAX(tke(ix,iy,iz,1),Zero)
         disC = MAX(dis(ix,iy,iz,1),Zero)
-!       tkeC = tke(ix,iy,iz,1)
-!       disC = dis(ix,iy,iz,1)
+        tkeC = tke(ix,iy,iz,1)
+        disC = dis(ix,iy,iz,1)
 
         AS(IndexMet(tkePosJac,tkePosJac))%c(ix,iy,iz,1) = AS(IndexMet(tkePosJac,tkePosJac))%c(ix,iy,iz,1) &
                                                           -Cmy0*Two*tkeC/(D(ix,iy,iz,1)+Eps)
@@ -1192,7 +1196,8 @@ SUBROUTINE JacTkeDisWallCompute
     rhoC  = Rho(ix,iy,iz,1)
     AS(IndexMet(disPosJac,tkePosJac))%c(ix,iy,iz,1) = AS(IndexMet(disPosJac,tkePosJac))%c(ix,iy,iz,1)        &
                                                       +(Cmy0)**0.75d0*FL*D(ix,iy,iz,1)/PrandtlNumber(disPos) &
-                                                      *1.5d0*SQRT(ABS(tkeC))*SIGN(tkeC,1.0d0)/(Rho(ix,iy,iz,1)+Eps)**1.5d0
+                                                      *1.5d0*SQRT(ABS(tkeC))*SIGN(tkeC,1.0d0)/(Rho(ix,iy,iz,1)+Eps)**1.5d0 &
+                                                      /(Karm*(z+zRauh)**2)/(VolC(ix,iy,iz)+Eps) 
   END DO
 
 END SUBROUTINE JacTkeDisWallCompute

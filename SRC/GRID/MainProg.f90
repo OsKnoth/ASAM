@@ -158,6 +158,7 @@ PROGRAM MainProg
 ! CALL Display_OutWeightBlk(OutputFile)
   WRITE(*,*) 'WriteWeightBlk'
   CALL WriteWeightBlk(OutputFile)
+  CALL WriteWeightNetCDF(OutputFile)
 ! IF (WNull) THEN
 !   CALL Display_OutWeightNullBlk(OutputFile)
 !   CALL WriteWeightNullBlk(OutputFile)
