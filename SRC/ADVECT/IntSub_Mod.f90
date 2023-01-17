@@ -45,8 +45,10 @@ SUBROUTINE ProjectVelFace(dt,Vel,IncrVecMet,VecMet,IncrVecChem,VecChem,Tol,VecG)
 !   Projection
   b=Zero
   x=Zero
+  WRITE(*,*) 'Vel',DOT(Vel,Vel)
   CALL rhs(b,Vel,IncrVecMet,VecG)
   Temp=DOT2(b,b)
+  WRITE(*,*) 'Temp',Temp
   MaxIter=QMRMaxIter
   IF (PRESENT(Tol)) THEN
     TolAct=Tol

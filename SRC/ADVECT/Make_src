@@ -1,8 +1,6 @@
 include ../$(IN)
 
 OBJ = RungeKuttaMethods_Mod.f90\
-      PeerMethods_Mod.f90\
-      LinPeerMethods_Mod.f90\
       TurbulentInflow_Mod.f90\
       Operator_Mod.f90\
       DiffKoeff_Mod.f90\

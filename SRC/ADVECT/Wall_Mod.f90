@@ -1150,8 +1150,6 @@ SUBROUTINE DragCompute(Time)
     RhoDryLoc   = RhoLoc-RhoVLoc-RhoLLoc-RhoILoc
     pLoc        = PressureTheta(RhoDryLoc,RhoVLoc,RhoLLoc,RhoILoc,Th(ix,iy,iz,1))+Eps
 
-    WRITE(*,*) 'DragM',DragM,'DragQ',DragQ,'DragH',DragH,BoundCell(i)%zRauh,uCL(ix,iy,iz,1),uCR(ix,iy,iz,1)
-
     uLoc=Half*(uCL(ix,iy,iz,1)+uCR(ix,iy,iz,1))/(RhoLoc+Eps)
     vLoc=Half*(vCL(ix,iy,iz,1)+vCR(ix,iy,iz,1))/(RhoLoc+Eps)
     wLoc=Half*(wCL(ix,iy,iz,1)+wCR(ix,iy,iz,1))/(RhoLoc+Eps)

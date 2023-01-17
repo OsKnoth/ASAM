@@ -62,15 +62,22 @@ PROGRAM MainProg
   CALL InputModelBCVel(InputFileName)
 ! CALL Display_GridFile(InputFileName)
   CALL ReadGrid(InputFileName)
+  WRITE(*,*) 'MainGrid 1'
   CALL Set_Domain_OutView
+  WRITE(*,*) 'MainGrid 2'
   CALL GetNeighbor
+  WRITE(*,*) 'MainGrid 3'
   CALL NeighborBounds
+  WRITE(*,*) 'MainGrid 4'
   CALL Allocate(Floor)
 
   ! Weights 
 ! CALL Display_ProcWeights(InputFileName)
+  WRITE(*,*) 'MainGrid 5'
   CALL ReadWeights(InputFileName)
+  WRITE(*,*) 'MainGrid 6'
   CALL InputFunction(InputFileName)
+  WRITE(*,*) 'MainGrid 7'
   CALL InputEmission(InputFileName)
   WRITE(*,*) 'NameFunction  ',NameFunction
   SELECT CASE(NameFunction)

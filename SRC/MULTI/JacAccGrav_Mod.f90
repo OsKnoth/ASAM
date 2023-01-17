@@ -2660,7 +2660,6 @@ SUBROUTINE LaplComputeMuTR(A)
   n1C=nx
   n2C=ny
   n3C=nz
-
   DO iRef=1,RefLevel
     Shift=2**(iRef-1)-1
     CALL SpNullify(Div)

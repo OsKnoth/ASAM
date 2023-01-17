@@ -8,7 +8,7 @@ USE Boundary_Mod, ONLY: BoundCommInterface, HaloType, Bound, copy_data_on_bnd, &
                         gradientp_boundary_condition, matmul_boundary_condition, intcell2face_boundary_condition, &
                         init_two_sided_exchange, finish_two_sided_exchange, matmul_bl_boundary_condition, &
                         matmul_rd_boundary_condition
-USE MPI_mod
+USE Parallel_Mod
 USE Index_Mod, ONLY: IndexC3, IndexC3block, IndexU3block, IndexV3block, IndexW3block, &
                      findloc_real
 
@@ -74,6 +74,9 @@ TYPE TransfCommInterface
   INTEGER, ALLOCATABLE :: rank_ptr(:)
 END TYPE TransfCommInterface
 
+
+REAL(Realkind), PARAMETER :: sor_param = 1.4
+
 !INTERFACE
 
 !  SUBROUTINE prolongate(self, field1d_coarse, field1d_fine, mode)
@@ -102,7 +105,6 @@ END TYPE TransfCommInterface
 
 CONTAINS
 
-
 RECURSIVE SUBROUTINE v_cycle(self, x, b, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
 
   IMPLICIT NONE
@@ -122,12 +124,12 @@ RECURSIVE SUBROUTINE v_cycle(self, x, b, nsmooth_pre, nsmooth_post, nsmooth_coar
 
   nsmooth_pre_def = 2
   nsmooth_post_def = 2
-  nsmooth_coarsest_def = 10
+  nsmooth_coarsest_def = 20
 
   IF (PRESENT(nsmooth_pre)) nsmooth_pre_def = nsmooth_pre
   IF (PRESENT(nsmooth_post)) nsmooth_post_def = nsmooth_post
   IF (PRESENT(nsmooth_coarsest)) nsmooth_coarsest_def = nsmooth_coarsest
-  
+
   IF (ASSOCIATED(self%next_coarse)) THEN
     CALL self%smoother%smooth(x, b, nsmooth_pre_def)
     CALL self%mat_mul(r, x)
@@ -148,7 +150,8 @@ RECURSIVE SUBROUTINE v_cycle(self, x, b, nsmooth_pre, nsmooth_post, nsmooth_coar
   
 END SUBROUTINE v_cycle
 
-SUBROUTINE solve_mg(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
+
+SUBROUTINE solve_mg(self, x, b, n_iter, res_tol, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
 
   IMPLICIT NONE
  
@@ -156,16 +159,18 @@ SUBROUTINE solve_mg(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmooth_coars
   REAL(Realkind), INTENT(in) :: b(:)
   REAL(Realkind), INTENT(inout) :: x(:)
   INTEGER, INTENT(in) :: n_iter
+  REAL(Realkind), INTENT(in) :: res_tol
   INTEGER, OPTIONAL, INTENT(in) :: nsmooth_pre, nsmooth_post, nsmooth_coarsest
   INTEGER :: nsmooth_pre_def, nsmooth_post_def, nsmooth_coarsest_def
 
   REAL(Realkind) :: r(SIZE(x, 1))
+  REAL(Realkind) :: rmax, rmaxglob
 
   INTEGER :: i, j, n
 
   nsmooth_pre_def = 2
   nsmooth_post_def = 2
-  nsmooth_coarsest_def = 10
+  nsmooth_coarsest_def = 20
 
   IF (PRESENT(nsmooth_pre)) nsmooth_pre_def = nsmooth_pre
   IF (PRESENT(nsmooth_post)) nsmooth_post_def = nsmooth_post
@@ -174,18 +179,23 @@ SUBROUTINE solve_mg(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmooth_coars
   n = SIZE(x, 1)
 
   DO i = 1, n_iter
-    CALL self%v_cycle(x, b, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
+    CALL self%v_cycle(x, b, nsmooth_pre_def, nsmooth_post_def, nsmooth_coarsest_def)
+!    CALL self%smoother%smooth(x, b, nsmooth_post_def)
     CALL self%mat_mul(r, x)
     DO j = 1, n
       r(j) = b(j) - r(j)
     END DO
-    WRITE(*,*) "RMAX:",  maxval(abs(r))
+
+    rmax = maxval(abs(r))
+    rmaxglob = max_para(rmax) 
+    IF (self%myrank .EQ. 0)  WRITE(*,*) "Iteration, rmax:", i,  rmaxglob
+    IF (rmaxglob .LE. res_tol) EXIT
   END DO
 
 END SUBROUTINE solve_mg
 
 
-SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
+SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, res_tol, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
 
   IMPLICIT NONE
 
@@ -193,8 +203,11 @@ SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmoo
   REAL(Realkind), INTENT(in) :: b(:)
   REAL(Realkind), INTENT(inout) :: x(:)
   INTEGER, INTENT(in) :: n_iter
+  REAL(Realkind), INTENT(in) :: res_tol
   INTEGER, OPTIONAL, INTENT(in) :: nsmooth_pre, nsmooth_post, nsmooth_coarsest
   INTEGER :: nsmooth_pre_def, nsmooth_post_def, nsmooth_coarsest_def
+
+  REAL(Realkind) :: rmax, rmaxglob
 
   REAL(Realkind) :: r(SIZE(x, 1)), &
                     r_tilde(SIZE(x, 1)), &
@@ -211,7 +224,7 @@ SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmoo
 
   nsmooth_pre_def = 2
   nsmooth_post_def = 2
-  nsmooth_coarsest_def = 10
+  nsmooth_coarsest_def = 20
 
   IF (PRESENT(nsmooth_pre)) nsmooth_pre_def = nsmooth_pre
   IF (PRESENT(nsmooth_post)) nsmooth_post_def = nsmooth_post
@@ -245,7 +258,7 @@ SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmoo
     END IF
 
     y(:) = 0.0
-    CALL self%v_cycle(y, p, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
+    CALL self%v_cycle(y, p, nsmooth_pre_def, nsmooth_post_def, nsmooth_coarsest_def)
    
     CALL self%mat_mul(v, y)
     alpha = rho_tilde / (dot_para(r_tilde, v) + eps)
@@ -255,7 +268,7 @@ SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmoo
     END DO
 
     z(:) = 0.0
-    CALL self%v_cycle(z, s, nsmooth_pre, nsmooth_post, nsmooth_coarsest)
+    CALL self%v_cycle(z, s, nsmooth_pre_def, nsmooth_post_def, nsmooth_coarsest_def)
 
     CALL self%mat_mul(t, z)
 
@@ -267,8 +280,11 @@ SUBROUTINE solve_mgbicgstab(self, x, b, n_iter, nsmooth_pre, nsmooth_post, nsmoo
     END DO
   
     rho = rho_tilde
- 
-    WRITE(*,*) "RMAX:",  maxval(abs(r))
+
+    rmax = maxval(abs(r))
+    rmaxglob = max_para(rmax)
+    IF (self%myrank .EQ. 0)  WRITE(*,*) "Iteration, rmax:", i,  rmaxglob 
+    IF (rmaxglob .LE. res_tol) EXIT
   END DO
 
 END SUBROUTINE solve_mgbicgstab
@@ -560,26 +576,50 @@ END SUBROUTINE div_mul
 !-----------------------------------------------------------------------
 !Routines to initialize things
 
-SUBROUTINE init_smoother(self, omega)
+SUBROUTINE init_smoother(self)
 
   IMPLICIT NONE
   CLASS(SubDomain) :: self
-  REAL(Realkind), INTENT(in) :: omega
   INTEGER :: i
+  REAL(Realkind) :: val
+  REAL(Realkind), PARAMETER :: zero=0.0
+
 
   IF (.NOT. ASSOCIATED(self%smoother)) THEN
     ALLOCATE(self%smoother)
     ALLOCATE(self%smoother%mat_rd)
     ALLOCATE(self%smoother%mat_bl)
+
+
     CALL SpMm_SpRowCol(self%smoother%mat_rd, self%Rd, self%mat)
     CALL SpMm_SpRowCol(self%smoother%mat_bl, self%Bl, self%mat)
+
     ALLOCATE(self%smoother%diaginv_rd(self%mat%m))
     ALLOCATE(self%smoother%diaginv_bl(self%mat%m))
 
-!    ALLOCATE(self%smoother%diaginv(self%mat%m))
 
     IF (ASSOCIATED(self%bc_if)) THEN
        self%smoother%comm_interf => self%bc_if
+      ALLOCATE(self%smoother%comm_interf%halo%mat_rd_halo)
+      ALLOCATE(self%smoother%comm_interf%halo%mat_bl_halo)
+
+      CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_rd_halo, self%smoother%comm_interf%halo%Rd_halo, &
+                         self%smoother%comm_interf%halo%mat_halo)
+      CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_bl_halo, self%smoother%comm_interf%halo%Bl_halo, &
+                         self%smoother%comm_interf%halo%mat_halo)
+    END IF
+!    ALLOCATE(self%smoother%diaginv(self%mat%m))
+
+  ELSE
+
+    CALL SpMm_SpRowCol(self%smoother%mat_rd, self%Rd, self%mat, .False.)
+    CALL SpMm_SpRowCol(self%smoother%mat_bl, self%Bl, self%mat, .False.)
+
+    IF (ASSOCIATED(self%bc_if)) THEN
+      CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_rd_halo, self%smoother%comm_interf%halo%Rd_halo, &
+                         self%smoother%comm_interf%halo%mat_halo, .False.)
+      CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_bl_halo, self%smoother%comm_interf%halo%Bl_halo, &
+                         self%smoother%comm_interf%halo%mat_halo, .False.)
     END IF
   END IF
 
@@ -596,26 +636,27 @@ SUBROUTINE init_smoother(self, omega)
 
 
     IF (self%smoother%mat_rd%Diagptr(i) == -1) THEN
-      self%smoother%diaginv_rd(i) = 0.0
+      self%smoother%diaginv_rd(i) = zero
     ELSE
-      self%smoother%diaginv_rd(i) = omega / (self%smoother%mat_rd%Val(self%smoother%mat_rd%Diagptr(i)) + 1e-20) ** 2 * &
-                                    self%smoother%mat_rd%Val(self%smoother%mat_rd%Diagptr(i))
+      val = self%smoother%mat_rd%Val(self%smoother%mat_rd%Diagptr(i))
+      IF (ABS(val) .GT. zero) THEN
+         self%smoother%diaginv_rd(i) = sor_param / self%smoother%mat_rd%Val(self%smoother%mat_rd%Diagptr(i))
+      ELSE
+         self%smoother%diaginv_rd(i) = zero
+      END IF
     END IF
 
     IF (self%smoother%mat_bl%Diagptr(i) == -1) THEN
-      self%smoother%diaginv_bl(i) = 0.0
+      self%smoother%diaginv_bl(i) = zero
     ELSE
-      self%smoother%diaginv_bl(i) = omega / (self%smoother%mat_bl%Val(self%smoother%mat_bl%Diagptr(i)) + 1e-20) ** 2 * &
-                                    self%smoother%mat_bl%Val(self%smoother%mat_bl%Diagptr(i))
+      val = self%smoother%mat_bl%Val(self%smoother%mat_bl%Diagptr(i))
+      IF (ABS(val) .GT. zero) THEN
+        self%smoother%diaginv_bl(i) = sor_param / self%smoother%mat_bl%Val(self%smoother%mat_bl%Diagptr(i))
+      ELSE
+        self%smoother%diaginv_bl(i) = zero
+      END IF
     END IF
   END DO
-
-  ALLOCATE(self%smoother%comm_interf%halo%mat_rd_halo)
-  ALLOCATE(self%smoother%comm_interf%halo%mat_bl_halo)
-  CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_rd_halo, self%smoother%comm_interf%halo%Rd_halo, &
-                     self%smoother%comm_interf%halo%mat_halo)
-  CALL SpMm_SpRowCol(self%smoother%comm_interf%halo%mat_bl_halo, self%smoother%comm_interf%halo%Bl_halo, &
-                     self%smoother%comm_interf%halo%mat_halo)
 
 END SUBROUTINE init_smoother
 
@@ -900,7 +941,6 @@ SUBROUTINE set_cell_type(subdom)
         END IF
       END DO
     ELSE
-
       DO jblock = 1, subdom%nblocks
         IF ((subdom%blocks(iblock)%cedge_w(jblock) .EQV. .TRUE.) .AND. (subdom%blockiscomp(jblock) .EQV. .TRUE.)) THEN
           n_tmp = UBOUND(subdom%blocks(iblock)%y, dim=1)
@@ -1104,6 +1144,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+          
+          IF (y2_tmp(1) .GE. y2(1) .AND. y2_tmp(1) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(1))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexV3block(1, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF 
+
+          IF (y2_tmp(UBOUND(y2_tmp, 1)) .GE. y2(1) .AND. y2_tmp(UBOUND(y2_tmp, 1)) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(UBOUND(y2_tmp, 1)))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexV3block(1, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+          
+          IF (z2_tmp(1) .GE. z2(1) .AND. z2_tmp(1) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(1))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexW3block(1, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+          
+          IF (z2_tmp(UBOUND(z2_tmp, 1)) .GE. z2(1) .AND. z2_tmp(UBOUND(z2_tmp, 1)) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(UBOUND(z2_tmp, 1)))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexW3block(1, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
 
         IF (subdom%blocks(iblock)%cedge_e(jblock) .EQV. .TRUE.) THEN
@@ -1117,6 +1197,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+
+          IF (y2_tmp(1) .GE. y2(1) .AND. y2_tmp(1) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(1))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexV3block(nx, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (y2_tmp(UBOUND(y2_tmp, 1)) .GE. y2(1) .AND. y2_tmp(UBOUND(y2_tmp, 1)) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(UBOUND(y2_tmp, 1)))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexV3block(nx, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(1) .GE. z2(1) .AND. z2_tmp(1) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(1))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexW3block(nx, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(UBOUND(z2_tmp, 1)) .GE. z2(1) .AND. z2_tmp(UBOUND(z2_tmp, 1)) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(UBOUND(z2_tmp, 1)))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexW3block(nx, j, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
 
         IF (subdom%blocks(iblock)%cedge_s(jblock) .EQV. .TRUE.) THEN
@@ -1130,6 +1250,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+
+          IF (x2_tmp(1) .GE. x2(1) .AND. x2_tmp(1) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(1))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexU3block(i, 1, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (x2_tmp(UBOUND(x2_tmp, 1)) .GE. x2(1) .AND. x2_tmp(UBOUND(x2_tmp, 1)) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(UBOUND(x2_tmp, 1)))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexU3block(i, 1, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(1) .GE. z2(1) .AND. z2_tmp(1) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(1))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexW3block(i, 1, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(UBOUND(z2_tmp, 1)) .GE. z2(1) .AND. z2_tmp(UBOUND(z2_tmp, 1)) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(UBOUND(z2_tmp, 1)))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexW3block(i, 1, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
 
         IF (subdom%blocks(iblock)%cedge_n(jblock) .EQV. .TRUE.) THEN
@@ -1143,6 +1303,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+
+          IF (x2_tmp(1) .GE. x2(1) .AND. x2_tmp(1) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(1))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexU3block(i, ny, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (x2_tmp(UBOUND(x2_tmp, 1)) .GE. x2(1) .AND. x2_tmp(UBOUND(x2_tmp, 1)) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(UBOUND(x2_tmp, 1)))
+            k_st = findloc_real(z2, MAX(z2(1), z2_tmp(1)))
+            k_end = findloc_real(z2, MIN(z2(UBOUND(z2, 1)), z2_tmp(UBOUND(z2_tmp, 1))))
+            DO k = k_st, k_end - 1
+              ind = IndexU3block(i, ny, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(1) .GE. z2(1) .AND. z2_tmp(1) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(1))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexW3block(i, ny, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (z2_tmp(UBOUND(z2_tmp, 1)) .GE. z2(1) .AND. z2_tmp(UBOUND(z2_tmp, 1)) .LE. z2(UBOUND(z2, 1))) THEN
+            k = findloc_real(z2, z2_tmp(UBOUND(z2_tmp, 1)))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexW3block(i, ny, k, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
 
         IF (subdom%blocks(iblock)%cedge_b(jblock) .EQV. .TRUE.) THEN
@@ -1156,6 +1356,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+
+          IF (x2_tmp(1) .GE. x2(1) .AND. x2_tmp(1) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(1))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexU3block(i, j, 1, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (x2_tmp(UBOUND(x2_tmp, 1)) .GE. x2(1) .AND. x2_tmp(UBOUND(x2_tmp, 1)) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(UBOUND(x2_tmp, 1)))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexU3block(i, j, 1, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (y2_tmp(1) .GE. y2(1) .AND. y2_tmp(1) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(1))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexV3block(i, j, 1, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (y2_tmp(UBOUND(y2_tmp, 1)) .GE. y2(1) .AND. y2_tmp(UBOUND(y2_tmp, 1)) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(UBOUND(y2_tmp, 1)))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexV3block(i, j, 1, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
 
         IF (subdom%blocks(iblock)%cedge_t(jblock) .EQV. .TRUE.) THEN
@@ -1169,6 +1409,46 @@ SUBROUTINE set_face_type(subdom)
               subdom%indsface1d_type(ind) = 1
             END DO
           END DO
+
+          IF (x2_tmp(1) .GE. x2(1) .AND. x2_tmp(1) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(1))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexU3block(i, j, nz, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (x2_tmp(UBOUND(x2_tmp, 1)) .GE. x2(1) .AND. x2_tmp(UBOUND(x2_tmp, 1)) .LE. x2(UBOUND(x2, 1))) THEN
+            i = findloc_real(x2, x2_tmp(UBOUND(x2_tmp, 1)))
+            j_st = findloc_real(y2, MAX(y2(1), y2_tmp(1)))
+            j_end = findloc_real(y2, MIN(y2(UBOUND(y2, 1)), y2_tmp(UBOUND(y2_tmp, 1))))
+            DO j = j_st, j_end - 1
+              ind = IndexU3block(i, j, nz, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (y2_tmp(1) .GE. y2(1) .AND. y2_tmp(1) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(1))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexV3block(i, j, nz, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
+
+          IF (y2_tmp(UBOUND(y2_tmp, 1)) .GE. y2(1) .AND. y2_tmp(UBOUND(y2_tmp, 1)) .LE. y2(UBOUND(y2, 1))) THEN
+            j = findloc_real(y2, y2_tmp(UBOUND(y2_tmp, 1)))
+            i_st = findloc_real(x2, MAX(x2(1), x2_tmp(1)))
+            i_end = findloc_real(x2, MIN(x2(UBOUND(x2, 1)), x2_tmp(UBOUND(x2_tmp, 1))))
+            DO i = i_st, i_end - 1
+              ind = IndexV3block(i, j, nz, subdom%blocks, iblock, check=.TRUE.)
+              subdom%indsface1d_type(ind) = 1
+            END DO
+          END IF
         END IF
       END DO
     END IF
@@ -1191,7 +1471,7 @@ SUBROUTINE make_sendrecv_bnds(send_bnds, recv_bnds, my_subdom, blockranks)
 
   INTEGER, ALLOCATABLE :: send_sizes(:)
   INTEGER, ALLOCATABLE :: send_nblocks(:)
-  INTEGER, ALLOCATABLE :: send_reqs(:)
+  TYPE(MPI_Request), ALLOCATABLE :: send_reqs(:)
 
   INTEGER :: nranks, irank, jrank, rank
   INTEGER :: ranks(my_subdom%nblocks)
@@ -1767,5 +2047,18 @@ FUNCTION dot_para(a, b)
 END FUNCTION dot_para
 
 
+FUNCTION max_para(val)
+  IMPLICIT NONE
+  
+  REAL(Realkind), INTENT(in) :: val
+  REAL(Realkind) :: max_para
+  REAL(Realkind) :: sendbuf(NumProcs), recvbuf(NumProcs)
+
+  sendbuf(:) = val
+  CALL MPI_ALLTOALL(sendbuf, 1, MPI_RealKind, recvbuf, 1, MPI_RealKind, MPI_COMM_WORLD, MPIErr)
+
+  max_para = maxval(recvbuf)
+
+END FUNCTION max_para
 
 END MODULE Subdom_Mod

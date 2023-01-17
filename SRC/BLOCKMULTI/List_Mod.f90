@@ -2,6 +2,7 @@ MODULE List_Mod
 
 USE Kind_Mod
 USE Sort_Mod, ONLY : sortunique
+USE Parallel_Mod
 
 IMPLICIT NONE
 
@@ -75,6 +76,8 @@ TYPE List
   PROCEDURE :: toiarray, icollect, torarray, rcollect
   PROCEDURE :: iunique, runique
 
+  PROCEDURE :: print
+
 END TYPE List
 
 
@@ -114,6 +117,10 @@ END TYPE IArray
 TYPE IArray2d
   INTEGER, POINTER :: data(:,:) => NULL()
 END TYPE IArray2d
+
+TYPE MPIRecArray
+   TYPE(MPI_Request), POINTER :: data(:) => NULL()
+END TYPE MPIRecArray
 
 
 CONTAINS
@@ -777,6 +784,25 @@ FUNCTION rindex(self, value) RESULT(i)
 END FUNCTION rindex
 
 
+SUBROUTINE print(self)
+  CLASS(LIST), TARGET :: self
+  TYPE(Element), POINTER :: current
+
+
+  IF (.NOT. ASSOCIATED(self%first)) THEN
+    WRITE(*,*) 'List is empty'
+    RETURN
+  END IF
+ 
+  current => self%first
+  WRITE(*,*) current%ivalue
+
+  DO WHILE(ASSOCIATED(current%next))
+    current => current%next
+    WRITE(*,*) current%ivalue
+  END DO
+
+END SUBROUTINE print
 
 SUBROUTINE remove(self, i)
 
@@ -1023,6 +1049,7 @@ SUBROUTINE iunique(self, unique)
   INTEGER, POINTER :: flattened(:)
 
   flattened => arr_tmp
+  
   CALL self%toiarray(flattened)
   CALL sortunique(flattened, unique)
 
@@ -1037,11 +1064,10 @@ SUBROUTINE toiarray(self, arr)
   INTEGER :: n
 
   IF (self%len_flat .EQ. 0) CALL self%count_deep()
-
   IF (.NOT. ASSOCIATED(arr)) ALLOCATE(arr(self%len_flat))
   n = 0
   CALL self%icollect(arr, n)
-  
+
 END SUBROUTINE toiarray
 
 

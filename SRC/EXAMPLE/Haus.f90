@@ -175,6 +175,7 @@ FUNCTION RhoFun(x,y,z,zHeight,Time)
   pLoc=p0*(One-kappa*Grav*z/(Rd*th0))**(Cpd/Rd)
   ThLoc=th0
   RhoFun=pLoc/((pLoc/p0)**kappa*Rd*ThLoc)
+  RhoFun=1.2d0
 
 END FUNCTION RhoFun
 
@@ -219,6 +220,7 @@ FUNCTION UStart(x,y,z,zHeight,Time)
   REAL(RealKind) :: x,y,z,zHeight,Time
 
   UStart=ABS(COS(alpha*PI/180.0d0))*uInFlow(x,y,z,Time)
+  UStart = 5.0d0
 
 ! UStart=0.0d0
 ! IF (x>39.0d0.AND.x<41.0d0.AND. &
@@ -246,7 +248,7 @@ FUNCTION VStart(x,y,z,zHeight,Time)
   REAL(RealKind) :: VStart,UStart
   REAL(RealKind) :: x,y,z,zHeight,Time
 ! VStart=ABS(SIN(alpha*PI/180.0d0))*uInFlow(x,y,z,Time)
-  VStart=0.0d0
+  VStart=5.0d0
 
 ! VStart=0.0d0
 ! IF (x>39.0d0.AND.x<41.0d0.AND. &

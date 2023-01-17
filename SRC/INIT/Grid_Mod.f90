@@ -962,7 +962,7 @@ SUBROUTINE read_grid2(FileName)
       END DO  
       EXIT
     ELSE IF (INDEX(Line,'#SelfMultiblock')>0.AND.SelfMultiBlock) THEN
-      CALL SelfMultiBlockCompute
+      CALL SelfMultiblockCompute
     END IF
   END DO
 1 CONTINUE
@@ -1443,6 +1443,7 @@ SUBROUTINE SelfMultiblockCompute
   INTEGER, ALLOCATABLE :: yCLoc(:,:,:)
   INTEGER, ALLOCATABLE :: zCLoc(:,:,:)
 
+  WRITE(*,*) 'In SelfMultiblockCompute'
   READ(InputUnit,*) Domain%ix0,Domain%ix1,BX
   READ(InputUnit,*) Domain%iy0,Domain%iy1,BY
   READ(InputUnit,*) Domain%iz0,Domain%iz1,BZ
@@ -1641,6 +1642,7 @@ SUBROUTINE SelfMultiblockCompute
     END DO
   END DO
   NumberCells=0
+  WRITE(*,*) 'nb vor nb=0',nb
   nb=0
   DO i=LBOUND(Blocks,1),UBOUND(Blocks,1)
     DO j=LBOUND(Blocks,2),UBOUND(Blocks,2)
@@ -1701,6 +1703,23 @@ SUBROUTINE SelfMultiblockCompute
     END DO
   END DO
 
+  WRITE(*,*) 'ALLOCATE Floor ',nb,SIZE(Blocks,1),SIZE(Blocks,2),SIZE(Blocks,3)
+  nb=0
+  DO i=LBOUND(Blocks,1),UBOUND(Blocks,1)
+    DO j=LBOUND(Blocks,2),UBOUND(Blocks,2)
+      DO k=LBOUND(Blocks,3),UBOUND(Blocks,3)
+        IF (Blocks(i,j,k)%Active) THEN
+          DO ii=1,2**MAX(xBMax+Blocks(i,j,k)%xC,0)
+            DO jj=1,2**MAX(yBMax+Blocks(i,j,k)%yC,0)
+              DO kk=1,2**MAX(xBMax+Blocks(i,j,k)%zC,0)
+                nb=nb+1
+              END DO
+            END DO
+          END DO
+        END IF
+      END DO
+    END DO
+  END DO
   ALLOCATE(Floor(nb))
   ib=0
   DO i=LBOUND(Blocks,1),UBOUND(Blocks,1)
@@ -1715,6 +1734,7 @@ SUBROUTINE SelfMultiblockCompute
                 Floor(ib)%igx1=Blocks(i,j,k)%ix0+(ii  )*(Blocks(i,j,k)%ix1-Blocks(i,j,k)%ix0)/2**MAX(xBMax+Blocks(i,j,k)%xC,0)  
                 Floor(ib)%igy0=Blocks(i,j,k)%iy0+(jj-1)*(Blocks(i,j,k)%iy1-Blocks(i,j,k)%iy0)/2**MAX(yBMax+Blocks(i,j,k)%yC,0)
                 Floor(ib)%igy1=Blocks(i,j,k)%iy0+(jj  )*(Blocks(i,j,k)%iy1-Blocks(i,j,k)%iy0)/2**MAX(yBMax+Blocks(i,j,k)%yC,0)  
+                WRITE(*,*) 'Block ',ib,Floor(ib)%igy0,Floor(ib)%igy1
                 Floor(ib)%igz0=Blocks(i,j,k)%iz0+(kk-1)*(Blocks(i,j,k)%iz1-Blocks(i,j,k)%iz0)/2**MAX(zBMax+Blocks(i,j,k)%zC,0)
                 Floor(ib)%igz1=Blocks(i,j,k)%iz0+(kk  )*(Blocks(i,j,k)%iz1-Blocks(i,j,k)%iz0)/2**MAX(zBMax+Blocks(i,j,k)%zC,0)  
                 iMaxC=MIN(Blocks(i,j,k)%xC,Blocks(i,j,k)%yC,Blocks(i,j,k)%zC)

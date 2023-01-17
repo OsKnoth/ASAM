@@ -23,7 +23,7 @@ MODULE Output_Mod
   INTEGER(KIND=MPI_OFFSET_KIND) :: OffsetSoil0=0
   INTEGER(KIND=MPI_OFFSET_KIND) :: OffsetCut0=0
   INTEGER(KIND=MPI_OFFSET_KIND), PRIVATE :: Offset
-  TYPE(MPI_Status) :: Status
+  TYPE(MPI_Status) :: StatusWrite
   TYPE(MPI_File) :: fh,fh1,fh2,fh3
   INTEGER :: OffsetShift
   INTEGER :: OffsetShiftGMV
@@ -600,14 +600,14 @@ SUBROUTINE gmvProbtimeWrite(ActTime)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,probtime(1:8),1, &
-                        MPI_DOUBLE_PRECISION,Status,MPIErr)
+                        MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
 
       TimeOut=ActTimeOutput
 
       CALL native_4byte_real(TimeOut,TimeOut)
       CALL MPI_FILE_WRITE_AT(fh,Offset,TimeOut,1, &
-                        MPI_REAL,Status,MPIErr)
+                        MPI_REAL,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+8+Real4Kind
   END IF
@@ -647,14 +647,14 @@ SUBROUTINE gmvProbtimeWriteSoil(ActTime)
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_WRITE_AT(fh2,Offset,probtime(1:8),1, &
-                        MPI_DOUBLE_PRECISION,Status,MPIErr)
+                        MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
 
       TimeOut=ActTimeOutput
 
       CALL native_4byte_real(TimeOut,TimeOut)
       CALL MPI_FILE_WRITE_AT(fh2,Offset,TimeOut,1, &
-                        MPI_REAL,Status,MPIErr)
+                        MPI_REAL,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+8+Real4Kind
   END IF
@@ -694,14 +694,14 @@ SUBROUTINE gmvProbtimeWriteCut(ActTime)
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_WRITE_AT(fh3,Offset,probtime(1:8),1, &
-                        MPI_DOUBLE_PRECISION,Status,MPIErr)
+                        MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
 
       TimeOut=ActTimeOutput
 
       CALL native_4byte_real(TimeOut,TimeOut)
       CALL MPI_FILE_WRITE_AT(fh3,Offset,TimeOut,1, &
-                        MPI_REAL,Status,MPIErr)
+                        MPI_REAL,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+8+Real4Kind
   END IF
@@ -724,11 +724,11 @@ SUBROUTINE gmvProbtimeRead(ActTime)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_READ_AT(fh,Offset,Dummy(1:8),1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       WRITE(*,*) 'Dummy ',Dummy(1:8)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh,Offset,GMVTime,1, &
-                      MPI_REAL,Status,MPIErr)
+                      MPI_REAL,StatusWrite,MPIErr)
       CALL MPI_Bcast(GMVTime,1,MPI_REAL,0,MPI_COMM_WORLD,MPIErr)
     ELSE  
       CALL MPI_Bcast(GMVTime,1,MPI_REAL,0,MPI_COMM_WORLD,MPIErr)
@@ -767,10 +767,10 @@ SUBROUTINE gmvOpenWrite(FileName)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,gmvinput,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,gmvOutputType,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     Offset0=Offset0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -795,10 +795,10 @@ SUBROUTINE gmvOpenSoilWrite(FileName)
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_WRITE_AT(fh2,Offset,gmvinput,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh2,Offset,gmvOutputType,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     OffsetSoil0=OffsetSoil0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -825,10 +825,10 @@ SUBROUTINE gmvOpenCutWrite(FileName)
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_WRITE_AT(fh3,Offset,gmvinput,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh3,Offset,gmvOutputType,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     OffsetCut0=OffsetCut0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -863,10 +863,10 @@ SUBROUTINE gmvOpenRead(FileName)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_READ_AT(fh,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     Offset0=Offset0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -892,10 +892,10 @@ SUBROUTINE gmvOpenSoilRead(FileName)
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_READ_AT(fh2,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh2,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     OffsetSoil0=OffsetSoil0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -923,10 +923,10 @@ SUBROUTINE gmvOpenCutRead(FileName)
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_READ_AT(fh3,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh3,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
     END IF
     OffsetCut0=OffsetCut0+LEN(gmvinput)+LEN(gmvOutputType)
@@ -945,7 +945,7 @@ SUBROUTINE gmvClose
   ELSE
     IF (MyId==0) THEN
       CALL MPI_FILE_WRITE_AT(fh,Offset0,endgmv,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     CALL MPI_FILE_CLOSE(fh,MPIErr)
   END IF
@@ -963,7 +963,7 @@ SUBROUTINE gmvCloseSoil
   ELSE
     IF (MyId==0) THEN
       CALL MPI_FILE_WRITE_AT(fh2,OffsetSoil0,endgmv,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     CALL MPI_FILE_CLOSE(fh2,MPIErr)
   END IF
@@ -981,7 +981,7 @@ SUBROUTINE gmvCloseCut
   ELSE
     IF (MyId==0) THEN
       CALL MPI_FILE_WRITE_AT(fh3,OffsetCut0,endgmv,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     CALL MPI_FILE_CLOSE(fh3,MPIErr)
   END IF
@@ -1092,10 +1092,10 @@ SUBROUTINE gmvGeometry
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,nodev,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,NumberOfNodes,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(nodev)+IntKind
     DO ibLoc=1,nbLoc
@@ -1147,7 +1147,7 @@ SUBROUTINE gmvGeometry
           END DO
         END IF
         CALL MPI_FILE_WRITE_AT(fh,Offset,Work,3*NumberOfNodesB, &
-                               MPI_REAL,Status,MPIErr)
+                               MPI_REAL,StatusWrite,MPIErr)
         DEALLOCATE(Work)
       END IF
     END DO
@@ -1156,10 +1156,10 @@ SUBROUTINE gmvGeometry
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,cells,1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,NumberOfCells,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(Cells)+IntKind
     DO ibLoc=1,nbLoc
@@ -1220,20 +1220,20 @@ SUBROUTINE gmvGeometry
       END DO
       CALL MPI_FILE_WRITE_AT(fh,Offset,iWork, &
                              11*NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(iWork)
     END DO
     Offset0=Offset0+NumberOfCells*(LEN(hex)+9*IntKind)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,material,1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,NumberOfMaterials,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
       Offset=Offset+4
       CALL MPI_FILE_WRITE_AT(fh,Offset,0,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
       Offset=Offset+4
       ALLOCATE(iWork(NumberOfMaterials*8))
       iw=1
@@ -1244,7 +1244,7 @@ SUBROUTINE gmvGeometry
         END DO
       END DO
       CALL MPI_FILE_WRITE_AT(fh,Offset,iWork,NumberOfMaterials*8, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(iWork)
     END IF
     Offset0=Offset0+LEN(material)+2*IntKind+32*NumberOfMaterials
@@ -1279,7 +1279,7 @@ SUBROUTINE gmvGeometry
       END DO
       CALL MPI_FILE_WRITE_AT(fh,Offset,iWork, &
                              NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(iWork)
     END DO
     Offset0=Offset0+NumberOfCells*IntKind
@@ -1436,7 +1436,7 @@ SUBROUTINE gmvVelocityFWrite(Vel,RhoCell)
             //polygons//fromfile//'"'//TRIM(OutputFileNameGMV)//'.gmvG'//'"' &
             //velocity//cZero
       CALL MPI_FILE_WRITE_AT(fh,Offset0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+cWorkLen
     DO ibLoc=1,nbLoc
@@ -1507,15 +1507,15 @@ SUBROUTINE gmvVelocityFWrite(Vel,RhoCell)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv
       CALL MPI_FILE_WRITE_AT(fh,Offset,xN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_WRITE_AT(fh,Offset,yN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+2*Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_WRITE_AT(fh,Offset,zN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       DEALLOCATE(xN)
       DEALLOCATE(yN)
       DEALLOCATE(zN)
@@ -1619,7 +1619,7 @@ SUBROUTINE gmvVelocityCWrite(VecC)
             //polygons//fromfile//'"'//TRIM(OutputFileNameGMV)//'.gmvG'//'"' &
             //velocity//cZero
       CALL MPI_FILE_WRITE_AT(fh,Offset0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+cWorkLen
     DO ibLoc=1,nbLoc
@@ -1670,15 +1670,15 @@ SUBROUTINE gmvVelocityCWrite(VecC)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv
       CALL MPI_FILE_WRITE_AT(fh,Offset,xN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_WRITE_AT(fh,Offset,yN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+2*Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_WRITE_AT(fh,Offset,zN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       DEALLOCATE(xN)
       DEALLOCATE(yN)
       DEALLOCATE(zN)
@@ -1792,7 +1792,7 @@ SUBROUTINE gmvVelocityFRead(VecC)
             //polygons//fromfile//'"'//TRIM(OutputFileNameGMV)//'.gmvG'//'"' &
             //velocity//cZero
       CALL MPI_FILE_READ_AT(fh,Offset0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+cWorkLen
     DO ibLoc=1,nbLoc
@@ -1822,15 +1822,15 @@ SUBROUTINE gmvVelocityFRead(VecC)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv
       CALL MPI_FILE_READ_AT(fh,Offset,xN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_READ_AT(fh,Offset,yN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       Offset=Offset0+Real4Kind*WriteOffsetCgmv+2*Real4Kind*OffSetShiftGMV
       CALL MPI_FILE_READ_AT(fh,Offset,zN(1:NumberOfCellsB), &
                              NumberOfCellsB, &
-                             MPI_REAL,Status,MPIErr)
+                             MPI_REAL,StatusWrite,MPIErr)
       IF (uPosL>Zero) THEN
         iw=0
         DO iz=iz0+1,iz1
@@ -1874,7 +1874,7 @@ SUBROUTINE gmvOpenScalarWrite
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,variable,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(variable)
   END IF
@@ -1893,7 +1893,7 @@ SUBROUTINE gmvScalarVarSoilWrite
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_WRITE_AT(fh2,Offset,variable,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+LEN(variable)
   END IF
@@ -1911,7 +1911,7 @@ SUBROUTINE gmvScalarVarCutWrite
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_WRITE_AT(fh3,Offset,variable,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+LEN(variable)
   END IF
@@ -1931,7 +1931,7 @@ SUBROUTINE gmvScalarVarSoilRead
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_READ_AT(fh2,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+LEN(variable)
   END IF
@@ -1951,7 +1951,7 @@ SUBROUTINE gmvScalarVarCutRead
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_READ_AT(fh3,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+LEN(variable)
   END IF
@@ -1970,7 +1970,7 @@ SUBROUTINE gmvOpenScalarRead
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_READ_AT(fh,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF            
     Offset0=Offset0+LEN(variable)
   END IF
@@ -2060,16 +2060,16 @@ SUBROUTINE gmvScalarWrite(Vec,iPos,name,it,RhoCell,Prof,VecC,Type,UnitKonv)
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,name(1:8),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,name(9:16),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,name(17:32),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh,Offset,0,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(name)+IntKind
     DO ibLoc=1,nbLoc
@@ -2157,7 +2157,7 @@ SUBROUTINE gmvScalarWrite(Vec,iPos,name,it,RhoCell,Prof,VecC,Type,UnitKonv)
       Offset=Offset0+WriteOffsetCgmv*IntKind
       CALL MPI_FILE_WRITE_AT(fh,Offset,xN, &
                              NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(xN)
     END DO
     Offset0=Offset0+Real4Kind*OffSetShiftGMV
@@ -2225,16 +2225,16 @@ SUBROUTINE gmvScalarRead(Vec,iPos,name,it)
         IF (MyId==0) THEN
           Offset=Offset0
           CALL MPI_FILE_READ_AT(fh,Offset,name(1:8),1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
           Offset=Offset+8
           CALL MPI_FILE_READ_AT(fh,Offset,name(9:16),1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
           Offset=Offset+8
           CALL MPI_FILE_READ_AT(fh,Offset,name(17:32),1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
           Offset=Offset+8
           CALL MPI_FILE_READ_AT(fh,Offset,iTemp,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
         END IF
         Offset0=Offset0+LEN(name)+IntKind
         DO ibLoc=1,nbLoc
@@ -2265,7 +2265,7 @@ SUBROUTINE gmvScalarRead(Vec,iPos,name,it)
           Offset=Offset0+WriteOffsetCgmv*IntKind
           CALL MPI_FILE_READ_AT(fh,Offset,xN, &
                                  NumberOfCellsB, &
-                                 MPI_INTEGER,Status,MPIErr)
+                                 MPI_INTEGER,StatusWrite,MPIErr)
           Cell=0
           DO iz=iz0+1,iz1
             DO iy=iy0+1,iy1
@@ -2298,7 +2298,7 @@ SUBROUTINE gmvCloseScalar
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_WRITE_AT(fh,Offset,endvars,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(endvars)
   END IF
@@ -2315,7 +2315,7 @@ SUBROUTINE gmvCloseReadScalar
     IF (MyId==0) THEN
       Offset=Offset0
       CALL MPI_FILE_READ_AT(fh,Offset,Dummy,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     Offset0=Offset0+LEN(endvars)
   END IF
@@ -2333,7 +2333,7 @@ SUBROUTINE gmvCloseScalarVarSoil
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_WRITE_AT(fh2,Offset,endvars,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+LEN(endvars)
   END IF
@@ -2352,7 +2352,7 @@ SUBROUTINE gmvCloseScalarVarCut
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_WRITE_AT(fh3,Offset,endvars,1, &
-                      MPI_DOUBLE_PRECISION,Status,MPIErr)
+                      MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+LEN(endvars)
   END IF
@@ -2395,7 +2395,7 @@ SUBROUTINE gmvIncludeSoilWrite(FileName)
             //cells//fromfile//'"'//TRIM(OutputNameSoilGMV)//'.out'//'.gmvG'//'"' &
             //polygons//fromfile//'"'//TRIM(OutputNameSoilGMV)//'.out'//'.gmvG'//'"'
       CALL MPI_FILE_WRITE_AT(fh2,OffsetSoil0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+cWorkLen
   END IF
@@ -2437,7 +2437,7 @@ SUBROUTINE gmvIncludeCutWrite(FileName)
             //cells//fromfile//'"'//TRIM(OutputNameCutGMV)//'.out'//'.gmvG'//'"' &
             //polygons//fromfile//'"'//TRIM(OutputNameCutGMV)//'.out'//'.gmvG'//'"'
       CALL MPI_FILE_WRITE_AT(fh3,OffsetCut0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+cWorkLen
   END IF
@@ -2481,7 +2481,7 @@ SUBROUTINE gmvIncludeSoilRead(Filename)
             //cells//fromfile//'"'//TRIM(OutputNameSoilGMV)//'.out'//'.gmvG'//'"' &
             //polygons//fromfile//'"'//TRIM(OutputNameSoilGMV)//'.out'//'.gmvG'//'"'
       CALL MPI_FILE_READ_AT(fh2,OffsetSoil0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+cWorkLen
   END IF
@@ -2525,7 +2525,7 @@ SUBROUTINE gmvIncludeCutRead(Filename)
             //cells//fromfile//'"'//TRIM(OutputNameCutGMV)//'.out'//'.gmvG'//'"' &
             //polygons//fromfile//'"'//TRIM(OutputNameCutGMV)//'.out'//'.gmvG'//'"'
       CALL MPI_FILE_READ_AT(fh3,OffsetCut0,cWork(1:cWorkLen),cWorkLen, &
-                      MPI_BYTE,Status,MPIErr)
+                      MPI_BYTE,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+cWorkLen
   END IF
@@ -2574,16 +2574,16 @@ SUBROUTINE gmvSoilVecWrite(Vec,iPos,name,RhoCell,Prof)
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_WRITE_AT(fh2,Offset,name(1:8),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh2,Offset,name(9:16),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh2,Offset,name(17:32),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh2,Offset,0,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+LEN(name)+IntKind
     DO ibLoc=1,nbLoc
@@ -2604,7 +2604,7 @@ SUBROUTINE gmvSoilVecWrite(Vec,iPos,name,RhoCell,Prof)
       NumberOfCellsB=iCell
       Offset=OffsetSoil0+WriteOffsetCSoilgmv*IntKind
       CALL MPI_FILE_WRITE_AT(fh2,Offset,xN,NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(xN)
     END DO
     OffsetSoil0=OffsetSoil0+Real4Kind*OffsetShiftSoilGMV
@@ -2655,16 +2655,16 @@ SUBROUTINE gmvCutVecWrite(Vec,iPos,name,RhoCell,Prof)
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_WRITE_AT(fh3,Offset,name(1:8),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh3,Offset,name(9:16),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh3,Offset,name(17:32),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_WRITE_AT(fh3,Offset,0,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+LEN(name)+IntKind
     DO ibLoc=1,nbLoc
@@ -2683,7 +2683,7 @@ SUBROUTINE gmvCutVecWrite(Vec,iPos,name,RhoCell,Prof)
       NumberOfCellsC=iCell
       Offset=OffsetCut0+WriteOffsetCCutgmv*IntKind
       CALL MPI_FILE_WRITE_AT(fh3,Offset,xN,NumberOfCellsC, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       DEALLOCATE(xN)
     END DO
     OffsetCut0=OffsetCut0+Real4Kind*OffsetShiftCutGMV
@@ -2741,16 +2741,16 @@ SUBROUTINE gmvSoilVecRead(Vec,iPos,name,RhoCell,Prof)
     IF (MyId==0) THEN
       Offset=OffsetSoil0
       CALL MPI_FILE_READ_AT(fh2,Offset,name(1:8),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh2,Offset,name(9:16),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh2,Offset,name(17:32),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh2,Offset,iTemp,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     OffsetSoil0=OffsetSoil0+LEN(name)+IntKind
     DO ibLoc=1,nbLoc
@@ -2768,7 +2768,7 @@ SUBROUTINE gmvSoilVecRead(Vec,iPos,name,RhoCell,Prof)
       NumberOfCellsB=iCell
       Offset=OffsetSoil0+WriteOffsetCSoilgmv*IntKind
       CALL MPI_FILE_READ_AT(fh2,Offset,xN,NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       iCell=0
       DO i=1,NumBoundCell
         DO iS=1,Domain%nrsoillayers !nzS
@@ -2836,16 +2836,16 @@ SUBROUTINE gmvCutVecRead(Vec,iPos,name,RhoCell,Prof)
     IF (MyId==0) THEN
       Offset=OffsetCut0
       CALL MPI_FILE_READ_AT(fh3,Offset,name(1:8),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh3,Offset,name(9:16),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh3,Offset,name(17:32),1, &
-                  MPI_DOUBLE_PRECISION,Status,MPIErr)
+                  MPI_DOUBLE_PRECISION,StatusWrite,MPIErr)
       Offset=Offset+8
       CALL MPI_FILE_READ_AT(fh3,Offset,iTemp,1, &
-                      MPI_INTEGER,Status,MPIErr)
+                      MPI_INTEGER,StatusWrite,MPIErr)
     END IF
     OffsetCut0=OffsetCut0+LEN(name)+IntKind
     DO ibLoc=1,nbLoc
@@ -2863,7 +2863,7 @@ SUBROUTINE gmvCutVecRead(Vec,iPos,name,RhoCell,Prof)
       NumberOfCellsB=iCell
       Offset=OffsetCut0+WriteOffsetCCutgmv*IntKind
       CALL MPI_FILE_READ_AT(fh3,Offset,xN,NumberOfCellsB, &
-                             MPI_INTEGER,Status,MPIErr)
+                             MPI_INTEGER,StatusWrite,MPIErr)
       iCell=0
       DO i=1,NumBoundCell
         DO iS=1,Domain%nrsoillayers !nzS
@@ -4363,7 +4363,7 @@ SUBROUTINE OutputVector(ActTime,Vector,RhoCell)
       nReals=1
       Time=ActTime
       CALL MPI_FILE_WRITE_AT(fh,Offset,Time,nReals, &
-                          MPI_REAL,Status,MPIErr)
+                          MPI_REAL,StatusWrite,MPIErr)
     END IF
     ncMax=0
     DO ibLoc=1,nbLoc
@@ -4398,7 +4398,7 @@ SUBROUTINE OutputVector(ActTime,Vector,RhoCell)
       NumOut=(ix1-ix0)*(iy1-iy0)*(iz1-iz0)
       nReals=NumData*NumOut
       CALL MPI_FILE_WRITE_AT(fh,Offset,work4,nReals, &
-                            MPI_REAL,Status,MPIErr)
+                            MPI_REAL,StatusWrite,MPIErr)
     END DO
     CALL MPI_FILE_CLOSE(fh,MPIErr)
     DEALLOCATE(Work4)

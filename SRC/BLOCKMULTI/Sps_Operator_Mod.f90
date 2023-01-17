@@ -158,13 +158,15 @@ SUBROUTINE sps_insert(ops_insert, field1d)
 
 END SUBROUTINE
 
-SUBROUTINE make_eye(eye_op, n):
+SUBROUTINE make_eye(eye_op, cellisopen):
 
   IMPLICIT NONE
 
   TYPE(SpRowCol), INTENT(INOUT) :: eye_op
-  INTEGER, INTENT(in) :: n
-  INTEGER :: i
+  REAL(Realkind), INTENT(in) :: cellisopen(:)
+  INTEGER :: i, n
+
+  n = SIZE(cellisopen, 1)
 
   eye_op%n = n
   eye_op%m = n
@@ -173,7 +175,7 @@ SUBROUTINE make_eye(eye_op, n):
   ALLOCATE(eye_op%ColInd(n))
   ALLOCATE(eye_op%Val(n))
 
-  eye_op%Val(:) = 1.0
+  eye_op%Val(:) = cellisopen
 
   eye_op%RowPtr(1) = 1
 

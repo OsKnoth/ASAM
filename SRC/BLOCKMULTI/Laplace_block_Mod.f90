@@ -10,7 +10,7 @@ USE Crop_Mod, ONLY: make_crop_operator_cell, make_crop_operator_face, make_crop_
 USE Kind_Mod
 USE Index_Mod, ONLY: vector_size, &
                      IndexU3, IndexV3, IndexW3, IndexC3, &
-                     IndexC3block
+                     IndexC3block, IndexU3block, IndexV3block, IndexW3block
 
 USE Subdom_Mod, ONLY: Subdomain, BoundCommInterface
 
@@ -25,7 +25,7 @@ IMPLICIT NONE
 CONTAINS
 
 
-SUBROUTINE make_operators(newsubdomain, btype, isblackijkzero)
+SUBROUTINE make_operators_static(newsubdomain, btype, isblackijkzero)
   IMPLICIT NONE
  
   TYPE(SubDomain), TARGET, INTENT(inout) :: newsubdomain
@@ -59,8 +59,9 @@ SUBROUTINE make_operators(newsubdomain, btype, isblackijkzero)
                             intc2f_tmp_Val(ubound_ncolids_blockgrad(newsubdomain%blocks)), &
                             rdbl_tmp_Val(newsubdomain%ncells_tmp)
 
+  REAL(Realkind) :: cellisopen(newsubdomain%ncells)
 
-  INTEGER :: nnz_lapl3d_tmp
+  INTEGER :: nnz_lapl3d_tmp, n, i, j, k, icell
 
   blocks => newsubdomain%blocks
 
@@ -105,7 +106,25 @@ SUBROUTINE make_operators(newsubdomain, btype, isblackijkzero)
   
   CALL SpMmBACT(newsubdomain%intc2f, Crop_domain_face, intc2f_tmp, Crop_domain_cell)
 
-  CALL make_eye(newsubdomain%eye, newsubdomain%div3d%m)
+  icell = 1
+  DO n = 1, newsubdomain%nblocks
+    IF (newsubdomain%blockiscomp(n)) THEN
+      DO i = 1, newsubdomain%blocks(n)%fld_shape(3)
+        DO j = 1, newsubdomain%blocks(n)%fld_shape(2)
+          DO k = 1, newsubdomain%blocks(n)%fld_shape(1)
+            IF (newsubdomain%blocks(n)%volseff(k, j, i) .LT. 1.0001e-20) THEN
+              cellisopen(icell) = 0.0
+            ELSE
+              cellisopen(icell) = 1.0
+            END IF
+            icell = icell + 1
+          END DO
+        END DO
+      END DO
+    END IF
+  END DO
+
+  CALL make_eye(newsubdomain%eye, cellisopen)
 
   rdbl_tmp_Val(:) = 1.0
   Bl_tmp%RowPtr => bl_tmp_RowPtr
@@ -139,7 +158,7 @@ SUBROUTINE make_operators(newsubdomain, btype, isblackijkzero)
   CALL SpNullify_SpRowCol(Bl_tmp)
   CALL SpNullify_SpRowCol(Rd_tmp)
 
-END SUBROUTINE make_operators
+END SUBROUTINE make_operators_static
 
 
 SUBROUTINE make_operators_commIf(newsubdomain, comm_interface, div3d_tmp, grad3d_tmp, intc2f_tmp, Bl_tmp, Rd_tmp)
@@ -243,7 +262,7 @@ SUBROUTINE make_lapl3d(newsubdomain, div3d_tmp, grad3d_tmp, Crop_domain_cell, nn
   lapl3d_tmp%ColInd => lapl3d_tmp_ColInd
   lapl3d_tmp%Val => lapl3d_tmp_val
   
-  CALL SpMm_SpRowCol(lapl3d_tmp, div3d_tmp, grad3d_tmp, allocate_mat=.False.)
+  CALL SpMm_SpRowCol(lapl3d_tmp, div3d_tmp, grad3d_tmp)
 
   CALL SpMmBACT(newsubdomain%lapl3d, Crop_domain_cell, lapl3d_tmp, Crop_domain_cell)
 
@@ -532,6 +551,9 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
         ELSE
           DO j = 1, ny
             DO k = 1, nz
+              Intc2f%ColInd(n) = IndexC3block(i, j, k, blocks, iblock, check=.TRUE.)
+              Intc2f%Val(n) = arseffx(k, j, i) / arsx(k, j, i)
+              n = n + 1
               Intc2f%RowPtr(irow + 1) = n
               irow = irow + 1
             END DO
@@ -576,6 +598,9 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
         ELSE
           DO j = 1, ny
             DO k = 1, nz
+              Intc2f%ColInd(n) = IndexC3block(i - 1, j, k, blocks, iblock, check=.TRUE.)
+              Intc2f%Val(n) = arseffx(k, j, i) / arsx(k, j, i)
+              n = n + 1
               Intc2f%RowPtr(irow + 1) = n
               irow = irow + 1
             END DO
@@ -636,6 +661,9 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
             END DO
           ELSE
             DO k = 1, nz
+              Intc2f%ColInd(n) = IndexC3block(i, j, k, blocks, iblock, check=.TRUE.)
+              Intc2f%Val(n) = arseffy(k, j, i) / arsy(k, j, i)
+              n = n + 1
               Intc2f%RowPtr(irow + 1) = n
               irow = irow + 1
             END DO
@@ -677,6 +705,9 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
             END DO
           ELSE
             DO k = 1, nz
+              Intc2f%ColInd(n) = IndexC3block(i, j - 1, k, blocks, iblock, check=.TRUE.)
+              Intc2f%Val(n) = arseffy(k, j, i) / arsy(k, j, i)
+              n = n + 1
               Intc2f%RowPtr(irow + 1) = n
               irow = irow + 1
             END DO
@@ -729,6 +760,10 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
               Intc2f%ColInd(n) = IndexC3block(i, j, k, blocks, iblock)
               Intc2f%Val(n) = icoeff_sum
               n = n + 1
+            ELSE
+              Intc2f%ColInd(n) = IndexC3block(i, j, k, blocks, iblock)
+              Intc2f%Val(n) = arseffz(k, j, i) / arsz(k, j, i)
+              n = n + 1
             END IF
             Intc2f%RowPtr(irow + 1) = n
             irow = irow + 1
@@ -763,6 +798,10 @@ SUBROUTINE make_intcell2face3d(Intc2f, subdom)
                 END DO
               END DO 
               Intc2f%Val(n_tmp) = icoeff_sum
+            ELSE
+              Intc2f%ColInd(n) = IndexC3block(i, j, k - 1, blocks, iblock)
+              Intc2f%Val(n) = arseffz(k, j, i) / arsz(k, j, i)
+              n = n + 1
             END IF 
             Intc2f%RowPtr(irow + 1) = n
             irow = irow + 1

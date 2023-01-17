@@ -39,6 +39,7 @@ MODULE Function_Mod
   Use Control_Mod
 
   USE ReadProfile_Mod
+  USE Output_Mod, ONLY : OutputTimeStep
 
   IMPLICIT NONE
 

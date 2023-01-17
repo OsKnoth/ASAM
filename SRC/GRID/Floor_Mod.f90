@@ -24,7 +24,9 @@ SUBROUTINE FloorAllocate(Floor)
 
   INTEGER :: ib
 
+  WRITE(*,*) 'nb',nb
   DO ib=1,nb
+    WRITE(*,*) 'ib',ib
     CALL Allocate(Floor(ib))
   END DO
 

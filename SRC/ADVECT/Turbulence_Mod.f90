@@ -114,7 +114,6 @@ SUBROUTINE Turbulence(Vector,Rhs,UVec)
   TYPE(Vector4Cell_T) :: Vector,Rhs
   TYPE (Vector4Cell_T), OPTIONAL :: UVec
   
-  WRITE(*,*) 'In Turbulence',TkeDis
   IF (TkeDis) THEN
     uCL=>Vector%Vec(uPosL)%c
     vCL=>Vector%Vec(vPosL)%c
@@ -410,9 +409,6 @@ SUBROUTINE TkeDisCompute
                          FW(ix:ix,iy:iy,iz-1:iz),        &
                          S,O)
 
-        IF (iz<=3) THEN
-          WRITE(*,*) 'TkeDis',S,O
-        END IF  
         tkeC = tke(ix,iy,iz,1)
         disC = dis(ix,iy,iz,1)
         tkeRhs(ix,iy,iz,1) = tkeRhs(ix,iy,iz,1)  &           !!!FILAUS

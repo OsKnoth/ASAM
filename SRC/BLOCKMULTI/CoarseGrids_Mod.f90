@@ -11,15 +11,17 @@ USE MatSpRowCol_Mod, ONLY: SpRowCol, SpMm_SpRowCol, SpTrans_SpRowCol, &
                            SpDeallocate_SpRowCol, SpNullify_SpRowCol
 USE Crop_Mod, ONLY: make_crop_operator_cell, make_crop_operator_face
 USE Block_Mod, ONLY: Block, Regular_Grid, gridding_cell, grid_blocks, neighborblocks
+!USE List_Mod, ONLY : List, Element, ListArray, IArray, RArray, IArray2d, RArray, MPIRecArray
 USE List_Mod, ONLY : List, Element, ListArray, IArray, RArray, IArray2d, RArray
 USE Sort_Mod, ONLY: sortunique
 USE Transfer_Mod, ONLY: init_transfer
-USE Laplace_block_Mod, ONLY: make_operators
+USE Laplace_block_Mod, ONLY: make_operators_static
 USE Index_Mod, ONLY: findloc_real, between, determine_overlap_1d
 USE Gradient_block_interpolation_Mod, ONLY: find_indices_jk, find_indices_ik, find_indices_ij
+USE Boundary_Mod, ONLY: Bound, cyclic_x, cyclic_y, cyclic_z
 
 USE Kind_Mod
-USE MPI_Mod
+USE Parallel_Mod
 
 IMPLICIT NONE
 
@@ -50,6 +52,10 @@ INTEGER :: ngrids
 
 REAL(Realkind), PARAMETER :: w = 0.55
 
+TYPE MPIRecArray
+   TYPE(MPI_Request), POINTER :: data(:) => NULL()
+END TYPE MPIRecArray
+
 CONTAINS
 
 SUBROUTINE define_coarse_grids()
@@ -66,7 +72,7 @@ SUBROUTINE define_coarse_grids()
 
   dim_size_max = MAXVAL((/nx_fine, ny_fine, nz_fine/))
  
-  ngrids = INT(LOG(REAL(dim_size_max, kind=Realkind)) / LOG(2.0))
+  ngrids = INT(LOG(REAL(dim_size_max, kind=Realkind)) / LOG(2.0)) + 1
 
   ALLOCATE(x2glob_lev(ngrids))
   ALLOCATE(y2glob_lev(ngrids))
@@ -103,7 +109,7 @@ SUBROUTINE coarsen_1d(x2, x2_glob_lst, ix_f, ix_l, res, bt)
 
   INTEGER :: iblock, nblocks, iwork
   
-  REAL(Realkind) :: coarsen_fac
+  INTEGER :: coarsen_fac
   INTEGER :: i, j, n
   REAL(Realkind) :: work(SIZE(res, 1) * (SIZE(x2, 1) + 2))
   REAL(Realkind) :: line_prev, line_next
@@ -333,7 +339,7 @@ SUBROUTINE intialize_coarse_subdomains(subdomain_finest)
   subdomain_fine => subdomain_finest
 
   DO n = 2, ngrids
-
+ 
     ALLOCATE(subdomain_fine%next_coarse)
     newsubdomain => subdomain_fine%next_coarse
 
@@ -396,10 +402,8 @@ SUBROUTINE intialize_coarse_subdomains(subdomain_finest)
                           resy_f, resz_f, blockglobids, blockglobids_f, blockranks, &
                           blockranks_f)
 
-
-
-    CALL check_common_faces(newsubdomain%blocks)
-    CALL check_common_edges(newsubdomain%blocks)
+    CALL check_common_faces(newsubdomain%blocks, cyclic_x, cyclic_y, cyclic_z)
+    CALL check_common_edges(newsubdomain%blocks, cyclic_x, cyclic_y, cyclic_z)
 
     CALL average_face_areas(newsubdomain%blocks)
 
@@ -407,7 +411,7 @@ SUBROUTINE intialize_coarse_subdomains(subdomain_finest)
     CALL newsubdomain%set_face_type()
 
     CALL newsubdomain%init_boundcomm_interface(blockranks)
-    CALL make_operators(newsubdomain, btype, isblackijkzero_lev(n)%data)
+    CALL make_operators_static(newsubdomain, btype, isblackijkzero_lev(n)%data)
 
 !    newsubdomain%mat => newsubdomain%lapl3d
     subdomain_fine => subdomain_fine%next_coarse
@@ -443,6 +447,7 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
                                                 blockranks_f
 
   INTEGER :: m, i, j, k, kz, jy, ix, nz, ny, nx, iblock, jblock_fine, ind, ii, jj, kk
+  INTEGER :: nblocks_fine
 
   INTEGER :: ix_first_c, ix_last_c, jy_first_c, jy_last_c, kz_first_c, kz_last_c, &
              ix_st_tmp, ix_end_tmp, jy_st_tmp, jy_end_tmp, kz_st_tmp, kz_end_tmp
@@ -459,10 +464,10 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
   INTEGER :: kz_first_tmp(nblocks_total + SIZE(subdomain_fine%blockids_comp, 1))
   INTEGER :: kz_last_tmp(nblocks_total + SIZE(subdomain_fine%blockids_comp, 1))
 
-  INTEGER :: sendbufint(NumProcs), recvbufint(NumProcs), &
-             reqs_send(NumProcs), reqs_recv(NumProcs), status(MPI_STATUS_SIZE)
-  TYPE(IArray) :: jsblocks_from(NumProcs), jsblocks_to(NumProcs), &
-                  reqs_send_arr(NumProcs), reqs_recv_arr(NumProcs)
+  INTEGER :: sendbufint(NumProcs), recvbufint(NumProcs)
+  TYPE(MPI_Request) :: reqs_send(NumProcs), reqs_recv(NumProcs)
+  TYPE(IArray) :: jsblocks_from(NumProcs), jsblocks_to(NumProcs)
+  TYPE(MPIRecArray) :: reqs_send_arr(NumProcs), reqs_recv_arr(NumProcs)
   TYPE(IArray2d) :: sendbufint2d(NumProcs), blockbnds_to(NumProcs)
  
   TYPE(RArray) :: receivebuf1d(NumProcs)
@@ -474,7 +479,7 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
   INTEGER, POINTER :: block_ispartof(:,:,:) => NULL()
   INTEGER, POINTER :: block_npartof(:) => NULL()
   INTEGER, POINTER :: neighbor_ids_unique(:) => NULL()
-  INTEGER, POINTER :: neighbors(:) => NULL()
+  TYPE(List) :: neighbors
   INTEGER, POINTER :: o12_ptr(:) => NULL()
 
   REAL(Realkind), POINTER :: x2_fine_tmp(:) => NULL(), &
@@ -500,11 +505,13 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
   kz_first_tmp(1:nblocks_total) = kz_first
   kz_last_tmp(1:nblocks_total) = kz_last
 
-  j = 1
+  nblocks_fine = 0
 
   DO i = 1, SIZE(subdomain_fine%blockids_compghst, 1)
 
     IF (subdomain_fine%blockiscomp(i) .EQV. .TRUE.) THEN
+      nblocks_fine = nblocks_fine + 1
+
       x_st = subdomain_fine%blocks(i)%x2(1)
       x_end = subdomain_fine%blocks(i)%x2(UBOUND(subdomain_fine%blocks(i)%x2, 1))
       y_st = subdomain_fine%blocks(i)%y2(1)
@@ -512,40 +519,47 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
       z_st = subdomain_fine%blocks(i)%z2(1)
       z_end = subdomain_fine%blocks(i)%z2(UBOUND(subdomain_fine%blocks(i)%z2, 1))
 
-      ix_first_tmp(nblocks_total + j) = MAX(FINDLOC(x2glob .GE. x_st, .TRUE., DIM=1) - 1, LBOUND(x2glob, 1))
-      ix_last_tmp(nblocks_total + j) = MIN(FINDLOC(x2glob .LE. x_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(x2glob, 1) - 1)
-      jy_first_tmp(nblocks_total + j) = MAX(FINDLOC(y2glob .GE. y_st, .TRUE., DIM=1) - 1, LBOUND(y2glob, 1))
-      jy_last_tmp(nblocks_total + j) = MIN(FINDLOC(y2glob .LE. y_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(y2glob, 1) - 1)
-      kz_first_tmp(nblocks_total + j) = MAX(FINDLOC(z2glob .GE. z_st, .TRUE., DIM=1) - 1, LBOUND(z2glob, 1))
-      kz_last_tmp(nblocks_total + j) = MIN(FINDLOC(z2glob .LE. z_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(z2glob, 1) - 1)
-      j = j + 1
+      ix_first_tmp(nblocks_total + nblocks_fine) = MAX(FINDLOC(x2glob .GE. x_st, .TRUE., DIM=1) - 1, LBOUND(x2glob, 1))
+      ix_last_tmp(nblocks_total + nblocks_fine) = MIN(FINDLOC(x2glob .LE. x_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(x2glob, 1) - 1)
+      jy_first_tmp(nblocks_total + nblocks_fine) = MAX(FINDLOC(y2glob .GE. y_st, .TRUE., DIM=1) - 1, LBOUND(y2glob, 1))
+      jy_last_tmp(nblocks_total + nblocks_fine) = MIN(FINDLOC(y2glob .LE. y_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(y2glob, 1) - 1)
+      kz_first_tmp(nblocks_total + nblocks_fine) = MAX(FINDLOC(z2glob .GE. z_st, .TRUE., DIM=1) - 1, LBOUND(z2glob, 1))
+      kz_last_tmp(nblocks_total + nblocks_fine) = MIN(FINDLOC(z2glob .LE. z_end, .TRUE., DIM=1, BACK=.TRUE.), UBOUND(z2glob, 1) - 1)
+
     END IF
   END DO  
 
   CALL  grid_blocks(gridding_grid, block_ispartof, block_npartof, x2glob, y2glob, z2glob, &
-                     ix_first_tmp, ix_last_tmp, jy_first_tmp, jy_last_tmp, kz_first_tmp, kz_last_tmp)
+                     ix_first_tmp(1:nblocks_total + nblocks_fine), &
+                     ix_last_tmp(1:nblocks_total + nblocks_fine), &
+                     jy_first_tmp(1:nblocks_total + nblocks_fine), &
+                     jy_last_tmp(1:nblocks_total + nblocks_fine), &
+                     kz_first_tmp(1:nblocks_total + nblocks_fine), &
+                     kz_last_tmp(1:nblocks_total + nblocks_fine))
 
-  DO i = nblocks_total + 1, SIZE(ix_first_tmp, 1)
+  DO i = nblocks_total + 1, nblocks_total + nblocks_fine
     sublist => neighbor_ids%new_sublist()
-    DO j = 1, block_npartof(i)
-      kz = block_ispartof(i, j, 1)
-      jy = block_ispartof(i, j, 2)
-      ix = block_ispartof(i, j, 3)
-      cell => gridding_grid%cells(kz, jy, ix)
-      DO k = 1, cell%nconts
-        IF (cell%contns(k) .LE. SIZE(ix_first, 1)) CALL list_tmp%append(cell%contns(k))
-      END DO
-    END DO
+
+    CALL neighborblocks(list_tmp, gridding_grid, block_ispartof, block_npartof, i, &
+                        ix_first_tmp, ix_last_tmp, jy_first_tmp, jy_last_tmp, kz_first_tmp, kz_last_tmp, &
+                        SIZE(ix_first, 1), cyclic_x, cyclic_y, cyclic_z)
+
     CALL list_tmp%count_deep()
     CALL list_tmp%unique(neighbor_ids_unique)
     CALL list_tmp%destroy()
     DO j = 1, SIZE(neighbor_ids_unique)
       CALL sublist%append(neighbor_ids_unique(j))
     END DO
+    DEALLOCATE(neighbor_ids_unique)
+    neighbor_ids_unique => NULL()
   END DO
-
+  
   CALL neighbor_ids%count_deep()
-  CALL neighbor_ids%unique(neighbor_ids_unique)
+  IF (neighbor_ids%len .EQ. 0) THEN 
+    ALLOCATE(neighbor_ids_unique(0))
+  ELSE 
+    CALL neighbor_ids%unique(neighbor_ids_unique)
+  END IF
 
   DO i = 1, neighbor_ids%len
     sublist => neighbor_ids_transform%new_sublist()
@@ -616,8 +630,7 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
 
   END DO
 
-  CALL check_common_faces(neighbor_blocks_unique)
-
+  CALL check_common_faces(neighbor_blocks_unique, cyclic_x, cyclic_y, cyclic_z)
 
   newsubdomain%myrank = subdomain_fine%myrank
   IF (SIZE(newsubdomain%blockids_comp, 1) .GE. 1) THEN
@@ -625,17 +638,21 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
     is_ghost(:) = .FALSE.
     DO i = 1, SIZE(newsubdomain%blockids_comp, 1)
       is_ghost(newsubdomain%blockids_comp(i)) = .TRUE.
-      neighbors => neighborblocks(gridding_grid, block_ispartof, block_npartof, newsubdomain%blockids_comp(i), &
-                                  ix_first_tmp, ix_last_tmp, jy_first_tmp, jy_last_tmp, kz_first_tmp, kz_last_tmp)
+      CALL neighborblocks(neighbors, gridding_grid, block_ispartof, block_npartof, newsubdomain%blockids_comp(i), &
+                          ix_first_tmp, ix_last_tmp, jy_first_tmp, jy_last_tmp, kz_first_tmp, kz_last_tmp, &
+                          HUGE(i), cyclic_x, cyclic_y, cyclic_z)
 
-      DO j = 1, SIZE(neighbors)
-        IF (neighbors(j) .LE. nblocks_total) is_ghost(neighbors(j)) = .TRUE.
-      END DO
+      IF (ASSOCIATED(neighbors%first)) THEN
+        elm => neighbors%first
+        IF (elm%ivalue .LE. nblocks_total) is_ghost(elm%ivalue) = .TRUE.
+        DO WHILE(ASSOCIATED(elm%next))
+          elm => elm%next
+          IF (elm%ivalue .LE. nblocks_total) is_ghost(elm%ivalue) = .TRUE.
+        END DO
+      END IF
 
-      DEALLOCATE(neighbors)
-      neighbors => NULL()
+      CALL neighbors%destroy()
     END DO
-
     newsubdomain%nblocks = COUNT(is_ghost, 1)
     ALLOCATE(newsubdomain%blockids_compghst(newsubdomain%nblocks))
 
@@ -726,6 +743,9 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
       thisblock => newsubdomain%blocks(i)
 
       newsubdomain%blocks(i)%myrank = blockranks(iblock)
+      newsubdomain%blocks(i)%resx = resx(iblock)
+      newsubdomain%blocks(i)%resy = resy(iblock)
+      newsubdomain%blocks(i)%resz = resz(iblock)
 
       nz = thisblock%fld_shape(1)
       ny = thisblock%fld_shape(2)
@@ -859,6 +879,8 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
     newsubdomain%ncells_tmp = 0
     newsubdomain%nfaces_tmp = 0
     subdomain_fine%ncoarse = 0
+    ALLOCATE(newsubdomain%blockids_compghst(0))
+    ALLOCATE(newsubdomain%blockiscomp(0))
   END IF
 
   DO i = 1, NumProcs
@@ -1252,8 +1274,12 @@ SUBROUTINE init_newblocks(newsubdomain, subdomain_fine, n, nblocks_total, &
 
   DEALLOCATE(neighbor_blocks_unique)
   neighbor_blocks_unique => NULL()
-  DEALLOCATE(neighbor_ids_unique)
-  neighbor_ids_unique => NULL()
+
+  IF (ASSOCIATED(neighbor_ids_unique)) THEN
+    DEALLOCATE(neighbor_ids_unique)
+    neighbor_ids_unique => NULL()
+  END IF
+
   DEALLOCATE(block_ispartof)
   block_ispartof => NULL()
   DEALLOCATE(block_npartof)
@@ -1301,6 +1327,109 @@ SUBROUTINE coarsen_cfield(field, field_tmp, x2_tmp, y2_tmp, z2_tmp, x2, y2, z2)
   END DO
 
 END SUBROUTINE coarsen_cfield
+
+SUBROUTINE coarsen_ufield_simple(field, field_tmp, x2_tmp, y2_tmp, z2_tmp, x2, y2, z2)
+
+  IMPLICIT NONE
+  REAL(Realkind), INTENT(in) :: field_tmp(:,:,:)
+  REAL(Realkind), POINTER, INTENT(inout) :: field(:,:,:)
+  REAL(Realkind), POINTER, INTENT(in), DIMENSION(:) :: x2_tmp, y2_tmp, z2_tmp, x2, y2, z2
+
+  INTEGER :: nz, ny, nx, i, j, k, ii, jj, kk
+  INTEGER :: nz_tmp, ny_tmp, nx_tmp
+
+  nz = SIZE(z2, 1) - 1
+  ny = SIZE(y2, 1) - 1
+  nx = SIZE(x2, 1) - 1
+
+  nz_tmp = SIZE(z2_tmp, 1) - 1
+  ny_tmp = SIZE(y2_tmp, 1) - 1
+  nx_tmp = SIZE(x2_tmp, 1) - 1
+
+  ALLOCATE(field(nz, ny, nx + 1))
+  field(:,:,:) = 0.0
+
+  DO ii = 1, nx + 1
+    i = FINDLOC(x2_tmp, x2(ii), DIM=1)
+    DO j = 1, ny_tmp
+      jj = between(y2, 0.5 * (y2_tmp(j) + y2_tmp(j + 1)))
+      DO k = 1, nz_tmp
+        kk = between(z2, 0.5 * (z2_tmp(k) + z2_tmp(k + 1)))
+        field(kk, jj, ii) = field(kk, jj, ii) + field_tmp(k, j, i)
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINE coarsen_ufield_simple
+
+SUBROUTINE coarsen_vfield_simple(field, field_tmp, x2_tmp, y2_tmp, z2_tmp, x2, y2, z2)
+
+  IMPLICIT NONE
+  REAL(Realkind), INTENT(in) :: field_tmp(:,:,:)
+  REAL(Realkind), POINTER, INTENT(inout) :: field(:,:,:)
+  REAL(Realkind), POINTER, INTENT(in), DIMENSION(:) :: x2_tmp, y2_tmp, z2_tmp, x2, y2, z2
+
+  INTEGER :: nz, ny, nx, i, j, k, ii, jj, kk
+  INTEGER :: nz_tmp, ny_tmp, nx_tmp
+
+  nz = SIZE(z2, 1) - 1
+  ny = SIZE(y2, 1) - 1
+  nx = SIZE(x2, 1) - 1
+
+  nz_tmp = SIZE(z2_tmp, 1) - 1
+  ny_tmp = SIZE(y2_tmp, 1) - 1
+  nx_tmp = SIZE(x2_tmp, 1) - 1
+
+  ALLOCATE(field(nz, ny + 1, nx))
+  field(:,:,:) = 0.0
+
+  DO i = 1, nx_tmp
+    ii = between(x2, 0.5 * (x2_tmp(i) + x2_tmp(i + 1)))
+    DO jj = 1, ny + 1 
+      j = FINDLOC(y2_tmp, y2(jj), DIM=1)
+      DO k = 1, nz_tmp
+        kk = between(z2, 0.5 * (z2_tmp(k) + z2_tmp(k + 1)))
+        field(kk, jj, ii) = field(kk, jj, ii) + field_tmp(k, j, i)
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINE coarsen_vfield_simple
+
+
+SUBROUTINE coarsen_wfield_simple(field, field_tmp, x2_tmp, y2_tmp, z2_tmp, x2, y2, z2)
+
+  IMPLICIT NONE
+  REAL(Realkind), INTENT(in) :: field_tmp(:,:,:)
+  REAL(Realkind), POINTER, INTENT(inout) :: field(:,:,:)
+  REAL(Realkind), POINTER, INTENT(in), DIMENSION(:) :: x2_tmp, y2_tmp, z2_tmp, x2, y2, z2
+
+  INTEGER :: nz, ny, nx, i, j, k, ii, jj, kk
+  INTEGER :: nz_tmp, ny_tmp, nx_tmp
+
+  nz = SIZE(z2, 1) - 1
+  ny = SIZE(y2, 1) - 1
+  nx = SIZE(x2, 1) - 1
+
+  nz_tmp = SIZE(z2_tmp, 1) - 1
+  ny_tmp = SIZE(y2_tmp, 1) - 1
+  nx_tmp = SIZE(x2_tmp, 1) - 1
+
+  ALLOCATE(field(nz + 1, ny, nx))
+  field(:,:,:) = 0.0
+
+  DO i = 1, nx_tmp
+    ii = between(x2, 0.5 * (x2_tmp(i) + x2_tmp(i + 1)))
+    DO j = 1, ny_tmp
+      jj = between(y2, 0.5 * (y2_tmp(j) + y2_tmp(j + 1)))
+      DO kk = 1, nz + 1
+        k = FINDLOC(z2_tmp, z2(kk), DIM=1)
+        field(kk, jj, ii) = field(kk, jj, ii) + field_tmp(k, j, i)
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINE coarsen_wfield_simple
 
 
 SUBROUTINE coarsen_ufield(field, field_tmp, x2_tmp, y2_tmp, z2_tmp, x2, y2, z2)
@@ -1557,9 +1686,11 @@ SUBROUTINE average_face_areas(blocks)
   
   TYPE(Block), POINTER, INTENT(inout) :: blocks(:)
   INTEGER :: iblock, nblocks
-  INTEGER :: i, j, k, nx, ny, nz, bndblock_id
+  INTEGER :: i, j, k, ii, jj, kk, nx, ny, nz, bndblock_id
   INTEGER :: i_bnds(2), j_bnds(2), k_bnds(2)
   REAL(Realkind), POINTER :: areas(:, :, :), arsx_bnd(:, :, :)
+  REAL(Realkind) :: areasum, area_avg
+  REAL(Realkind), PARAMETER :: eps = 1e-20
 
   IF(.NOT. ASSOCIATED(blocks)) RETURN
 
@@ -1575,10 +1706,26 @@ SUBROUTINE average_face_areas(blocks)
         DO k = 1, nz
           CALL find_indices_jk(blocks, blocks(iblock)%cface_w, j, j_bnds, k, k_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((k_bnds(2) - k_bnds(1) .EQ. 0) .AND. (j_bnds(2) - j_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffx(k, j, 1) = 0.5 * (blocks(iblock)%arseffx(k, j, 1) + &
-                                                blocks(bndblock_id)%arseffx(k, j, UBOUND(blocks(bndblock_id)%arseffx, 3)))
-              blocks(bndblock_id)%arseffx(k, j, UBOUND(blocks(bndblock_id)%arseffx, 3)) = blocks(iblock)%arseffx(k, j, 1)
+            
+            IF (k_bnds(2) - k_bnds(1) .GT. 0 .OR. j_bnds(2) - j_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsx(k, j, 1) + eps .GE. &
+                      blocks(bndblock_id)%arsx(k_bnds(1), j_bnds(1), UBOUND(blocks(bndblock_id)%arsx, 3))) THEN
+  
+              areasum = 0
+              DO jj = j_bnds(1), j_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arseffx(kk, jj, UBOUND(blocks(bndblock_id)%arsx, 3))
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffx(k, j, 1))
+              DO jj = j_bnds(1), j_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  blocks(bndblock_id)%arseffx(kk, jj, UBOUND(blocks(bndblock_id)%arsx, 3)) = &
+                  blocks(bndblock_id)%arseffx(kk, jj, UBOUND(blocks(bndblock_id)%arsx, 3)) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffx(k, j, 1) = area_avg
             END IF
           END IF
         END DO
@@ -1591,10 +1738,27 @@ SUBROUTINE average_face_areas(blocks)
         DO k = 1, nz
           CALL find_indices_jk(blocks, blocks(iblock)%cface_e, j, j_bnds, k, k_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((k_bnds(2) - k_bnds(1) .EQ. 0) .AND. (j_bnds(2) - j_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffx(k, j, i) = 0.5 * (blocks(iblock)%arseffx(k, j, i) + blocks(bndblock_id)%arseffx(k, j, 1))
-              blocks(bndblock_id)%arseffx(k, j, 1) = blocks(iblock)%arseffx(k, j, i)
+            IF (k_bnds(2) - k_bnds(1) .GT. 0 .OR. j_bnds(2) - j_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsx(k, j, 1) + eps .GE. &
+                      blocks(bndblock_id)%arsx(k_bnds(1), j_bnds(1), 1)) THEN
+
+              areasum = 0
+              DO jj = j_bnds(1), j_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arseffx(kk, jj, 1)
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffx(k, j, i))
+              DO jj = j_bnds(1), j_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  blocks(bndblock_id)%arseffx(kk, jj, 1) = &
+                  blocks(bndblock_id)%arseffx(kk, jj, 1) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffx(k, j, i) = area_avg
             END IF
+
           END IF
         END DO
       END DO
@@ -1605,11 +1769,26 @@ SUBROUTINE average_face_areas(blocks)
         DO k = 1, nz
           CALL find_indices_ik(blocks, blocks(iblock)%cface_s, i, i_bnds, k, k_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((k_bnds(2) - k_bnds(1) .EQ. 0) .AND. (i_bnds(2) - i_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffy(k, 1, i) = 0.5 * (blocks(iblock)%arseffy(k, 1, i) + &
-                             blocks(bndblock_id)%arseffy(k, UBOUND(blocks(bndblock_id)%arseffy, 2), i))
-              blocks(bndblock_id)%arseffy(k, UBOUND(blocks(bndblock_id)%arseffy, 2), i) = blocks(iblock)%arseffy(k, 1, i)
-            END IF
+            IF (k_bnds(2) - k_bnds(1) .GT. 0 .OR. i_bnds(2) - i_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsy(k, 1, i) + eps .GE. &
+                      blocks(bndblock_id)%arsy(k_bnds(1), UBOUND(blocks(bndblock_id)%arsy, 2), i_bnds(1))) THEN
+  
+              areasum = 0
+              DO ii = i_bnds(1), i_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arsy(kk, UBOUND(blocks(bndblock_id)%arsy, 2), ii)
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffy(k, 1, i))
+              DO ii = i_bnds(1), i_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  blocks(bndblock_id)%arseffy(kk, UBOUND(blocks(bndblock_id)%arsy, 2), ii) = &
+                  blocks(bndblock_id)%arseffy(kk, UBOUND(blocks(bndblock_id)%arsy, 2), ii) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffy(k, 1, i) = area_avg
+            END IF          
           END IF
         END DO
       END DO
@@ -1621,9 +1800,25 @@ SUBROUTINE average_face_areas(blocks)
         DO k = 1, nz
           CALL find_indices_ik(blocks, blocks(iblock)%cface_n, i, i_bnds, k, k_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((k_bnds(2) - k_bnds(1) .EQ. 0) .AND. (i_bnds(2) - i_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffy(k, j, i) = 0.5 * (blocks(iblock)%arseffy(k, j, i) + blocks(bndblock_id)%arseffy(k, 1, i))
-              blocks(bndblock_id)%arseffy(k, 1, i) = blocks(iblock)%arseffy(k, j, i)
+            IF (k_bnds(2) - k_bnds(1) .GT. 0 .OR. i_bnds(2) - i_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsy(k, 1, i) + eps .GE. &
+                      blocks(bndblock_id)%arsy(k_bnds(1), 1, i_bnds(1))) THEN
+
+              areasum = 0
+              DO ii = i_bnds(1), i_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arseffy(kk, 1, ii)
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffy(k, j, i))
+              DO ii = i_bnds(1), i_bnds(2)
+                DO kk = k_bnds(1), k_bnds(2)
+                  blocks(bndblock_id)%arseffy(kk, 1, ii) = &
+                  blocks(bndblock_id)%arseffy(kk, 1, ii) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffy(k, j, i) = area_avg
             END IF
           END IF
         END DO
@@ -1635,11 +1830,26 @@ SUBROUTINE average_face_areas(blocks)
         DO j = 1, ny
           CALL find_indices_ij(blocks, blocks(iblock)%cface_b, i, i_bnds, j, j_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((i_bnds(2) - i_bnds(1) .EQ. 0) .AND. (j_bnds(2) - j_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffz(1, j, i) = 0.5 * (blocks(iblock)%arseffz(1, j, i) + &
-                                                blocks(bndblock_id)%arseffz(UBOUND(blocks(bndblock_id)%arseffz, 1), j, i))
-              blocks(bndblock_id)%arseffz(UBOUND(blocks(bndblock_id)%arseffz, 1), j, i) = blocks(iblock)%arseffz(1, j, i) 
-           END IF
+            IF (i_bnds(2) - i_bnds(1) .GT. 0 .OR. j_bnds(2) - j_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsz(1, j, i) + eps .GE. &
+                      blocks(bndblock_id)%arsz(UBOUND(blocks(bndblock_id)%arsz, 1), j_bnds(1), i_bnds(1))) THEN
+
+              areasum = 0
+              DO ii = i_bnds(1), i_bnds(2)
+                DO jj = j_bnds(1), j_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arseffz(UBOUND(blocks(bndblock_id)%arsz, 1), jj, ii)
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffz(1, j, i))
+              DO ii = i_bnds(1), i_bnds(2)
+                DO jj = j_bnds(1), j_bnds(2)
+                  blocks(bndblock_id)%arseffz(UBOUND(blocks(bndblock_id)%arsz, 1), jj, ii) = &
+                  blocks(bndblock_id)%arseffz(UBOUND(blocks(bndblock_id)%arsz, 1), jj, ii) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffz(1, j, i) = area_avg
+            END IF
           END IF
         END DO
       END DO
@@ -1651,9 +1861,25 @@ SUBROUTINE average_face_areas(blocks)
         DO j = 1, ny
           CALL find_indices_ij(blocks, blocks(iblock)%cface_t, i, i_bnds, j, j_bnds, iblock, bndblock_id)
           IF (bndblock_id .LE. 99999999) THEN
-            IF ((i_bnds(2) - i_bnds(1) .EQ. 0) .AND. (j_bnds(2) - j_bnds(1) .EQ. 0)) THEN
-              blocks(iblock)%arseffz(k, j, i) = 0.5 * (blocks(iblock)%arseffz(k, j, i) + blocks(bndblock_id)%arseffz(1, j, i))
-              blocks(bndblock_id)%arseffz(1, j, i) = blocks(iblock)%arseffz(k, j, i)
+            IF (j_bnds(2) - j_bnds(1) .GT. 0 .OR. i_bnds(2) - i_bnds(1) .GT. 0 &
+                .OR. blocks(iblock)%arsz(1, j, i) + eps .GE. &
+                      blocks(bndblock_id)%arsz(1, j_bnds(1), i_bnds(1))) THEN
+
+              areasum = 0
+              DO ii = i_bnds(1), i_bnds(2)
+                DO jj = j_bnds(1), j_bnds(2)
+                  areasum = areasum + blocks(bndblock_id)%arseffz(1, jj, ii)
+                END DO
+              END DO
+
+              area_avg = 0.5 * (areasum + blocks(iblock)%arseffz(k, j, i))
+              DO ii = i_bnds(1), i_bnds(2)
+                DO jj = j_bnds(1), j_bnds(2)
+                  blocks(bndblock_id)%arseffz(1, jj, ii) = &
+                  blocks(bndblock_id)%arseffz(1, jj, ii) * area_avg / (areasum + eps)
+                END DO
+              END DO
+              blocks(iblock)%arseffz(k, j, i) = area_avg
             END IF
           END IF
         END DO

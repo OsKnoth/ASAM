@@ -443,6 +443,7 @@ SUBROUTINE ReadWeights(FileName)
   REAL(RealKind) :: yw0,yw1
   REAL(RealKind) :: zw0,zw1
 
+  WRITE(*,*) 'In ReadWeights 1'
   ! Domain-Part-------------------------------------------------------------------------
   ALLOCATE(domain%dx(domain%ix0+1:domain%ix1))
   ALLOCATE(domain%dy(domain%iy0+1:domain%iy1))
@@ -451,6 +452,7 @@ SUBROUTINE ReadWeights(FileName)
   ALLOCATE(domain%yP(domain%iy0:domain%iy1))
   ALLOCATE(domain%zP(domain%iz0:domain%iz1))
 
+  WRITE(*,*) 'In ReadWeights 2'
   OPEN(UNIT=InputUnit,FILE=TRIM(FileName),STATUS='OLD')
   DO
     READ(InputUnit,*,END=1) Line
@@ -465,6 +467,7 @@ SUBROUTINE ReadWeights(FileName)
   END DO
 1 CONTINUE
   REWIND(InputUnit)
+  WRITE(*,*) 'In ReadWeights 3'
   DO 
     READ(InputUnit,*,END=2) Line
     !.......................................................................
@@ -492,6 +495,7 @@ SUBROUTINE ReadWeights(FileName)
   END DO
 2 CONTINUE
   REWIND(InputUnit)
+  WRITE(*,*) 'In ReadWeights 4'
   DO 
     READ(InputUnit,*,END=3) Line
     !.......................................................................
@@ -555,8 +559,12 @@ SUBROUTINE ReadWeights(FileName)
     !........................................................................
   END DO
 4 CONTINUE
+  WRITE(*,*) 'In ReadWeights 5',SIZE(Floor),nb
   DO ib=1,nb
     CALL Set(Floor(ib))
+    WRITE(*,*) ib,igx0,igx1,LBOUND(domain%xP),UBOUND(domain%xP)
+    WRITE(*,*) ib,igy0,igy1,LBOUND(domain%yP),UBOUND(domain%yP)
+    WRITE(*,*) ib,igz0,igz1,LBOUND(domain%zP),UBOUND(domain%zP)
     Floor(ib)%x0=domain%xP(igx0)
     Floor(ib)%x1=domain%xP(igx1)
     Floor(ib)%y0=domain%yP(igy0)
@@ -564,9 +572,11 @@ SUBROUTINE ReadWeights(FileName)
     Floor(ib)%z0=domain%zP(igz0)
     Floor(ib)%z1=domain%zP(igz1)
   END DO  
+  WRITE(*,*) 'In ReadWeights 5',SIZE(Floor)
   CLOSE(UNIT=InputUnit)
 
   mi_wgts2 = TRIM(FileName(1:INDEX(FileName,'.grid')-1))//'.Weight2'
+  WRite(*,*) 'Open Weight-File'
   OPEN(UNIT=InputUnit,FILE=mi_wgts2,STATUS='old')
   READ(InputUnit,*) GridType
   GridType=TRIM(GridType)

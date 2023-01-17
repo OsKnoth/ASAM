@@ -30,6 +30,8 @@ CANOPYLIB = -L$(LIB) -lcanopy
 
 ADVECTLIB = -L$(LIB) -ladvect
 
+BLOCKMULTILIB = -L$(LIB) -lblockmulti
+
 ADJUSTLIB = -L$(LIB) -ladjust
 
 INITLIB = -L$(LIB) -linit
@@ -52,7 +54,7 @@ MICROPHYSLIB = -L$(LIB) -lmicrophys
 
 SPECSLIB = -L$(LIB) -lspecs
 
-OBJ =  $(MODLIB) $(WINDFARMLIB) $(SOILLIB) $(CANOPYLIB) $(EXAMPLELIB) $(PITZERLIB) $(ADVECTLIB) $(CGLIB) $(ADJUSTLIB) $(INITLIB) \
+OBJ =  $(MODLIB) $(WINDFARMLIB) $(SOILLIB) $(CANOPYLIB) $(EXAMPLELIB) $(PITZERLIB) $(ADVECTLIB) $(BLOCKMULTILIB) $(CGLIB) $(ADJUSTLIB) $(INITLIB) \
        $(MULTILIB) $(MATRIXLIB) $(SOLULIB) $(CHEMIELIB) \
        $(RADIATIONLIB) $(MICROPHYSLIB) $(SPECSLIB)
 
@@ -63,29 +65,37 @@ OBJSHAPE = $(SHAPELIB)
 OBJCHEMSYS = $(CHEMSYSLIB)       
        
 
-Prog: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD   
+Prog: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o $(EX) \
-        ADVECT/MainProg.f90 EXAMPLE/$(EX).f90 $(OP) $(OBJ) $(PARMETIS) $(MUMPS) $(SCALAP) $(NETCDF) $(LMPI) $(CL)  ; \
+        ADVECT/MainProg.f90 EXAMPLE/$(EX).f90 $(OPTFREE) $(OBJ) $(PARMETIS) $(MUMPS) $(SCALAP) $(NETCDF) $(LMPI) $(CL)  ; \
         mv $(EX) $(COMPPATH)/$(EX)/$(EX).$(MACH); \
         rm -f ~/bin/$(EX).$(MACH);\
         ln -s $(COMPPATH)/$(EX)/$(EX).$(MACH)  ~/bin/$(EX).$(MACH);\
         rm *.mod  
-Read: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD   
+Pres: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
+	$(LINK) $(OPT) $(INCL) $(KINCL) -o Pres \
+        ADVECT/TestPresSolver.f90 EXAMPLE/$(EX).f90 $(OPTFREE) $(OBJ) $(PARMETIS) $(MUMPS) $(SCALAP) $(NETCDF) $(LMPI) $(CL)  ; \
+        mv Pres $(COMPPATH)/$(EX)/Pres.$(MACH); \
+        rm -f ~/bin/Pres.$(MACH);\
+        ln -s $(COMPPATH)/$(EX)/Pres.$(MACH)  ~/bin/Pres.$(MACH);\
+        rm *.mod  
+
+Read: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o Read \
         ADVECT/MainRead.f90 $(OP) $(OBJ) $(PARMETIS) $(NETCDF) $(LMPI) $(CL)  ; \
         mv Read ../bin/Read.$(MACH); \
         rm -f ~/bin/Read.$(MACH);\
         ln -s $(DEFPATH)/bin/Read.$(MACH) ~/bin/Read.$(MACH);
-ReadProf: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD   
+ReadProf: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o $(EX) \
         ADVECT/MainReadProf.f90 EXAMPLE/$(EX).f90 $(OP) $(OBJ) $(PARMETIS) $(NETCDF) $(LMPI) $(CL)  ; \
         mv $(EX) $(COMPPATH)/$(EX)/ReadProf.$(MACH); \
         rm *.mod  
-TestMPI: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD   
+TestMPI: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o TestMPI \
         ADVECT/MainProgMPI_Test.f90 $(OP) $(OBJ) $(PARMETIS) $(NETCDF) $(LMPI) $(CL)  ; \
         mv TestMPI ~/bin/TestMPI.$(MACH); 
-Average: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD   
+Average: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o Average \
         ADVECT/MainTimeAverage.f90 $(OP) $(OBJ) $(PARMETIS) $(NETCDF) $(LMPI) $(CL)  ; \
         mv Average ../bin/Average.$(MACH); \
@@ -94,7 +104,7 @@ Average: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD Adju
 
 GridGen: GridD 
 	$(LINK) $(OPT) $(INCL) $(KGRIDINCL) -o GridGen\
-        GRID/MainProg.f90 $(OP) $(OBJGRID) $(NETCDF) $(CURFIT) $(SURFIT) $(GK) $(CL) ;\
+        GRID/MainProg.f90 $(OPT) $(OBJGRID) $(NETCDF) $(CURFIT) $(SURFIT) $(GK) $(CL) ;\
         mv GridGen $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH);\
         rm -f ~/bin/Grid.$(MACH);\
         ln -s $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH) ~/bin/Grid.$(MACH);
@@ -172,16 +182,18 @@ InitD:
 	@cd INIT; make -f Make_src "IN=$(IN)"
 AdvectD: 
 	@cd ADVECT; make -f Make_src "IN=$(IN)"
+BlockMultiD: 
+	@cd BLOCKMULTI; make -f Make_src "IN=$(IN)"
 MultiD: 
 	@cd MULTI; make -f Make_src "IN=$(IN)"
 MatrixD: 
 	@cd MATRIX; make -f Make_src "IN=$(IN)"
 SoluD: 
 	@cd SOLU; make -f Make_src "IN=$(IN)"
-ExampleD: 
-	@cd EXAMPLE; make -f Make_src "IN=$(IN)"
 RadiationD:
 	@cd STRAHLUNG; make -f Make_src "IN=$(IN)"
+ExampleD: 
+	@cd EXAMPLE; make -f Make_src "IN=$(IN)"
 SpecsD:
 	@cd SPECS; make -f Make_src "IN=$(IN)"
 		

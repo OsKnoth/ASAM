@@ -1220,6 +1220,9 @@ SUBROUTINE ReadWeights(InputFile)
       dx(ix)=ABS(dx(ix))
       xP(ix)=xP(ix-1)+dx(ix)
     END DO
+    ix=ix1
+    ixref = ix * 2.e0**levX
+    xP(ix1)=domain%xP(ixref-shX-1)
     !......................................
     iy=iy0+1
     iyref = iy * 2.e0**levY
@@ -1230,6 +1233,9 @@ SUBROUTINE ReadWeights(InputFile)
       dy(iy)=ABS(dy(iy))
       yP(iy)=yP(iy-1)+dy(iy)
     END DO
+    iy=iy1
+    iyref = iy * 2.e0**levY
+    yP(iy1)=domain%yP(iyref-shY-1)
     !......................................
     iz=iz0+1
     izref = iz * 2.e0**levZ
@@ -1240,6 +1246,9 @@ SUBROUTINE ReadWeights(InputFile)
       dz(iz)=ABS(dz(iz))
       zP(iz)=zP(iz-1)+dz(iz)
     END DO
+    iz=iz1
+    izref = iz * 2.e0**levZ
+    zP(iz1)=domain%zP(izref-shZ-1)
   END DO
 
 END SUBROUTINE ReadWeights
@@ -1531,6 +1540,23 @@ SUBROUTINE SelfMultiblockCompute
     END DO
   END DO
 
+  WRITE(*,*) 'ALLOCATE Floor ',nb
+  nb=0
+  DO i=LBOUND(Blocks,1),UBOUND(Blocks,1)
+    DO j=LBOUND(Blocks,2),UBOUND(Blocks,2)
+      DO k=LBOUND(Blocks,3),UBOUND(Blocks,3)
+        IF (Blocks(i,j,k)%Active) THEN
+          DO ii=1,2**MAX(xBMax+Blocks(i,j,k)%xC,0)
+            DO jj=1,2**MAX(yBMax+Blocks(i,j,k)%yC,0)
+              DO kk=1,2**MAX(xBMax+Blocks(i,j,k)%zC,0)
+                nb=nb+1
+              END DO
+            END DO
+          END DO
+        END IF
+      END DO
+    END DO
+  END DO
   ALLOCATE(Floor(nb))
   ib=0
   DO i=LBOUND(Blocks,1),UBOUND(Blocks,1)
@@ -1545,6 +1571,7 @@ SUBROUTINE SelfMultiblockCompute
                 Floor(ib)%igx1=Blocks(i,j,k)%ix0+(ii  )*(Blocks(i,j,k)%ix1-Blocks(i,j,k)%ix0)/2**MAX(xBMax+Blocks(i,j,k)%xC,0)  
                 Floor(ib)%igy0=Blocks(i,j,k)%iy0+(jj-1)*(Blocks(i,j,k)%iy1-Blocks(i,j,k)%iy0)/2**MAX(yBMax+Blocks(i,j,k)%yC,0)
                 Floor(ib)%igy1=Blocks(i,j,k)%iy0+(jj  )*(Blocks(i,j,k)%iy1-Blocks(i,j,k)%iy0)/2**MAX(yBMax+Blocks(i,j,k)%yC,0)  
+                WRITE(*,*) 'Block ',ib,Floor(ib)%igy0,Floor(ib)%igy1
                 Floor(ib)%igz0=Blocks(i,j,k)%iz0+(kk-1)*(Blocks(i,j,k)%iz1-Blocks(i,j,k)%iz0)/2**MAX(zBMax+Blocks(i,j,k)%zC,0)
                 Floor(ib)%igz1=Blocks(i,j,k)%iz0+(kk  )*(Blocks(i,j,k)%iz1-Blocks(i,j,k)%iz0)/2**MAX(zBMax+Blocks(i,j,k)%zC,0)  
                 iMaxC=MIN(Blocks(i,j,k)%xC,Blocks(i,j,k)%yC,Blocks(i,j,k)%zC)

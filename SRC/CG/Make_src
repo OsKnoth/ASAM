@@ -1,5 +1,8 @@
 include ../$(IN)
 OBJ = Kind_Mod_$(MACH).f90\
+      Sort_Mod.f90\
+      List_Mod.f90\
+      Block_Mod.f90\
       Index_Mod.f90 \
       Tool_Mod.f90\
       Matrix_Mod.f90\

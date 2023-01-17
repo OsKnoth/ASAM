@@ -7,7 +7,7 @@ USE Index_Mod, ONLY: IndexC3, IndexC3block, IndexU3block,IndexV3block, IndexW3bl
 USE MatSpRowCol_Mod, ONLY: SpRowCol, SpAVec_SpRowCol, SpMm_SpRowCol, SpDeallocate_SpRowCol, &
                            SpNullify_SpRowCol, SpTrans_SpRowCol, make_eye, Axpy_SpRowCol
 
-USE MPI_Mod
+USE Parallel_Mod
 
 !Boundary structure for point to point communication of field parts
 TYPE Bound
@@ -18,7 +18,7 @@ TYPE Bound
   INTEGER, POINTER :: blockids(:) => NULL()
   INTEGER, POINTER :: blockptr(:) => NULL()
   INTEGER :: tag               ! tag
-  INTEGER :: req
+  TYPE(MPI_Request) :: req
   TYPE(Bound), POINTER :: next => NULL()
 END TYPE Bound
 
@@ -54,6 +54,8 @@ TYPE BoundCommInterface
   TYPE(Bound), POINTER :: recv_bnds => NULL()
   INTEGER, POINTER :: block2halo_inds(:) => NULL()
 END TYPE BoundCommInterface
+
+LOGICAL :: cyclic_x, cyclic_y, cyclic_z
 
 
 CONTAINS
@@ -225,7 +227,7 @@ SUBROUTINE finish_two_sided_exchange(comm_interf)
   TYPE(BoundCommInterface), INTENT(inout) :: comm_interf
 
   TYPE(Bound), POINTER :: send_current, recv_current
-  
+ 
   send_current => comm_interf%send_bnds
   recv_current => comm_interf%recv_bnds
 

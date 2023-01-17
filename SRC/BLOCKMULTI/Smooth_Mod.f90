@@ -56,7 +56,7 @@ SUBROUTINE init_from_sprowcol_lexicographic(self, mat, omega, comm_interf)
     IF (mat%Diagptr(i) == -1) THEN
       self%diaginv(i) = 0.0
     ELSE
-      self%diaginv(i) = omega / (mat%Val(mat%Diagptr(i)) + 1e-20) ** 2 * mat%Val(mat%Diagptr(i))
+      self%diaginv(i) = omega / mat%Val(mat%Diagptr(i))
     END IF
   END DO
 
@@ -90,13 +90,13 @@ SUBROUTINE init_from_sprowcol_redblack(self, mat,  Bl_crop, Rd_crop, omega, comm
 
   DO i = 1, mat_rd%m
     IF (mat_rd%Diagptr(i) .GT. 0) THEN
-      self%diaginv_rd(i) = omega / (mat_rd%Val(mat_rd%Diagptr(i)) + 1e-20) ** 2 * mat_rd%Val(mat_rd%Diagptr(i))
+      self%diaginv_rd(i) = omega / mat_rd%Val(mat_rd%Diagptr(i))
     END IF
   END DO
 
   DO i = 1, mat_bl%m
     IF (mat_bl%Diagptr(i) .GT. 0) THEN
-      self%diaginv_bl(i) = omega / (mat_bl%Val(mat_bl%Diagptr(i)) + 1e-20) ** 2 * mat_bl%Val(mat_bl%Diagptr(i))
+      self%diaginv_bl(i) = omega / mat_bl%Val(mat_bl%Diagptr(i))
     END IF
   END DO
 

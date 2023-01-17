@@ -41,10 +41,13 @@ MODULE Parallel_Mod
    INTEGER :: NumberNeiProc
    INTEGER :: MaxPutBuf, MaxGetBuf
 
+   TYPE(MPI_Status) :: status
+
 
 CONTAINS 
 
-SUBROUTINE start_MPI()
+SUBROUTINE start_MPI(myrank)
+  INTEGER, INTENT(inout), OPTIONAL :: myrank
 
 !-----------------------------------------------------------------------
 !     MPI Initialization
@@ -57,6 +60,10 @@ SUBROUTINE start_MPI()
       END IF
 !
       CALL MPI_COMM_RANK( MPI_COMM_WORLD, MyId, MPIErr )
+      IF (PRESENT(myrank)) THEN
+        myrank=MyId
+      END IF  
+
       CALL MPI_COMM_SIZE( MPI_COMM_WORLD, NumProcs, MPIErr )
 
       IF (RealKind==4) THEN

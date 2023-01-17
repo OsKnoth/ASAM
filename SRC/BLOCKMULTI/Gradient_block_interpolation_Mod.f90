@@ -303,7 +303,7 @@ SUBROUTINE boundint_weights_yz(weights, points_loc, points_volsarea, ipoint, blo
         points_loc(ipoint, 1) = bndblock_id2 
         points_loc(ipoint, 2) = i_bnd_2
         points_loc(ipoint, 3) = j_bnd_2
-        points_loc(ipoint, 4) = nz_tmp
+        points_loc(ipoint, 4) = 1
 
       END IF
 
@@ -617,7 +617,7 @@ SUBROUTINE boundint_weights_xz(weights, points_loc, points_volsarea, ipoint, blo
         points_loc(ipoint, 1) = bndblock_id2
         points_loc(ipoint, 2) = i_bnd_2
         points_loc(ipoint, 3) = j_bnd_2
-        points_loc(ipoint, 4) = nz_tmp
+        points_loc(ipoint, 4) = 1
 
       END IF
 
@@ -1131,7 +1131,6 @@ SUBROUTINE linear_weights(weights, points, ipoint, point_dest)
   INTEGER, INTENT(in) :: ipoint
   REAL(Realkind), INTENT(in) :: point_dest(2)
   REAL(Realkind) :: mat(3, 3), mat_inv(3, 3), b_vecs(3, ipoint), b(3), w_matrix(ipoint, 3)
-  REAL(Realkind) :: id(3, 3)
 
   INTEGER :: i, j
 
@@ -1157,8 +1156,6 @@ SUBROUTINE linear_weights(weights, points, ipoint, point_dest)
     END IF
 
     CALL inv(mat, mat_inv)
-
-    id = MATMUL(mat_inv, mat)
 
     w_matrix = TRANSPOSE(MATMUL(mat_inv, b_vecs))
 

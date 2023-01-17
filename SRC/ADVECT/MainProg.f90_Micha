@@ -39,6 +39,19 @@ PROGRAM MainProg
   USE ReadWRFnc_Mod
   USE Rhs_Mod
 
+!--------------Begin Block-----------------
+  USE Subdom_Mod, ONLY: SubDomain
+  USE DomDecomp_Mod, ONLY: read_blocks_from_netcdf, vec1d_from_homog, btype, blockranks
+  USE Laplace_block_Mod, ONLY: make_operators_static
+  USE Compressible_Mod, ONLY: solveM, setup_pressure_solver, update_pressure_solver_dt
+  USE Output_Mod, ONLY: output_serial
+  USE List_Mod, ONLY: RArray
+
+  USE CoarseGrids_Mod, ONLY: define_coarse_grids, partition_clevels, intialize_coarse_subdomains, &
+                             subdomain_lev, isblackijkzero_lev, determine_color_startcell
+
+!--------------End Block-----------------
+
   IMPLICIT NONE
 
   TYPE(VelocityFace_T), POINTER :: VelF1(:)
@@ -90,8 +103,94 @@ PROGRAM MainProg
  
   LOGICAL :: FinishNudging
   LOGICAL :: FinishTendency
+!--------------Begin Block-----------------
+  CHARACTER(len=128), PARAMETER :: file_path = "CanyonHof.nc"
+  CHARACTER(len=3) :: file_nr
+  TYPE(SubDomain), TARGET :: subdom
+  REAL(Realkind), ALLOCATABLE :: rhoM(:), rhothetaMi(:)
+  REAL(Realkind), ALLOCATABLE :: rhoM_New(:), rhothetaMi_New(:)
+  REAL(Realkind), ALLOCATABLE, TARGET :: rhovelM(:)
+  REAL(Realkind), ALLOCATABLE, TARGET :: rhovelM_New(:)
+  TYPE(SubDomain), POINTER :: this_subdomain => NULL()
+  REAL(Realkind), PARAMETER :: urho0M = 6.0, &
+                               vrho0M = 6.0, &
+                               wrho0M = 0.0, &
+                               rho0M = 1.2, &
+                               theta0M = 284.0
+
+  REAL(RealKind) :: dtM=0.1d0
+  REAL(Realkind), PARAMETER :: gamm = 1.0
+  REAL(Realkind), PARAMETER :: sor_param = 1.5
+  Real(Realkind) :: resmax_tol = 1e-5
+  INTEGER, PARAMETER :: NumIter = 100                           
+  INTEGER :: n,icellM
+!--------------End Block-----------------
 
   CALL start_MPI
+
+!--------------Begin Block-----------------
+! CALL start_MPI(subdom%myrank)
+  subdom%myrank = MyId
+
+  CALL read_blocks_from_netcdf(file_path, subdom)
+
+  CALL define_coarse_grids()
+  CALL partition_clevels()
+  CALL determine_color_startcell()
+
+  CALL intialize_coarse_subdomains(subdom)
+  IF (subdom%myrank .EQ. 0) WRITE(*,*) "Blocks read"
+
+  this_subdomain => subdomain_lev
+  CALL this_subdomain%set_cell_type()
+  CALL this_subdomain%set_face_type()
+
+  !make the communication interface
+  CALL this_subdomain%init_boundcomm_interface(blockranks)
+
+  CALL make_operators_static(this_subdomain, btype, isblackijkzero_lev(1)%data)
+
+  ALLOCATE(rhoM(this_subdomain%ncells))
+  ALLOCATE(rhothetaMi(this_subdomain%ncells))
+  ALLOCATE(rhovelM(this_subdomain%nfaces))
+  ALLOCATE(rhoM_New(this_subdomain%ncells))
+  ALLOCATE(rhothetaMi_New(this_subdomain%ncells))
+  ALLOCATE(rhovelM_New(this_subdomain%nfaces))
+  icellM = 1
+  DO n = 1, this_subdomain%nblocks
+  IF (this_subdomain%blockiscomp(n)) THEN
+    DO i = 1, this_subdomain%blocks(n)%fld_shape(3)
+      DO j = 1, this_subdomain%blocks(n)%fld_shape(2)
+        DO k = 1, this_subdomain%blocks(n)%fld_shape(1)
+          IF (this_subdomain%blocks(n)%volseff(k, j, i) .LT. 1.001e-20) THEN
+            rhoM(icellM) = 0
+            rhothetaMi(icellM) = 0
+          ELSE
+            rhoM(icellM) = rho0M
+            rhothetaMi(icellM) = theta0M * rho0M
+          END IF
+          icellM = icellM + 1
+        END DO
+      END DO
+    END DO
+  END IF
+END DO
+
+  CALL vec1d_from_homog(this_subdomain, urho0M, vrho0M, wrho0M, rhovelM)
+  rhovelM = 0.0d0
+  rhovelM(100) = 1.0
+  IF (this_subdomain%myrank .EQ. 0) WRITE(*,*) "Solve"
+
+  WRITE(*,*) 'vor solve_rhotheta'
+  CALL setup_pressure_solver(this_subdomain, dtM, gamm, rhothetaMi, rhoM)
+  CALL solveM(this_subdomain, rhothetaMi_new, rhoM_new, rhovelM_new, rhothetaMi, rhoM, rhovelM, dtM, gamm, NumIter, resmax_tol)
+  WRITE(*,*) 'rhovelM_New(98:102)',rhovelM_New(98:102)
+  STOP
+  WRITE(*,*) 'nach solve_rhotheta'
+
+  WRITE(file_nr, '(I3.3)') this_subdomain%myrank
+
+!--------------End Block-----------------
 
   CALL Random_seed(size=SizeSeed)
 ! seed = 1 !myID
@@ -770,6 +869,31 @@ PROGRAM MainProg
     END DO
     CALL Copy(VecMet,VecMetP)
     GravComp=0.0d0
+!--------------Begin Block-----------------
+!   DO ib=1,nb
+!     CALL Set(Floor(iB))
+!     VelF1(ib)%uF=urho0M
+!     VelF1(ib)%vF=vrho0M
+!     VelF1(ib)%wF=wrho0M
+!     VecMetP(ib)%Vec(ThPos)%c(:,:,:,1)=theta0M*rho0M*VolC/(VolC+1.d-40)
+!     VecMetP(ib)%Vec(RhoPos)%c(:,:,:,1)=rho0M*VolC/(VolC+1.d-40)
+!   END DO  
+    VelF1 = 0.0d0
+    VelF1(1)%uF(2,2,2)=1.0d0
+    WRITE(*,*) 'Dot VelF1',Dot(VelF1,VelF1)
+    CALL CopyVelF2Vec(subdom,VelF1,rhovelM)
+    CALL CopyVec2Vec(subdom,VecMetP,ThPos,rhothetaMi,RhoPos)
+    CALL CopyVec2Vec(subdom,VecMetP,RhoPos,rhoM)
+
+    dtM = dtP
+    WRITE(*,*) 'dtM dtP',dtM,dtP
+    CALL setup_pressure_solver(this_subdomain, dtM, gamm, rhothetaMi, rhoM)
+    WRITE(*,*) 'solve'
+    CALL solveM(this_subdomain, rhothetaMi_new, rhoM_new, rhovelM_new, rhothetaMi, rhoM, rhovelM, dtM, gamm, NumIter, resmax_tol)
+    WRITE(*,*) 'Copy'
+    CALL CopyVec2VelF(subdom,rhovelM_new,VelF2)
+!--------------End Block-------------------
+    WRITE(*,*) 'Dot VelF1',Dot(VelF1,VelF1)
     CALL JacAccGrav(VecMetP)
     VecMetP=Zero
     IF (Anelastic.OR.PseudoIn) THEN
@@ -782,6 +906,10 @@ PROGRAM MainProg
       CALL PrepareEn(VecMet,VelF1,Time)
     END IF  
   END IF  
+  WRITE(*,*) 'Diff',SUM(ABS(VelF1(1)%uF-VelF2(1)%uF))
+  WRITE(*,*) 'VelF1(1)%uF',VelF1(1)%uF(:,1,1)
+  WRITE(*,*) 'VelF2(1)%uF',VelF2(1)%uF(:,1,1)
+  STOP
   GravComp=Grav
   Time=StartTime
   CALL PrepareF(VecMet,VelF1,Time)
@@ -1203,5 +1331,103 @@ SUBROUTINE UpdateBoundary(Time)
     END IF
   END IF
 END SUBROUTINE UpdateBoundary
+
+SUBROUTINE CopyVelF2Vec(subdom,VelF,x)
+  TYPE(SubDomain), INTENT(in) :: subdom
+  TYPE(VelocityFace_T), POINTER :: VelF(:)
+  REAL(Realkind), INTENT(inout) :: x(:)
+
+  INTEGER :: iblock
+  INTEGER :: nz, ny, nx
+  INTEGER :: current_ind
+
+  current_ind = 1
+  DO iblock = 1, subdom%nblocks
+    IF (subdom%blockiscomp(iblock) .EQV. .TRUE.) THEN
+      nx=SIZE(VelF(iblock)%uF,1)-1
+      ny=SIZE(VelF(iblock)%vF,2)-1
+      nz=SIZE(VelF(iblock)%wF,3)-1
+
+      x(current_ind:current_ind + (nx+1)*ny*nz - 1) = PACK(RESHAPE(VelF(iblock)%uF,(/nz,ny,(nx+1)/),ORDER=(/3,2,1/)),MASK=.TRUE.)
+      current_ind = current_ind + (nx+1)*ny*nz 
+      x(current_ind:current_ind + nx*(ny+1)*nz - 1) = PACK(RESHAPE(VelF(iblock)%vF,(/nz,(ny+1),nx/),ORDER=(/3,2,1/)),MASK=.TRUE.)
+      current_ind = current_ind + nx*(ny+1)*nz 
+      x(current_ind:current_ind + nx*ny*(nz+1) - 1) = PACK(RESHAPE(VelF(iblock)%wF,(/(nz+1),ny,nx/),ORDER=(/3,2,1/)),MASK=.TRUE.)
+      current_ind = current_ind + nx*ny*(nz+1) 
+
+    END IF
+  END DO
+END SUBROUTINE CopyVelF2Vec
+
+SUBROUTINE CopyVec2VelF(subdom,x,VelF)
+  TYPE(SubDomain), INTENT(in) :: subdom
+  REAL(Realkind), INTENT(inout) :: x(:)
+  TYPE(VelocityFace_T), POINTER :: VelF(:)
+
+  INTEGER :: iblock
+  INTEGER :: nz, ny, nx
+  INTEGER :: current_ind
+
+  current_ind = 1
+  DO iblock = 1, subdom%nblocks
+    IF (subdom%blockiscomp(iblock) .EQV. .TRUE.) THEN
+      nx=SIZE(VelF(iblock)%uF,1)-1
+      ny=SIZE(VelF(iblock)%vF,2)-1
+      nz=SIZE(VelF(iblock)%wF,3)-1
+!     VelF(iblock)%uF = RESHAPE(x(current_ind:current_ind + (nx+1)*ny*nz - 1),(/nz,ny,(nx+1)/),ORDER=(/3,2,1/))
+!     current_ind = current_ind + (nx+1)*ny*nz
+!     VelF(iblock)%vF = RESHAPE(x(current_ind:current_ind + nx*(ny+1)*nz - 1),(/nz,(ny+1),nx/),ORDER=(/3,2,1/))
+!     current_ind = current_ind + nx*(ny+1)*nz
+!     VelF(iblock)%wF = RESHAPE(x(current_ind:current_ind + nx*ny*(nz+1) - 1),(/(nz+1),ny,nx/),ORDER=(/3,2,1/))
+!     current_ind = current_ind + nx*ny*(nz+1)
+      VelF(iblock)%uF = RESHAPE(x(current_ind:current_ind + (nx+1)*ny*nz - 1),(/(nx+1),ny,nz/),ORDER=(/3,2,1/))
+      current_ind = current_ind + (nx+1)*ny*nz
+      VelF(iblock)%vF = RESHAPE(x(current_ind:current_ind + nx*(ny+1)*nz - 1),(/nx,(ny+1),nz/),ORDER=(/3,2,1/))
+      current_ind = current_ind + nx*(ny+1)*nz
+      VelF(iblock)%wF = RESHAPE(x(current_ind:current_ind + nx*ny*(nz+1) - 1),(/nx,ny,(nz+1)/),ORDER=(/3,2,1/))
+      current_ind = current_ind + nx*ny*(nz+1)
+    END IF
+  END DO
+END SUBROUTINE CopyVec2VelF
+
+SUBROUTINE CopyVec2Vec(subdom,Vec,Pos,x,RhoPos)
+  TYPE(SubDomain), INTENT(in) :: subdom
+  TYPE(Vector4Cell_T), POINTER :: Vec(:)
+  INTEGER :: Pos
+  REAL(Realkind), INTENT(inout) :: x(:)
+  INTEGER, OPTIONAL :: RhoPos
+
+  INTEGER :: iblock
+  INTEGER :: nz, ny, nx
+  INTEGER :: iz1, iy1, ix1
+  INTEGER :: iz0, iy0, ix0
+  INTEGER :: current_ind
+
+  current_ind = 1
+  DO iblock = 1, subdom%nblocks
+    IF (subdom%blockiscomp(iblock) .EQV. .TRUE.) THEN
+      ix1=UBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),1)-1
+      ix0=LBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),1)
+      nx=ix1-ix0
+      iy1=UBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),2)-1
+      iy0=LBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),2)
+      ny=iy1-iy0
+      iz1=UBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),3)-1
+      iz0=LBOUND(Vec(iblock)%Vec(Pos)%c(:,:,:,1),3)
+      nz=iz1-iz0
+
+      IF (PRESENT(RhoPos)) THEN
+        x(current_ind:current_ind + nx*ny*nz - 1) =  &
+          PACK(RESHAPE(Vec(iblock)%Vec(Pos)%c(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1,1)/(Vec(iblock)%Vec(RhoPos)%c(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1,1)+1.d-8), &
+          (/nz,ny,nx/),ORDER=(/3,2,1/)),MASK=.TRUE.)
+      ELSE
+        x(current_ind:current_ind + nx*ny*nz - 1) =  &
+          PACK(RESHAPE(Vec(iblock)%Vec(Pos)%c(ix0+1:ix1,iy0+1:iy1,iz0+1:iz1,1),(/nz,ny,nx/),ORDER=(/3,2,1/)),MASK=.TRUE.)
+      END IF  
+      current_ind = current_ind + nx*ny*nz 
+
+    END IF
+  END DO
+END SUBROUTINE CopyVec2Vec
 
 END PROGRAM MainProg

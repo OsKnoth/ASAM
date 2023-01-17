@@ -150,12 +150,14 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
     DO i = 1, nx + 1
 
       IF (i == 1) THEN
+
         IF (ANY(blocks(iblock)%cface_w)) THEN
 
           DO j = 1, ny
             DO k = 1, nz
 
               CALL find_indices_jk(blocks, blocks(iblock)%cface_w, j, j_bnds, k, k_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -233,11 +235,13 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
         END IF
 
       ELSEIF (i == nx + 1) THEN
+
         IF (ANY(blocks(iblock)%cface_e)) THEN
           DO j = 1, ny
             DO k = 1, nz
 
               CALL find_indices_jk(blocks, blocks(iblock)%cface_e, j, j_bnds, k, k_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -266,7 +270,6 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
               gcoeff_sum = 0.0              
 
               IF ((k_bnds(2) - k_bnds(1) > 0) .OR. (j_bnds(2) - j_bnds(1) > 0)) THEN
-
                 DO jj = j_bnds(1), j_bnds(2)
                   DO kk = k_bnds(1), k_bnds(2)
                     gcoeff = 0.0
@@ -277,10 +280,12 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
                 END DO
               ELSE
                 IF (ABS(z_bnd(k_bnds(1)) - z(k)) + ABS(y_bnd(j_bnds(1)) - y(j)) > eps) THEN
+
                   CALL boundint_weights_yz(weights, points_loc, points_volsarea, ipoint, blocks, bndblock_id, &
                                            x, y, z, y_bnd, z_bnd, y2_bnd, z2_bnd, volseff_bnd, arseffx_bnd, &
                                            j, k,  j_bnds, k_bnds, 1, point_dest)
                   DO l = 1, ipoint
+
                     gcoeff = 2.0 * weights(l) * arseffx(k, j, i) * points_volsarea(l, 2) / &
                              (volseff(k, j, i - 1) * points_volsarea(l, 2) + points_volsarea(l, 1) * arseffx(k, j, i) + eps)
                     gcoeff_sum = gcoeff_sum + gcoeff
@@ -316,6 +321,7 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
         END IF
 
       ELSE
+
         DO j = 1, ny
           DO k = 1, nz
             area = blocks(iblock)%arseffx(k, j, i)
@@ -339,11 +345,13 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
     ! y-component
     DO i = 1, nx
       DO j = 1, ny + 1
+        
         IF (j == 1) THEN
           IF (ANY(blocks(iblock)%cface_s)) THEN
             DO k = 1, nz
 
               CALL find_indices_ik(blocks, blocks(iblock)%cface_s, i, i_bnds, k, k_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -421,6 +429,7 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
             DO k = 1, nz
 
               CALL find_indices_ik(blocks, blocks(iblock)%cface_n, i, i_bnds, k, k_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -460,10 +469,12 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
                 END DO
               ELSE
                 IF (ABS(z_bnd(k_bnds(1)) - z(k)) + ABS(x_bnd(i_bnds(1)) - x(i)) > eps) THEN
+
                   CALL boundint_weights_xz(weights, points_loc, points_volsarea, ipoint, blocks, bndblock_id, &
                                            x, y, z, x_bnd, z_bnd, x2_bnd, z2_bnd, volseff_bnd, arseffy_bnd, &
                                            i, k, i_bnds, k_bnds, 1, point_dest)
                   DO l = 1, ipoint
+
                     gcoeff = 2.0 * weights(l) * arseffy(k, j, i) * points_volsarea(l, 2) / &
                              (volseff(k, j - 1, i) * points_volsarea(l, 2) + points_volsarea(l, 1) * arseffy(k, j, i) + eps)
                     gcoeff_sum = gcoeff_sum + gcoeff
@@ -471,6 +482,7 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
                                                       blocks, points_loc(l, 1), check=.TRUE.)
                     GRAD3d_a%Val(n) = gcoeff
                     n = n + 1
+
                   END DO
                 ELSE
                   volume = 0.5 * (volseff(k, j - 1, i) + volseff_bnd(k_bnds(1), 1, i_bnds(1)))
@@ -517,12 +529,14 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
     DO i = 1, nx
       DO j = 1, ny
         DO k = 1, nz + 1
+
           IF (k == 1) THEN
 
 
             IF (ANY(blocks(iblock)%cface_b)) THEN
-
+              
               CALL find_indices_ij(blocks, blocks(iblock)%cface_b, i, i_bnds, j, j_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -593,12 +607,8 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
 
           ELSE IF (k == nz + 1) THEN
             IF (ANY(blocks(iblock)%cface_t)) THEN
-
-              GRAD3d_a%ColInd(n) = IndexC3block(i, j, k - 1, blocks, iblock, check=.TRUE.)
-              n_tmp = n
-              n = n + 1
-
               CALL find_indices_ij(blocks, blocks(iblock)%cface_t, i, i_bnds, j, j_bnds, iblock, bndblock_id)
+
               IF (bndblock_id .GT. 99999999) THEN
                 GRAD3d_a%RowPtr(irow + 1) = n
                 INT2d_bnds%RowPtr(irow + 1) = n2
@@ -629,7 +639,6 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
               gcoeff_sum = 0.0
 
               IF ((j_bnds(2) - j_bnds(1) > 0) .OR. (i_bnds(2) - i_bnds(1) > 0)) THEN
-
                 DO ii = i_bnds(1), i_bnds(2)
                   DO jj = j_bnds(1), j_bnds(2)
                     gcoeff = 0.0
@@ -687,10 +696,11 @@ SUBROUTINE make_grad3d(GRAD3d, blocks)
     END DO
   END DO
 
+
 !  CALL resize_sprowcol_dataflds(GRAD3d_a, n - 1)
 !  CALL resize_sprowcol_dataflds(INT2d_bnds, n2 - 1)
 
-  CALL SpMm_SpRowCol(Grad3d_b, INT2d_bnds, GRAD3d_a, allocate_mat=.FALSE.)
+  CALL SpMm_SpRowCol(Grad3d_b, INT2d_bnds, GRAD3d_a)
   CALL SpA_SpRowCol(Grad3d, Grad3d_a, Grad3d_b, allocate_mat=.FALSE.)
 
 !  CALL SpDeallocate_SpRowCol(GRAD3d_a)

@@ -4,15 +4,7 @@ USE Kindmod
 
 INTERFACE merge_argsort
 
-  SUBROUTINE merge_argsort_int(inum, d)
-    INTEGER, INTENT(IN) :: inum(:)
-    INTEGER, INTENT(OUT), :: d(SIZE(inum))
-  END SUBROUTINE merge_argsort_int
-
-  SUBROUTINE merge_argsort_real(rnum, d)
-    REAL(Realkind), INTENT(IN) :: rnum(:)
-    INTEGER, INTENT(OUT), :: d(SIZE(rnum))
-  END SUBROUTINE merge_argsort_real
+  MODULE PROCEDURE merge_argsort_int, merge_argsort_real
   
 END INTERFACE
 
@@ -23,7 +15,7 @@ SUBROUTINE merge_argsort_real(rnum,d)
   IMPLICIT NONE
 
   REAL(Realkind), INTENT(IN) :: rnum(:)
-  INTEGER, INTENT(OUT), :: d(SIZE(rnum))
+  INTEGER, INTENT(OUT) :: d(SIZE(rnum))
            
   INTEGER :: il(SIZE(rnum))
 
@@ -78,7 +70,7 @@ SUBROUTINE merge_argsort_int(inum,d)
   IMPLICIT NONE
 
   INTEGER, INTENT(IN) :: inum(:)
-  INTEGER, INTENT(OUT), :: d(SIZE(inum))
+  INTEGER, INTENT(OUT) :: d(SIZE(inum))
 
   INTEGER :: il(SIZE(inum))
 

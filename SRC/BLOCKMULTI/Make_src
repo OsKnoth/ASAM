@@ -1,0 +1,27 @@
+include ../$(IN)
+OBJ = Boundary_Mod.f90\
+      Smooth_Mod.f90\
+      Subdom_Mod.f90\
+      Part_Mod.f90\
+      DomDecomp_Mod.f90\
+      Crop_Mod.f90\
+      Transfer_Mod.f90\
+      Gradient_block_interpolation_Mod.f90\
+      Gradient_block_Mod.f90\
+      Laplace_block_Mod.f90\
+      CoarseGrids_Mod.f90\
+      Output_Mod.f90\
+      Constants_Mod.f90\
+      Compressible_Mod.f90
+
+$(LIB)/libblockmulti.a: $(OBJ)
+	@if [ -f *.o ] ;\
+          then  rm *.o ;\
+         fi
+	$(F90) $(OPTFREE)  -I. $(INCL) $(KINCL) -c $(PCL) $?
+	@ar $(X64) rv $(LIB)/libblockmulti.a ${?:.f90=.o}
+	@ar $(X64) ts $(LIB)/libblockmulti.a
+	-@for i in `ls *.$(ModSuf) 2>/dev/null`; do \
+           mv $$i $(LIB); \
+        done
+	@rm *.o

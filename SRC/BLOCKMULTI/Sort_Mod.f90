@@ -25,12 +25,14 @@ SUBROUTINE rsortunique(a, unique)
 
   n = SIZE(a, 1)
 
-  IF (n .EQ. 1) THEN
-    ALLOCATE(unique(n))
+  ALLOCATE(unique(n))
+  
+  IF (n .EQ. 0) THEN
+     RETURN
+  ELSE IF (n .EQ. 1) THEN
     unique(:) = a
     RETURN
   END IF
-
 
   CALL MergeSort(a)
 
@@ -56,21 +58,24 @@ SUBROUTINE isortunique(a, unique)
   INTEGER :: unique_tmp(SIZE(a, 1))
   INTEGER :: n, i, iunique
 
+
   IF (ASSOCIATED(unique)) THEN
     DEALLOCATE(unique)
   END IF
 
   n = SIZE(a, 1)
 
-  IF (n .EQ. 1) THEN
-    ALLOCATE(unique(n))
+  ALLOCATE(unique(n))
+
+  IF (n .EQ. 0) THEN
+     RETURN
+  ELSE IF (n .EQ. 1) THEN
     unique(:) = a
     RETURN
   END IF
 
-
   CALL MergeSort(a)
-
+  
   unique_tmp(1) = a(1)
   iunique = 1
   DO i = 2, n

@@ -243,7 +243,6 @@ SUBROUTINE SoilCompute(Time)
             wLoc*wLoc
     VT    = SQRT(MAX(V-VN*VN,Zero))          
 
-    WRITE(*,*) 'DragM ',DragM
 !   Wind
     uRhsL(ix,iy,iz,1)=uRhsL(ix,iy,iz,1)- &
                    RhoAir*FL*DragM*VT*(uLocL-n1*VN)
@@ -321,8 +320,6 @@ SUBROUTINE SoilCompute(Time)
                    +F_par*AlbedoVeg(F_plant,LandClass))
       BoundCell(i)%alb = AlbSoil+AlbVeg
       
-  ! WRITE (*,*) 'After flux: i,LandClass,TS(1),TSurface', i, LandClass, TS(1),TSurface
-
 !     incoming (direct) solar Radiation
       Qdir       = (One-(AlbSoil+AlbVeg))*BoundCell(i)%raddirekt*shad &
                    *MAX(Zero,(n1G*radn1+n2G*radn2+n3G*radn3))
@@ -331,8 +328,6 @@ SUBROUTINE SoilCompute(Time)
       ! downward long wave radiation hitting the surface
       Qinf       = BoundCell(i)%radinfred
 
-!     WRITE (*,*) 'Soil: AlbSoil,AlbVeg,1-Sum,raddir,raddif,radinf',AlbSoil,AlbVeg,(One-(AlbSoil+AlbVeg)),BoundCell(i)%raddirekt,BoundCell(i)%raddiffus,BoundCell(i)%radinfred
-!     WRITE (*,*) 'Soil: Qdir,Qdif,Qinf',Qdir,Qdif,Qinf
 
       IF (cfcap(SoilType(1))>WS(1)) THEN
         hu=Half*(1.0d0-COS((WS(1)*Pi)/(1.6d0*cfcap(SoilType(1)))))
@@ -344,10 +339,6 @@ SUBROUTINE SoilCompute(Time)
       Eva_Soil      = MAX(0.0d0,(One-F_plant-F_i)*(hu*RhoV_Sat-RhoVAir)*DragH*VT) 
       Eva_Intercept = F_i*DragH*VT*(RhoVAir-MIN(RhoV_Sat,RhoV_g)) 
 
-!     WRITE(*,*) 'Eva_Pot, Eva_Soil, Eva_Intercept',Eva_Pot, Eva_Soil, Eva_Intercept,F_plant,F_i
-!     WRITE(*,*) 'i,SoilType',i,SoilType
-
-!     WRITE (*,*) 'LC,WS(1),cporv',LandClass,WS(1),cporv(SoilType(1))
       IF (WS(1)>=cporv(SoilType(1))) THEN
         I_perc = 0.0d0
       ELSE
@@ -399,7 +390,6 @@ SUBROUTINE SoilCompute(Time)
 !     RhsWS(1)  = RhsWS(1)-(Eva_Soil-I_perc)/RhoW
       RhsWS(1)  = RhsWS(1)-(Eva_Soil)/RhoW
 
-!     WRITE(*,*) 'Upper BC: ',i,LandClass,RhsTS(1),RhsWS(1),Eva_Soil,I_perc,F_LH
 
       IF (TS(1)<=T_freeze) RhsWgn = Zero 
 
@@ -458,14 +448,7 @@ SUBROUTINE SoilCompute(Time)
     BulkCoeffDragCell(ibLoc)%cB(i,1)=BoundCell(i)%DragM
     BulkCoeffHeatCell(ibLoc)%cB(i,1)=BoundCell(i)%DragH
     BulkCoeffMoistCell(ibLoc)%cB(i,1)=BoundCell(i)%DragQ
-  ! WRITE (*,*) 'i,MoistFlux,Qlat,Lv',i,MoistFlux,Qlat,Lv,F_LH,+SumTransp,+Eva_Soil,-Eva_Intercept,RhoVAir,RhoV_Sat,DragH,VT
   END DO
-! Test output
-! IF (MOD(INT(Time),60)==0) THEN
-!   OPEN(123,FILE='SoilData.txt',STATUS='UNKNOWN',ACTION='WRITE',POSITION='APPEND')
-!   WRITE(123,*) Time,TS(1),TAir,BoundCell(1)%FluxSens,RhoV_Sat,RhoVAir,BoundCell(1)%FluxLat,BoundCell(1)%DragM,BoundCell(1)%DragH
-!   CLOSE(123)
-! END IF
 
 END SUBROUTINE SoilCompute
 
@@ -666,15 +649,12 @@ FUNCTION  TranspirFunction(TAir,DragCoeff,Ushear,WSroot,RadPAR,   &
   FolResist    = 1.0d0/MAX(Eps,(ReductTransp*LAIndex*Resist_la**(-1.0d0)))
   IF (WSoil.LE.cpwp(SoilType)) THEN
     TranspirFunction = Zero
-!   WRITE (*,*) 'Tr ZERO'
   ELSE
     TranspirFunction = (One-InterceptArea)*PlantArea*            &
                         Epotg*AtmoResist/(AtmoResist+FolResist)  &
                        *MIN(dzSoil(iS),MAX(0.d0,(z_root(LandType)-zSoil(iS-1)))) &
                        /(z_root(LandType)+Eps)  &
                        *WSoil/(WSroot+Eps)
-!   WRITE (*,*) ' WSoil,cpwp(SoilType),SoilType,Epotg,AtmoResist', WSoil,cpwp(SoilType),SoilType,Epotg,AtmoResist,TranspirFunction
-!   WRITE (*,*) 'Tr calc'
   END IF
 END FUNCTION TranspirFunction
 

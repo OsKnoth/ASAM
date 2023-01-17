@@ -10,8 +10,9 @@ USE MatSpRowCol_Mod, ONLY: SpRowCol, &
 USE Index_Mod, ONLY: between, IndexC, IndexC3block, &
                      determine_overlap_1d, determine_overlap_1d_halo
 USE Block_Mod, ONLY: Block
-USE MPI_Mod
-USE Boundary_Mod, ONLY: Bound, copy_data_on_bnd, copy_data_from_bnd
+USE Parallel_Mod
+USE Boundary_Mod, ONLY: Bound, copy_data_on_bnd, copy_data_from_bnd, cyclic_x, cyclic_y, cyclic_z
+USE DomDecomp_Mod, ONLY: x2glob, y2glob, z2glob
 USE Subdom_Mod, ONLY: Subdomain, TransfCommInterface
 USE List_Mod, ONLY: List, Element, ListArray, IArray, IArray2d
 USE Kind_Mod
@@ -34,12 +35,11 @@ SUBROUTINE init_transfer(newsubdomain, subdomain_fine, neighbor_ids, &
   TYPE(Block), INTENT(in), TARGET :: neighbor_blocks_unique(:)
   INTEGER, INTENT(in) :: ilev
 
-
   TYPE(TransfCommInterface), POINTER :: new_restrcomm_if  => NULL()
 
   TYPE(SpRowCol) :: Prol_fo, Prol_so, Restr, Cut_samerank, Cut_samerank_T, Cut_offrank, Cut_offrank_T
 
-  INTEGER :: i, j, k, ip, n, m, ind, iblock, jblock, icell_st, bind, idata, nranks_comm, nnz
+  INTEGER :: i, j, k, ip, n, m, m_tmp, ind, iblock, jblock, icell_st, bind, idata, nranks_comm, nnz
 
   TYPE(Element), POINTER :: elm => NULL()
   TYPE(List), POINTER :: possible_overlapblock_ids => NULL(), &
@@ -47,19 +47,20 @@ SUBROUTINE init_transfer(newsubdomain, subdomain_fine, neighbor_ids, &
   TYPE(Block), POINTER :: block_coarse => NULL(), &
                           block_fine => NULL()
 
-  INTEGER :: o12(6, neighbor_ids%len_flat), &
-             o21(6, neighbor_ids%len_flat)
-  INTEGER :: nnzs(neighbor_ids%len_flat), &
-             Rowptr_sizes(neighbor_ids%len_flat)
-  LOGICAL :: overlaps(neighbor_ids%len_flat)
+  INTEGER :: o12(8, neighbor_ids%len_flat * 27), &
+             o21(8, neighbor_ids%len_flat * 27)
+  INTEGER :: cyc(6, neighbor_ids%len_flat * 27)
+  INTEGER :: nnzs(neighbor_ids%len_flat * 27), &
+             Rowptr_sizes(neighbor_ids%len_flat * 27)
+  LOGICAL :: overlaps(neighbor_ids%len_flat * 27)
 
   TYPE(ListArray) :: jsblocks_to_la(NumProcs), &
                      blockbnds_to_la(NumProcs), &
                      send_transinds(NumProcs), &
                      overlap_blockids_transinds(NumProcs)
 
-  INTEGER :: sendbufint(NumProcs), recvbufint(NumProcs), &
-             reqs_send(NumProcs), reqs_recv(NumProcs), status(MPI_STATUS_SIZE)
+  INTEGER :: sendbufint(NumProcs), recvbufint(NumProcs)
+  TYPE(MPI_Request) :: reqs_send(NumProcs), reqs_recv(NumProcs)
   INTEGER :: blockrank, MPIErr, tag_send, tag_recv, data_size
 
   TYPE(IArray) :: jsblocks_from(NumProcs), jsblocks_to(NumProcs), &
@@ -77,6 +78,9 @@ SUBROUTINE init_transfer(newsubdomain, subdomain_fine, neighbor_ids, &
 
   nnzs(:) = 0
   Rowptr_sizes(:) = 0
+  o12(:, :) = -1
+  o21(:, :) = -1
+  cyc(:, :) = 0
 
   ind = 1
   m = 1
@@ -103,42 +107,538 @@ SUBROUTINE init_transfer(newsubdomain, subdomain_fine, neighbor_ids, &
         elm => ind_trans%get(bind)
         block_coarse => neighbor_blocks_unique(elm%ivalue)
 
+        o12(7, m) = n
+        o21(7, m) = n
+        o12(8, m) = elm%ivalue
+        o21(8, m) = jblock
+
         CALL determine_overlap_1d_halo(block_fine%x2, block_coarse%x2, o12(1:2, m), o21(1:2, m))
         CALL determine_overlap_1d_halo(block_fine%y2, block_coarse%y2, o12(3:4, m), o21(3:4, m))
         CALL determine_overlap_1d_halo(block_fine%z2, block_coarse%z2, o12(5:6, m), o21(5:6, m))
 
-!        CALL determine_overlap_1d(block_fine%x2, block_coarse%x2, o12(1:2, m), o21(1:2, m))
-!        CALL determine_overlap_1d(block_fine%y2, block_coarse%y2, o12(3:4, m), o21(3:4, m))
-!        CALL determine_overlap_1d(block_fine%z2, block_coarse%z2, o12(5:6, m), o21(5:6, m))
+        m_tmp = m
 
-        IF (ALL(o12(:, m) .GT. 0)) THEN
-          overlaps(m) = .TRUE.
-
-          nnzs(m) = (o12(2, m) - o12(1, m) + 1) * (o12(4, m) - o12(3, m) + 1) * (o12(6, m) - o12(5, m) + 1)
-
-          Rowptr_sizes(m) = block_fine%ncells + 1
-        ELSE
-          overlaps(m) = .FALSE.
+        IF (cyclic_x) THEN
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1))) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:6, m + 1) = o12(3:6, m_tmp)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:6, m + 1) = o21(3:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            m = m + 1
+          END IF
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1)) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:6, m + 1) = o12(3:6, m_tmp)
+            o21(1:2, m + 1) = 1
+            o21(3:6, m + 1) = o21(3:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            m = m + 1
+          END IF
         END IF
 
-        IF (overlaps(m) .AND. .NOT. ANY(jblock .EQ. newsubdomain%blockids_comp)) THEN
-          blockrank = blockranks(jblock)
-          CALL overlap_blockids_transinds(blockrank + 1)%lst%append(elm%ivalue)
-          CALL jsblocks_to_la(blockrank + 1)%lst%append(jblock)
-          CALL blockbnds_to_la(blockrank + 1)%lst%append(o21(:, m))
-          elm => ind_trans%get(bind)
-          CALL send_transinds(blockrank + 1)%lst%append(elm%ivalue)
+        IF (cyclic_y) THEN
+          IF (block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1))) THEN
+            o12(3:4, m + 1) = 1
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(3, m + 1) = 1
+            m = m + 1
+          END IF
+          IF (block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1)) THEN
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(3:4, m + 1) = 1
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(4, m + 1) = 1
+            m = m + 1
+          END IF
+        END IF
+
+        IF (cyclic_z) THEN
+          IF (block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(5:6, m + 1) = 1
+            o12(1:4, m + 1) = o12(1:4, m_tmp)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o21(1:4, m + 1) = o21(1:4, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+          IF (block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o12(1:4, m + 1) = o12(1:4, m_tmp)
+            o21(5:6, m + 1) = 1
+            o21(1:4, m + 1) = o21(1:4, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+        END IF
+
+        IF (cyclic_x .AND. cyclic_y) THEN
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1))) THEN
+            o12(1:4, m + 1) = 1
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(3, m + 1) = 1
+            m = m + 1
+          END IF
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1)) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = 1
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(4, m + 1) = 1
+            m = m + 1
+          END IF
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1))) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = 1
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(3, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1)) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = o12(5:6, m_tmp)
+            o21(1:4, m + 1) = 1
+            o21(5:6, m + 1) = o21(5:6, m_tmp)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(4, m + 1) = 1
+            m = m + 1
+          END IF
+        END IF
+
+        IF (cyclic_x .AND. cyclic_z) THEN
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:4, m + 1) = o12(3:4, m_tmp)
+            o12(5:6, m + 1) = 1
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = o21(3:4, m_tmp)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:4, m + 1) = o12(3:4, m_tmp)
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = o21(3:4, m_tmp)
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = o12(3:4, m_tmp)
+            o12(5:6, m + 1) = 1
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = o21(3:4, m_tmp)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = o12(3:4, m_tmp)
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = o21(3:4, m_tmp)
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+        END IF
+ 
+        IF (cyclic_y .AND. cyclic_z) THEN
+          IF (block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(3:6, m + 1) = 1
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(3, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(3:4, m + 1) = 1
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(3, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = 1
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(3:4, m + 1) = 1
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(4, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = o12(1:2, m_tmp)
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = o21(1:2, m_tmp)
+            o21(3:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(4, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+        END IF
+
+        IF (cyclic_x .AND. cyclic_y .AND. cyclic_z) THEN
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN        
+            o12(1:6, m + 1) = 1
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(3, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:6, m + 1) = 1
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(3, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = 1
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = 1
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(4, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:4, m + 1) = 1
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(3, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(1) .EQ. z2glob(1) .AND. &
+              block_coarse%z2(UBOUND(block_coarse%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1))) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o21(5:6, m + 1) = 1
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = 1
+            o21(5:6, m + 1) = block_coarse%fld_shape(1)
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(4, m + 1) = 1
+            cyc(5, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(1) .EQ. y2glob(1) .AND. &
+              block_coarse%y2(UBOUND(block_coarse%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = 1
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = 1
+            o21(3:4, m + 1) = block_coarse%fld_shape(2)
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(3, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(1) .EQ. x2glob(1) .AND. &
+              block_coarse%x2(UBOUND(block_coarse%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:2, m + 1) = 1
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:2, m + 1) = block_coarse%fld_shape(3)
+            o21(3:4, m + 1) = 1
+            o21(5:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(1, m + 1) = 1
+            cyc(4, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
+
+          IF (block_fine%x2(UBOUND(block_fine%x2, 1)) .EQ. x2glob(UBOUND(x2glob, 1)) .AND. &
+              block_coarse%x2(1) .EQ. x2glob(1) .AND. &
+              block_fine%y2(UBOUND(block_fine%y2, 1)) .EQ. y2glob(UBOUND(y2glob, 1)) .AND. &
+              block_coarse%y2(1) .EQ. y2glob(1) .AND. &
+              block_fine%z2(UBOUND(block_fine%z2, 1)) .EQ. z2glob(UBOUND(z2glob, 1)) .AND. &
+              block_coarse%z2(1) .EQ. z2glob(1)) THEN
+            o12(1:2, m + 1) = block_fine%fld_shape(3)
+            o12(3:4, m + 1) = block_fine%fld_shape(2)
+            o12(5:6, m + 1) = block_fine%fld_shape(1)
+            o21(1:6, m + 1) = 1
+            o12(7, m + 1) = n
+            o21(7, m + 1) = n
+            o12(8, m + 1) = elm%ivalue
+            o21(8, m + 1) = jblock
+            cyc(2, m + 1) = 1
+            cyc(4, m + 1) = 1
+            cyc(6, m + 1) = 1
+            m = m + 1
+          END IF
         END IF
         m = m  + 1
       END DO
     END IF
   END DO
+ 
+  DO n = 1, m - 1
+    IF (ALL(o12(1:6, n) .GT. 0)) THEN
+      overlaps(n) = .TRUE.
+      nnzs(n) = (o12(2, n) - o12(1, n) + 1) * (o12(4, n) - o12(3, n) + 1) * (o12(6, n) - o12(5, n) + 1)
+      block_fine => subdomain_fine%blocks(o12(7, n))
+      Rowptr_sizes(n) = block_fine%ncells + 1
+
+      jblock = o21(8, n)
+      IF (.NOT. ANY(jblock .EQ. newsubdomain%blockids_comp)) THEN 
+        blockrank = blockranks(jblock)
+        CALL overlap_blockids_transinds(blockrank + 1)%lst%append(o12(8, n))
+        CALL jsblocks_to_la(blockrank + 1)%lst%append(jblock)
+        CALL blockbnds_to_la(blockrank + 1)%lst%append(o21(:, n))
+        CALL send_transinds(blockrank + 1)%lst%append(o12(8, n))
+      END IF
+    ELSE
+      overlaps(n) = .FALSE.
+    END IF
+  END DO
 
   CALL make_prol(Prol_fo, subdomain_fine, neighbor_blocks_unique, neighbor_ids_unique, neighbor_ids, &
-                   neighbor_ids_transform, overlaps, o12, o21, nnzs, Rowptr_sizes, order=1)
+                   neighbor_ids_transform, overlaps, o12, o21, cyc, nnzs, Rowptr_sizes, order=1)
 
   CALL make_prol(Prol_so, subdomain_fine, neighbor_blocks_unique, neighbor_ids_unique, neighbor_ids, &
-                   neighbor_ids_transform, overlaps, o12, o21, 8 * nnzs, Rowptr_sizes, order=2)
+                   neighbor_ids_transform, overlaps, o12, o21, cyc, 8 * nnzs, Rowptr_sizes, order=2)
 
   CALL SpTrans_SpRowCol(Restr, Prol_fo)  
 
@@ -319,7 +819,7 @@ END SUBROUTINE init_transfer
 
 
 SUBROUTINE make_prol(Prol, subdomain_fine, blocks_coarse, neighbor_ids_unique, neighbor_ids, &
-                       neighbor_ids_transform, overlaps, o12, o21, nnzs, Rowptr_sizes, order)
+                       neighbor_ids_transform, overlaps, o12, o21, cyc, nnzs, Rowptr_sizes, order)
   IMPLICIT NONE
 
   TYPE(SpRowCol), INTENT(inout) :: Prol
@@ -328,7 +828,7 @@ SUBROUTINE make_prol(Prol, subdomain_fine, blocks_coarse, neighbor_ids_unique, n
   INTEGER, INTENT(in) :: neighbor_ids_unique(:)
   TYPE(List), INTENT(in) :: neighbor_ids, neighbor_ids_transform
   LOGICAL, INTENT(in) :: overlaps(:)
-  INTEGER, INTENT(in), DIMENSION(:,:) :: o21, o12
+  INTEGER, INTENT(in), DIMENSION(:,:) :: o21, o12, cyc
   INTEGER, INTENT(in), DIMENSION(:) :: nnzs, Rowptr_sizes
   INTEGER, INTENT(in) :: order
 
@@ -364,66 +864,165 @@ SUBROUTINE make_prol(Prol, subdomain_fine, blocks_coarse, neighbor_ids_unique, n
     Prol%n = Prol%n + blocks_coarse(n)%ncells
   END DO
 
-  DO n = 1, subdomain_fine%nblocks
-    IF (subdomain_fine%blockiscomp(n)) THEN
+  DO m = 1, SIZE(o12, 2)
 
-      block_fine => subdomain_fine%blocks(n)
+    IF (o12(7, m) .LT. 0) CYCLE
 
-      elm => neighbor_ids%get(iblock_fine)
-      possible_overlapblock_ids => elm%sublist
+    block_fine => subdomain_fine%blocks(o12(7, m))
+    block_coarse => blocks_coarse(o12(8, m))
 
-      elm => neighbor_ids_transform%get(iblock_fine)
-      ind_trans => elm%sublist
-      iblock_fine = iblock_fine + 1
+    IF (overlaps(m)) THEN
 
-      DO iblock_coarse = 1, possible_overlapblock_ids%len
-        elm => ind_trans%get(iblock_coarse)
-        block_coarse => blocks_coarse(elm%ivalue)
+      ncells_fine = block_fine%ncells
+      ncells_coarse_z = block_fine%fld_shape(3) * block_fine%fld_shape(2) * block_coarse%fld_shape(1)
+      ncells_coarse_zy = block_fine%fld_shape(3) * block_coarse%fld_shape(2) * block_coarse%fld_shape(1)
+      ncells_coarse_zyx = block_coarse%ncells
 
-        IF (overlaps(m)) THEN
+      prolz_nnz_ub = block_fine%fld_shape(3) * block_fine%fld_shape(2) * (o12(6, m) - o12(5, m) + 1)
+      proly_nnz_ub = block_fine%fld_shape(3) * (o12(4, m) - o12(3, m) + 1) * block_coarse%fld_shape(1)
+      prolx_nnz_ub = (o12(2, m) - o12(1, m) + 1) * block_coarse%fld_shape(2) * block_coarse%fld_shape(1)
+      prolxy_nnz_ub = (o12(2, m) - o12(1, m) + 1) * (o12(4, m) - o12(3, m) + 1) * block_coarse%fld_shape(1)
+      prol_nnz_ub = (o12(2, m) - o12(1, m) + 1) * (o12(4, m) - o12(3, m) + 1) * (o12(6, m) - o12(5, m) + 1)
 
-          ncells_fine = block_fine%ncells
-          ncells_coarse_z = block_fine%fld_shape(3) * block_fine%fld_shape(2) * block_coarse%fld_shape(1)
-          ncells_coarse_zy = block_fine%fld_shape(3) * block_coarse%fld_shape(2) * block_coarse%fld_shape(1)
-          ncells_coarse_zyx = block_coarse%ncells
-
-          prolz_nnz_ub = block_fine%fld_shape(3) * block_fine%fld_shape(2) * (o12(6, m) - o12(5, m) + 1)
-          proly_nnz_ub = block_fine%fld_shape(3) * (o12(4, m) - o12(3, m) + 1) * block_coarse%fld_shape(1)
-          prolx_nnz_ub = (o12(2, m) - o12(1, m) + 1) * block_coarse%fld_shape(2) * block_coarse%fld_shape(1)
-          prolxy_nnz_ub = (o12(2, m) - o12(1, m) + 1) * (o12(4, m) - o12(3, m) + 1) * block_coarse%fld_shape(1)
-          prol_nnz_ub = (o12(2, m) - o12(1, m) + 1) * (o12(4, m) - o12(3, m) + 1) * (o12(6, m) - o12(5, m) + 1)
-
-          ncol_off = 0
-          DO j = 1, elm%ivalue - 1
-            ncol_off = ncol_off + blocks_coarse(j)%ncells
-          END DO
-
-          Prolsub%RowPtr => Prolsub_rowptr(1:Rowptr_sizes(m))
-
-          IF (order .EQ. 1) THEN
-
-            CALL make_prol_fo_part(Prolsub, block_fine, block_coarse, &
-                                   prolz_nnz_ub, proly_nnz_ub, prolx_nnz_ub, prolxy_nnz_ub, prol_nnz_ub, &
-                                   ncells_fine, ncells_coarse_z, ncells_coarse_zy, ncells_coarse_zyx)
-          ELSE IF (order .EQ. 2) THEN
-            CALL make_prol_so_part(Prolsub, block_fine, blocks_coarse, elm%ivalue, &
-                                   2 * prolz_nnz_ub, 2 * proly_nnz_ub, 2 * prolx_nnz_ub, 4 * prolxy_nnz_ub, 8 * prol_nnz_ub, &
-                                   ncells_fine, ncells_coarse_z, ncells_coarse_zy, ncells_coarse_zyx)
-          END IF
-
-          DO i = 1, Prolsub%m
-            ii = i + irow - 1
-            DO j = Prolsub%RowPtr(i), Prolsub%RowPtr(i + 1) - 1
-              colindptr(ii) = colindptr(ii) + 1
-              proltmp_colind(colindptr(ii), ii) = Prolsub%ColInd(j) + ncol_off
-              proltmp_val(colindptr(ii), ii) = Prolsub%Val(j)
-            END DO
-          END DO
-        END IF
-        m = m + 1
+      ncol_off = 0
+      DO j = 1, o12(8, m) - 1
+        ncol_off = ncol_off + blocks_coarse(j)%ncells
       END DO
-      irow = irow + block_fine%ncells
+
+      Prolsub%RowPtr => Prolsub_rowptr(1:Rowptr_sizes(m))
+
+      IF (cyc(1, m) .EQ. 1) THEN !cyclic w-boundary
+        DO i = 1, SIZE(block_fine%x, 1)
+          block_fine%x(i) = block_fine%x(i) + x2glob(UBOUND(x2glob, 1)) - x2glob(1)
+        END DO
+        DO i = 1, SIZE(block_fine%x2, 1)
+          block_fine%x2(i) = block_fine%x2(i) + x2glob(UBOUND(x2glob, 1)) - x2glob(1)
+        END DO
+      END IF
+      IF (cyc(2, m) .EQ. 1) THEN !cyclic e-boundary
+        DO i = 1, SIZE(block_fine%x, 1)
+          block_fine%x(i) = block_fine%x(i) - (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%x2, 1)
+          block_fine%x2(i) = block_fine%x2(i) - (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+        END DO
+      END IF
+      IF (cyc(3, m) .EQ. 1) THEN !cyclic s-boundary
+        DO i = 1, SIZE(block_fine%y, 1)
+          block_fine%y(i) = block_fine%y(i) + y2glob(UBOUND(y2glob, 1)) - y2glob(1)
+        END DO
+        DO i = 1, SIZE(block_fine%y2, 1)
+          block_fine%y2(i) = block_fine%y2(i) + y2glob(UBOUND(y2glob, 1)) - y2glob(1)
+        END DO
+      END IF
+      IF (cyc(4, m) .EQ. 1) THEN !cyclic n-boundary
+        DO i = 1, SIZE(block_fine%y, 1)
+          block_fine%y(i) = block_fine%y(i) - (y2glob(UBOUND(y2glob, 1)) - y2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%y2, 1)
+          block_fine%y2(i) = block_fine%y2(i) - (y2glob(UBOUND(y2glob, 1)) - y2glob(1))
+        END DO
+      END IF
+      IF (cyc(5, m) .EQ. 1) THEN !cyclic b-boundary
+        DO i = 1, SIZE(block_fine%z, 1)
+          block_fine%z(i) = block_fine%z(i) + (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%z2, 1)
+          block_fine%z2(i) = block_fine%z2(i) + (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+      END IF
+      IF (cyc(6, m) .EQ. 1) THEN !cyclic t-boundary
+        DO i = 1, SIZE(block_fine%z, 1)
+          block_fine%z(i) = block_fine%z(i) - (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%z2, 1)
+          block_fine%z2(i) = block_fine%z2(i) - (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+      END IF
+
+
+      IF (order .EQ. 1) THEN
+        CALL make_prol_fo_part(Prolsub, block_fine, block_coarse, &
+                               prolz_nnz_ub, proly_nnz_ub, prolx_nnz_ub, prolxy_nnz_ub, prol_nnz_ub, &
+                               ncells_fine, ncells_coarse_z, ncells_coarse_zy, ncells_coarse_zyx)
+      ELSE IF (order .EQ. 2) THEN
+
+        CALL make_prol_so_part(Prolsub, block_fine, blocks_coarse, o12(8, m), &
+                               2 * prolz_nnz_ub, 2 * proly_nnz_ub, 2 * prolx_nnz_ub, 4 * prolxy_nnz_ub, 8 * prol_nnz_ub, &
+                               ncells_fine, ncells_coarse_z, ncells_coarse_zy, ncells_coarse_zyx)
+      END IF
+
+
+      IF (cyc(1, m) .EQ. 1) THEN !cyclic w-boundary
+        DO i = 1, SIZE(block_fine%x, 1)
+          block_fine%x(i) = block_fine%x(i) - (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%x2, 1)
+          block_fine%x2(i) = block_fine%x2(i) - (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+        END DO
+      END IF
+      IF (cyc(2, m) .EQ. 1) THEN !cyclic e-boundary
+        DO i = 1, SIZE(block_fine%x, 1)
+          block_fine%x(i) = block_fine%x(i) + x2glob(UBOUND(x2glob, 1)) - x2glob(1)
+        END DO
+        DO i = 1, SIZE(block_fine%x2, 1)
+          block_fine%x2(i) = block_fine%x2(i) + x2glob(UBOUND(x2glob, 1)) - x2glob(1)
+        END DO
+      END IF
+
+      IF (cyc(3, m) .EQ. 1) THEN !cyclic s-boundary
+        DO i = 1, SIZE(block_fine%y, 1)
+          block_fine%y(i) = block_fine%y(i) - y2glob(UBOUND(y2glob, 1)) + y2glob(1)
+        END DO
+        DO i = 1, SIZE(block_fine%y2, 1)
+          block_fine%y2(i) = block_fine%y2(i) - y2glob(UBOUND(y2glob, 1)) + y2glob(1)
+        END DO
+      END IF
+
+      IF (cyc(4, m) .EQ. 1) THEN !cyclic n-boundary
+        DO i = 1, SIZE(block_fine%y, 1)
+          block_fine%y(i) = block_fine%y(i) + y2glob(UBOUND(y2glob, 1)) - y2glob(1)
+        END DO
+        DO i = 1, SIZE(block_fine%y2, 1)
+          block_fine%y2(i) = block_fine%y2(i) + y2glob(UBOUND(y2glob, 1)) - y2glob(1)
+        END DO
+      END IF
+
+      IF (cyc(5, m) .EQ. 1) THEN !cyclic b-boundary
+        DO i = 1, SIZE(block_fine%z, 1)
+          block_fine%z(i) = block_fine%z(i) - (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%z2, 1)
+          block_fine%z2(i) = block_fine%z2(i) - (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+      END IF
+
+      IF (cyc(6, m) .EQ. 1) THEN !cyclic t-boundary
+        DO i = 1, SIZE(block_fine%z, 1)
+          block_fine%z(i) = block_fine%z(i) + (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+        DO i = 1, SIZE(block_fine%z2, 1)
+          block_fine%z2(i) = block_fine%z2(i) + (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+        END DO
+      END IF
+
+      DO i = 1, Prolsub%m
+        ii = i + irow - 1
+        DO j = Prolsub%RowPtr(i), Prolsub%RowPtr(i + 1) - 1
+          colindptr(ii) = colindptr(ii) + 1
+          proltmp_colind(colindptr(ii), ii) = Prolsub%ColInd(j) + ncol_off
+          proltmp_val(colindptr(ii), ii) = Prolsub%Val(j)
+        END DO
+      END DO
     END IF
+    
+    IF (m .LT. SIZE(o12, 2)) THEN
+      IF (o12(7, m) .NE. o12(7, m + 1)) THEN
+        irow = irow + block_fine%ncells
+      END IF
+    ELSE
+      irow = irow + block_fine%ncells
+    END IF  
   END DO
 
   Prol%m = irow - 1
@@ -512,7 +1111,6 @@ SUBROUTINE make_prol_fo_part(Prol, block_fine, block_coarse, &
   prolz_indptr(1) = 1
   c = 1
 
-
   DO i = 1, nx
     DO j = 1, ny
       DO k = 1, nz
@@ -599,8 +1197,8 @@ SUBROUTINE make_prol_fo_part(Prol, block_fine, block_coarse, &
   Proltmp%ColInd => proltmp_colind
   Proltmp%Val => proltmp_val
 
-  CALL SpMm_SpRowCol(Proltmp, Proly, Prolx, allocate_mat=.False., withdiagptr=.False.)
-  CALL SpMm_SpRowCol(Prol, Prolz, Proltmp, allocate_mat=.False., withdiagptr=.False.)
+  CALL SpMm_SpRowCol(Proltmp, Proly, Prolx, withdiagptr=.False.)
+  CALL SpMm_SpRowCol(Prol, Prolz, Proltmp, withdiagptr=.False.)
 
   CALL SpNullify_SpRowCol(Prolz)
   CALL SpNullify_SpRowCol(Proly)
@@ -628,20 +1226,26 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
 
   REAl(Realkind), TARGET :: prolz_val(prolz_nnz), &
                             proly_val(proly_nnz), &
+                            proly2_val(proly_nnz), &
                             prolx_val(prolx_nnz), &
+                            prolx2_val(prolx_nnz), &
                             proltmp_val(prolxy_nnz)
 
   INTEGER, TARGET :: prolz_colind(prolz_nnz), &
                      proly_colind(proly_nnz), &
+                     proly2_colind(proly_nnz), &
                      prolx_colind(prolx_nnz), &
+                     prolx2_colind(prolx_nnz), &
                      proltmp_colind(prolxy_nnz) 
                      
   INTEGER, TARGET :: prolz_indptr(ncells_fine + 1), &
                      proly_indptr(ncells_coarse_z + 1), &
+                     proly2_indptr(ncells_coarse_z + 1), &
                      prolx_indptr(ncells_coarse_zy + 1), &
+                     prolx2_indptr(ncells_coarse_zy + 1), &
                      proltmp_indptr(ncells_coarse_z + 1)
-
-  REAL(Realkind), POINTER :: x(:), y(:), z(:), x2(:), y2(:), z2(:)
+  REAL(Realkind), POINTER :: x(:), y(:), z(:), &
+                             x2(:), y2(:), z2(:)
   REAL(Realkind), POINTER :: x_coarse(:), y_coarse(:), z_coarse(:), &
                              x2_coarse(:), y2_coarse(:), z2_coarse(:)
   REAL(Realkind), POINTER, DIMENSION(:) :: x_coarse_tmp, y_coarse_tmp, z_coarse_tmp
@@ -653,7 +1257,7 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
   INTEGER :: nx, ny, nz, nx_coarse, ny_coarse, nz_coarse
 
   INTEGER :: i_bnds(2), j_bnds(2), k_bnds(2)  
-  INTEGER :: m, iindptr, ind, c, bndblock_id
+  INTEGER :: m, iindptr, ind, c, ii, nvals, bndblock_id
   INTEGER :: k, i, j, k_ind, j_ind, i_ind
   
   Prolz%m = ncells_fine
@@ -688,7 +1292,7 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
   nz_coarse = block_coarse%fld_shape(1)
   ny_coarse = block_coarse%fld_shape(2)
   nx_coarse = block_coarse%fld_shape(3)
-  
+
   prolz_val(:) = 1.0
   iindptr = 1
   prolz_indptr(1) = 1
@@ -699,12 +1303,13 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
       DO k = 1, nz
         IF (z(k) .LT. z_coarse(1)) THEN
           IF (z2(k + 1) .LT. z2_coarse(1)) THEN
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           ELSE IF (ANY(block_coarse%cface_b)) THEN
             CALL find_bndblock_ij(blocks_coarse, block_coarse%cface_b, x2(i), x2(i + 1), y2(j), y2(j + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               z_coarse_bnd = blocks_coarse(bndblock_id)%z(UBOUND(blocks_coarse(bndblock_id)%z, 1))
+              IF (z_coarse_bnd .GT. z(k) .AND. cyclic_z) THEN ! cyclic boundary
+                z_coarse_bnd = z_coarse_bnd - (z2glob(UBOUND(z2glob, 1)) - z2glob(1))
+              END IF
               IF (z_coarse_bnd .NE. z(k)) THEN
                 val1 = (z(k) - z_coarse_bnd) / (z_coarse(1) - z_coarse_bnd)
                 ind = IndexC(i, j, 1, nx, ny, nz_coarse)
@@ -713,25 +1318,21 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           ELSE !Neumann boundary 
-            val1 = 1.0
             ind = IndexC(i, j, 1, nx, ny, nz_coarse)
             prolz_colind(c) = ind
-            prolz_val(c) = val1
+            prolz_val(c) = 1.0
             c = c + 1
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           END IF
         ELSE IF (z(k) > z_coarse(UBOUND(z_coarse, 1))) THEN
           IF (z2(k) > z2_coarse(UBOUND(z2_coarse, 1))) THEN 
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           ELSE IF (ANY(block_coarse%cface_t)) THEN
             CALL find_bndblock_ij(blocks_coarse, block_coarse%cface_t, x2(i), x2(i + 1), y2(j), y2(j + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               z_coarse_bnd = blocks_coarse(bndblock_id)%z(1)
+              IF (z_coarse_bnd .LT. z(k) .AND. cyclic_z) THEN ! cyclic boundary
+                z_coarse_bnd = z_coarse_bnd + z2glob(UBOUND(z2glob, 1)) - z2glob(1)
+              END IF
               IF (z_coarse_bnd .NE. z(k)) THEN
                 val1 = (z_coarse_bnd - z(k)) / (z_coarse_bnd - z_coarse(UBOUND(z_coarse, 1)))
                 ind = IndexC(i, j, UBOUND(z_coarse, 1), nx, ny, nz_coarse)
@@ -740,24 +1341,17 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           ELSE !Neumann boundary 
-            val1 = 1.0
             ind = IndexC(i, j, UBOUND(z_coarse, 1), nx, ny, nz_coarse)
             prolz_colind(c) = ind
-            prolz_val(c) = val1
+            prolz_val(c) = 1.0
             c = c + 1 
-            iindptr = iindptr + 1
-            prolz_indptr(iindptr) =  c
           END IF
         ELSE IF ((z(k) .EQ. z_coarse(1)) .AND. (z_coarse(1) .EQ. z_coarse(UBOUND(z_coarse, 1)))) THEN
           ind = IndexC(i, j, 1, nx, ny, nz_coarse)
           prolz_colind(c) = ind
           prolz_val(c) = 1.0
           c = c + 1 
-          iindptr = iindptr + 1
-          prolz_indptr(iindptr) =  c
         ELSE
           k_ind = between(z_coarse, z(k))
           IF (z_coarse(k_ind) .EQ. z(k)) THEN
@@ -778,9 +1372,9 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
             prolz_val(c) = val2
             c = c + 1 
           END IF
-          iindptr = iindptr + 1
-          prolz_indptr(iindptr) =  c
         END IF
+        iindptr = iindptr + 1
+        prolz_indptr(iindptr) =  c
       END DO
     END DO
   END DO
@@ -795,19 +1389,18 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
   c = 1
 
   DO i = 1, nx
-    DO j = 1, ny
-      IF (y(j) .LT. y_coarse(1)) THEN
-        IF (y2(j + 1) .LT. y2_coarse(1)) THEN
-          DO k = 1, nz_coarse
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        ELSE IF (ANY(block_coarse%cface_s)) THEN
-          DO k = 1, nz_coarse
-            CALL find_bndblock_ik(blocks_coarse, block_coarse%cface_s, x2(i), x2(i + 1), &
+    DO k = 1, nz_coarse
+      DO j = 1, ny
+        IF (y(j) .LT. y_coarse(1)) THEN
+          IF (y2(j + 1) .LT. y2_coarse(1)) THEN
+          ELSE IF (ANY(block_coarse%cface_s)) THEN
+             CALL find_bndblock_ik(blocks_coarse, block_coarse%cface_s, x2(i), x2(i + 1), &
                                    z2_coarse(k), z2_coarse(k + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               y_coarse_bnd = blocks_coarse(bndblock_id)%y(UBOUND(blocks_coarse(bndblock_id)%y, 1))
+              IF (y_coarse_bnd .GT. y(j) .AND. cyclic_y) THEN ! cyclic boundary
+                y_coarse_bnd = y_coarse_bnd - (y2glob(UBOUND(y2glob, 1)) - y2glob(1))
+              END IF
               IF (y_coarse_bnd .NE. y(j)) THEN
                 val1 = (y(j) - y_coarse_bnd) / (y_coarse(1) - y_coarse_bnd)
                 ind = IndexC(i, 1, k, nx, ny_coarse, nz_coarse)
@@ -816,32 +1409,22 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        ELSE !Neumann boundary
-          DO k = 1, nz_coarse
-            val1 = 1.0
+          ELSE !Neumann boundary
             ind = IndexC(i, 1, k, nx, ny_coarse, nz_coarse)
             proly_colind(c) = ind
-            Proly_val(c) = val1
+            Proly_val(c) = 1.0
             c = c + 1
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        END IF
-      ELSE IF (y(j) .GT. y_coarse(UBOUND(y_coarse, 1))) THEN
-        IF (y2(j) .GT. y2_coarse(UBOUND(y2_coarse, 1))) THEN
-          DO k = 1, nz_coarse
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        ELSE IF (ANY(block_coarse%cface_n)) THEN
-          DO k = 1, nz_coarse
+          END IF
+        ELSE IF (y(j) .GT. y_coarse(UBOUND(y_coarse, 1))) THEN
+          IF (y2(j) .GT. y2_coarse(UBOUND(y2_coarse, 1))) THEN
+          ELSE IF (ANY(block_coarse%cface_n)) THEN 
             CALL find_bndblock_ik(blocks_coarse, block_coarse%cface_n, x2(i), x2(i + 1), &
                                   z2_coarse(k), z2_coarse(k + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               y_coarse_bnd = blocks_coarse(bndblock_id)%y(1)
+              IF (y_coarse_bnd .LT. y(j) .AND. cyclic_y) THEN ! cyclic boundary
+                y_coarse_bnd = y_coarse_bnd + y2glob(UBOUND(y2glob, 1)) - y2glob(1)
+              END IF
               IF (y_coarse_bnd .NE. y(j)) THEN
                 val1 = (y_coarse_bnd - y(j)) / (y_coarse_bnd - y_coarse(UBOUND(y_coarse, 1)))
                 ind = IndexC(i, UBOUND(y_coarse, 1), k, nx, ny_coarse, nz_coarse)
@@ -850,40 +1433,26 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        ELSE !Neumann boundary
-          DO k = 1, nz_coarse
-            val1 = 1.0
+          ELSE !Neumann boundary 
             ind = IndexC(i, UBOUND(y_coarse, 1), k, nx, ny_coarse, nz_coarse)
             proly_colind(c) = ind
-            Proly_val(c) = val1
+            Proly_val(c) = 1.0
             c = c + 1
-            iindptr = iindptr + 1
-            proly_indptr(iindptr) =  c
-          END DO
-        END IF
-
-      ELSE IF ((y(j) .EQ. y_coarse(1)) .AND. (y_coarse(1) .EQ. y_coarse(UBOUND(y_coarse, 1)))) THEN
-        DO k = 1, nz_coarse
+          END IF
+        ELSE IF ((y(j) .EQ. y_coarse(1)) .AND. (y_coarse(1) .EQ. y_coarse(UBOUND(y_coarse, 1)))) THEN
           ind = IndexC(i, 1, k, nx, ny_coarse, nz_coarse)
           proly_colind(c) = ind
-          Proly_val(c) = val1
+          Proly_val(c) = 1.0
           c = c + 1
-          iindptr = iindptr + 1
-          proly_indptr(iindptr) =  c
-        END DO
-      ELSE
-        j_ind = between(y_coarse, y(j))
-        IF (y_coarse(j_ind) .EQ. y(j)) THEN
-          val1 = 1.0
-          val2 = 0.0
         ELSE
-          val1 = (y_coarse(j_ind + 1) - y(j)) / (y_coarse(j_ind + 1) - y_coarse(j_ind))
-          val2 = 1.0 - val1
-        END IF
-        DO k = 1, nz_coarse
+          j_ind = between(y_coarse, y(j))
+          IF (y_coarse(j_ind) .EQ. y(j)) THEN
+            val1 = 1.0
+            val2 = 0.0
+          ELSE
+            val1 = (y_coarse(j_ind + 1) - y(j)) / (y_coarse(j_ind + 1) - y_coarse(j_ind))
+            val2 = 1.0 - val1
+          END IF
           ind = IndexC(i, j_ind, k, nx, ny_coarse, nz_coarse)
           proly_colind(c) = ind
           Proly_val(c) = val1
@@ -894,38 +1463,53 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
             Proly_val(c) = val2
             c = c + 1
           END IF
-          iindptr = iindptr + 1
-          proly_indptr(iindptr) =  c
-        END DO
-      END IF
+        END IF
+        iindptr = iindptr + 1
+        proly_indptr(iindptr) =  c
+      END DO
     END DO
   END DO
 
-  Proly%RowPtr => proly_indptr(1:iindptr)
-  Proly%Val => proly_val(1:c - 1)
-  Proly%ColInd => proly_colind(1:c - 1)
+  c = 1
+  iindptr = 1
+  proly2_indptr(1) = 1
+  DO i = 1, nx
+    DO j = 1, ny
+      DO k = 1, nz_coarse
+        ind = j + ((k - 1) + (i - 1) * nz_coarse) * ny
+        DO ii = proly_indptr(ind), proly_indptr(ind + 1) - 1
+          proly2_colind(c) = proly_colind(ii)
+          proly2_val(c) = Proly_val(ii)
+          c = c + 1
+        END DO
+        iindptr = iindptr + 1
+        proly2_indptr(iindptr) = c
+      END DO
+    END DO
+  END DO
+
+  Proly%RowPtr => proly2_indptr(1:iindptr)
+  Proly%Val => proly2_val(1:c - 1)
+  Proly%ColInd => proly2_colind(1:c - 1)
 
   prolx_val(:) = 1.0
   iindptr = 1
   prolx_indptr(1) = 1
   c = 1
 
-  DO i = 1, nx
-    IF (x(i) .LT. x_coarse(1)) THEN
-      IF (x2(i + 1) .LT. x2_coarse(1)) THEN
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      ELSE IF (ANY(block_coarse%cface_w)) THEN
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
+  DO j = 1, ny_coarse
+    DO k = 1, nz_coarse
+      DO i = 1, nx
+        IF (x(i) .LT. x_coarse(1)) THEN
+          IF (x2(i + 1) .LT. x2_coarse(1)) THEN
+          ELSE IF (ANY(block_coarse%cface_w)) THEN
             CALL find_bndblock_jk(blocks_coarse, block_coarse%cface_w, y2_coarse(j), y2_coarse(j + 1), &
                                   z2_coarse(k), z2_coarse(k + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               x_coarse_bnd = blocks_coarse(bndblock_id)%x(UBOUND(blocks_coarse(bndblock_id)%x, 1))
+              IF (x_coarse_bnd .GT. x(i) .AND. cyclic_x) THEN ! cyclic boundary
+                x_coarse_bnd = x_coarse_bnd - (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+              END IF
               IF (x_coarse_bnd .NE. x(i)) THEN
                 val1 = (x(i) - x_coarse_bnd) / (x_coarse(1) - x_coarse_bnd)
                 ind = IndexC(1, j, k, nx_coarse, ny_coarse, nz_coarse)
@@ -934,38 +1518,22 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      ELSE !Neumann boundary
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
-            val1 = 1.0 
+          ELSE !Neumann boundary
             ind = IndexC(1, j, k, nx_coarse, ny_coarse, nz_coarse)
             Prolx_colind(c) = ind
-            Prolx_val(c) = val1
+            Prolx_val(c) = 1.0
             c = c + 1
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      END IF
-    ELSE IF (x(i) .GT. x_coarse(UBOUND(x_coarse, 1))) THEN
-      IF (x2(i) .GT. x2_coarse(UBOUND(x2_coarse, 1))) THEN
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      ELSE IF (ANY(block_coarse%cface_e)) THEN
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
+          END IF
+        ELSE IF (x(i) .GT. x_coarse(UBOUND(x_coarse, 1))) THEN
+          IF (x2(i) .GT. x2_coarse(UBOUND(x2_coarse, 1))) THEN
+          ELSE IF (ANY(block_coarse%cface_e)) THEN 
             CALL find_bndblock_jk(blocks_coarse, block_coarse%cface_e, y2_coarse(j), y2_coarse(j + 1), &
                                   z2_coarse(k), z2_coarse(k + 1), iblock, bndblock_id)
             IF (bndblock_id .LT. HUGE(bndblock_id)) THEN
               x_coarse_bnd = blocks_coarse(bndblock_id)%x(1)
+              IF (x_coarse_bnd .LT. x(i) .AND. cyclic_x) THEN ! cyclic boundary
+                x_coarse_bnd = x_coarse_bnd + (x2glob(UBOUND(x2glob, 1)) - x2glob(1))
+              END IF
               IF (x_coarse_bnd .NE. x(i)) THEN
                 val1 = (x_coarse_bnd - x(i)) / (x_coarse_bnd - x_coarse(UBOUND(x_coarse, 1)))
                 ind = IndexC(UBOUND(x_coarse, 1), j, k, nx_coarse, ny_coarse, nz_coarse)
@@ -974,45 +1542,26 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
                 c = c + 1
               END IF
             END IF
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      ELSE !Neumann boundary
-        DO j = 1, ny_coarse
-          DO k = 1, nz_coarse
-            val1 = 1.0 
+          ELSE !Neumann boundary
             ind = IndexC(UBOUND(x_coarse, 1), j, k, nx_coarse, ny_coarse, nz_coarse)
             Prolx_colind(c) = ind
-            Prolx_val(c) = val1
+            Prolx_val(c) = 1.0
             c = c + 1
-            iindptr = iindptr + 1
-            Prolx_indptr(iindptr) =  c
-          END DO
-        END DO
-      END IF
-    ELSE IF ((x(i) .EQ. x_coarse(1)) .AND. (x_coarse(1) .EQ. x_coarse(UBOUND(x_coarse, 1)))) THEN
-      DO j = 1, ny_coarse
-        DO k = 1, nz_coarse
+          END IF
+        ELSE IF ((x(i) .EQ. x_coarse(1)) .AND. (x_coarse(1) .EQ. x_coarse(UBOUND(x_coarse, 1)))) THEN
           ind = IndexC(1, j, k, nx_coarse, ny_coarse, nz_coarse)
           Prolx_colind(c) = ind
           Prolx_val(c) = 1.0
           c = c + 1
-          iindptr = iindptr + 1
-          Prolx_indptr(iindptr) =  c
-        END DO
-      END DO
-    ELSE
-      i_ind = between(x_coarse, x(i))
-      IF (x_coarse(i_ind) .EQ. x(i)) THEN
-        val1 = 1.0 
-        val2 = 0.0
-      ELSE
-        val1 = (x_coarse(i_ind + 1) - x(i)) / (x_coarse(i_ind + 1) - x_coarse(i_ind))
-        val2 = 1.0 - val1
-      END IF
-      DO j = 1, ny_coarse
-        DO k = 1, nz_coarse
+        ELSE
+          i_ind = between(x_coarse, x(i))
+          IF (x_coarse(i_ind) .EQ. x(i)) THEN
+            val1 = 1.0 
+            val2 = 0.0
+          ELSE
+            val1 = (x_coarse(i_ind + 1) - x(i)) / (x_coarse(i_ind + 1) - x_coarse(i_ind))
+            val2 = 1.0 - val1
+          END IF 
           ind = IndexC(i_ind, j, k, nx_coarse, ny_coarse, nz_coarse)
           Prolx_colind(c) = ind
           Prolx_val(c) = val1
@@ -1023,23 +1572,41 @@ SUBROUTINE make_prol_so_part(Prol, block_fine, blocks_coarse, iblock, &
             Prolx_val(c) = val2
             c = c + 1
           END IF
-          iindptr = iindptr + 1
-          Prolx_indptr(iindptr) =  c
-        END DO
+        END IF
+        iindptr = iindptr + 1
+        Prolx_indptr(iindptr) =  c
       END DO
-    END IF
+    END DO
   END DO         
-  
-  Prolx%RowPtr => prolx_indptr(1:iindptr)
-  Prolx%Val => prolx_val(1:c - 1)
-  Prolx%ColInd => prolx_colind(1:c - 1)
+
+  c = 1
+  iindptr = 1
+  prolx2_indptr(1) = 1
+  DO i = 1, nx
+    DO j = 1, ny_coarse
+      DO k = 1, nz_coarse
+        ind = i + ((k - 1) + (j - 1) * nz_coarse) * nx
+        DO ii = prolx_indptr(ind), prolx_indptr(ind + 1) - 1
+          prolx2_colind(c) = prolx_colind(ii)
+          prolx2_val(c) = Prolx_val(ii)
+          c = c + 1
+        END DO
+        iindptr = iindptr + 1
+        prolx2_indptr(iindptr) = c
+      END DO
+    END DO
+  END DO
+
+  Prolx%RowPtr => prolx2_indptr(1:iindptr)
+  Prolx%Val => prolx2_val(1:c - 1)
+  Prolx%ColInd => prolx2_colind(1:c - 1)
 
   Proltmp%RowPtr => proltmp_indptr
   Proltmp%ColInd => proltmp_colind
   Proltmp%Val => proltmp_val
   
-  CALL SpMm_SpRowCol(Proltmp, Proly, Prolx, allocate_mat=.False., withdiagptr=.False.)
-  CALL SpMm_SpRowCol(Prol, Prolz, Proltmp, allocate_mat=.False., withdiagptr=.False.)
+  CALL SpMm_SpRowCol(Proltmp, Proly, Prolx, withdiagptr=.False.)
+  CALL SpMm_SpRowCol(Prol, Prolz, Proltmp, withdiagptr=.False.)
 
   CALL SpNullify_SpRowCol(Prolz)
   CALL SpNullify_SpRowCol(Proly)
