@@ -46,5 +46,5 @@ NETCDF     +=  -lsz
 CURFIT      = -L GRID/LIB -l_cur
 SURFIT      = -L GRID/LIB -l_surf
 GK          = -L GRID/LIB -l_gk
-MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.1.0/lib -ldmumps  -lmumps_common  -lpord
+MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/lib -ldmumps  -lmumps_common  -lpord
 SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.0.1/libscalapack.a 
