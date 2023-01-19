@@ -7,3 +7,5 @@ SRC/EXAMPLE/BryanFritsch.f90
 SRC/list
 *.swp
 SRC/a.out
+*.a
+*.a
