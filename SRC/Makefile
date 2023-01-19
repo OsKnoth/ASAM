@@ -104,7 +104,7 @@ Average: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD Adju
 
 GridGen: GridD 
 	$(LINK) $(OPT) $(INCL) $(KGRIDINCL) -o GridGen\
-        GRID/MainProg.f90 $(OPT) $(OBJGRID) $(NETCDF) $(CURFIT) $(SURFIT) $(GK) $(CL) ;\
+        GRID/MainProg.f90 $(OPT) $(OP) $(OBJGRID) $(NETCDF) $(CURFIT) $(SURFIT) $(GK) $(CL) ;\
         mv GridGen $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH);\
         rm -f ~/bin/Grid.$(MACH);\
         ln -s $(DEFPATH)/LIBGRID_$(MACH)/Grid.$(MACH) ~/bin/Grid.$(MACH);
