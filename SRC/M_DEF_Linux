@@ -47,4 +47,4 @@ CURFIT      = -L GRID/LIB -l_cur
 SURFIT      = -L GRID/LIB -l_surf
 GK          = -L GRID/LIB -l_gk
 MUMPS       = -L $(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/lib -ldmumps  -lmumps_common  -lpord
-SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.1.0/libscalapack.a 
+SCALAP      = $(DEFPATH)/SparseLinearSolver/scalapack-2.0.1/libscalapack.a 
