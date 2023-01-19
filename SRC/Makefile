@@ -67,7 +67,7 @@ OBJCHEMSYS = $(CHEMSYSLIB)
 
 Prog: CgD ModD WindFarmD ChemieD SoilD CanopyD PitzerD MicroPhysD SpecsD AdjustD InitD MultiD MatrixD SoluD RadiationD ExampleD AdvectD BlockMultiD   
 	$(LINK) $(OPT) $(INCL) $(KINCL) -o $(EX) \
-        ADVECT/MainProg.f90 EXAMPLE/$(EX).f90 $(OPTFREE) $(OBJ) $(PARMETIS) $(MUMPS) $(SCALAP) $(NETCDF) $(LMPI) $(CL)  ; \
+        ADVECT/MainProg.f90 EXAMPLE/$(EX).f90 $(OPTFREE) $(OP) $(OBJ)  $(PARMETIS) $(MUMPS) $(SCALAP) $(NETCDF) $(LMPI) $(CL)  ; \
         mv $(EX) $(COMPPATH)/$(EX)/$(EX).$(MACH); \
         rm -f ~/bin/$(EX).$(MACH);\
         ln -s $(COMPPATH)/$(EX)/$(EX).$(MACH)  ~/bin/$(EX).$(MACH);\
