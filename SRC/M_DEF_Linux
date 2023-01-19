@@ -17,9 +17,8 @@ F77  = mpif77 $(OPTFIX)
 
 CC   = mpicc  
 
-
-OP =
-CL=
+OP=-Wl,--start-group
+CL=-Wl,--end-group
 
 INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
 INCL        += -I/opt/tools/packages/gcc-10.2.0/netcdf-4.7.4/include
