@@ -21,8 +21,8 @@ CC   = mpicc
 OP =
 CL=
 
-#INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
-INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/include
+INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
+#INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/include
 KINCL       = -I$(DEFPATH)/LIB_Linux
 KGRIDINCL   = -I$(DEFPATH)/LIBGRID_Linux
 KSHAPEINCL  = -I$(DEFPATH)/LIBSHAPE_Linux
