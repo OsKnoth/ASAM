@@ -748,6 +748,7 @@ PROGRAM MainProg
     CALL InitActivity
   END IF
 
+  WRITE(*,*) '-- Meteorologie -- 9'
   IF (Chemie.OR.Aerosol) THEN
     IF (Emiss) THEN
       CALL SetEmission(IniFile)
@@ -760,6 +761,7 @@ PROGRAM MainProg
   IF (ThetaKind=='PreEn') THEN
     CALL PrepareEn(VecMet,VelF1,Time)
   END IF  
+  WRITE(*,*) '-- Meteorologie -- 9'
   IF (dtP>0.0d0.AND.JacSound) THEN
     CALL AllocateVec4Met(VecMetP,VectorComponentsMet)
     DO ibLoc=1,nbLoc
@@ -784,6 +786,7 @@ PROGRAM MainProg
   END IF  
   GravComp=Grav
   Time=StartTime
+  WRITE(*,*) '-- Meteorologie -- 10'
   CALL PrepareF(VecMet,VelF1,Time)
 
   !Time=0.0e0 ??
