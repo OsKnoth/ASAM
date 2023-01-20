@@ -21,7 +21,7 @@ OP=-Wl,--start-group
 CL=-Wl,--end-group
 
 INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.0.0/include
-INCL        += -I/opt/tools/packages/gcc-10.2.0/netcdf-4.4.1.1/include
+INCL        += -I/opt/tools/packages/gcc-10.2.0/netcdf-4.7.4/include
 #INCL        = -I/usr/local/include -I$(DEFPATH)/SparseLinearSolver/metis-5.1.0/include -I$(DEFPATH)/SparseLinearSolver/MUMPS_5.3.5/include
 KINCL       = -I$(DEFPATH)/LIB_Linux
 KGRIDINCL   = -I$(DEFPATH)/LIBGRID_Linux
@@ -39,7 +39,7 @@ KINCL_D     = -I$(DEFPATH)/LIB_LinuxD
 KINCLGRID_D = -I$(DEFPATH)/LIBGRID_LinuxD
 KCHEMINCL   =-I$(DEFPATH)/LIBCHEMSYS_Linux
 PARMETIS    = -L$(DEFPATH)/SparseLinearSolver/metis-5.1.0/build/Linux-x86_64/libmetis -lmetis -lm -llapack -lblas
-NETCDF      = -L/opt/tools/packages/gcc-10.2.0/netcdf-4.4.1.1/lib -lcurl  -lnetcdf -lnetcdff 
+NETCDF      = -L/opt/tools/packages/gcc-10.2.0/netcdf-4.7.4/lib -lcurl  -lnetcdf -lnetcdff 
 NETCDF     +=  -lhdf5_hl -lhdf5    -lz
 NETCDF     +=  -lsz 
 CURFIT      = -L GRID/LIB -l_cur
